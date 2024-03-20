@@ -1,0 +1,33 @@
+# The Out Of Order Processor
+This document describes some of the needs of the project
+
+## Testcases
+Fundamentally, a test requires you to predict the correct result, and then compare the correct result to the acquired result.
+
+We need to test for both correctness of our program result, and for the correct implementation of Tomosulo. Both of these can be incorrect independently.
+
+### Basic Functionality Tests
+The easiest way to test for correctness is to run a testcase twice. Once on an actual ARM machine, and the other inside of our emulator. We then only need to check th results.
+
+The easiest way to check for Tomosulo would be to compare the cycle count with no Tomosulo implemented with the cycle count with Tomosulo implemented. If there are hazards in the assembly, Tomosulo should always result in some speedup. If there is no speedup, then our tomosulo is not working.
+
+### Useful Unit Tests
+Unit tests for Tomosulo would provide useful information about its functionality. Ideally, we should create unique tests for each hazard to ensure that it actually works. We can begin with 4 unique test cases for each type of hazard (RAR, RAW, WAR, and WAW).
+
+Given that we have a 5 stage pipeline and 41 possible instructions (each with roughly 3 possible operand orderings), we have (41^3)^5 possible orderings. 
+
+### The Gold Standard
+The gold standard would be to have a perfect simulation. This means we should have knowledge of each register's expected state during each cycle (both GPRs and hardware registers). We can then compare the state of the registers at each cycle with the state that our simluator produces.
+
+Calculating these expected states may need to be done by hand (ie. on paper, in excel, or in a simulator written by us in a higher level language). I do not believe that we will be able to use any existing simulators, since our specific processor which is running ARM will be so hyper-specific (a 5-stage processor with OOO).
+
+It would be useful to do this for at least one or two fairly complex test cases.
+
+## The Testbench
+The testbench should ideally provide the following useful information every cycle to be able to debug Tomosulo and correctness:
+- GPR contents
+- Hardware register contents
+- Information about renamings such as:
+  * The specific hazard which caused the rename
+  * Which register caused the rename
+  * Which hardware register was used for the rename
