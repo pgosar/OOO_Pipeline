@@ -40,5 +40,4 @@ The testbench should ideally provide the following useful information every cycl
 - Hardware register contents
 - Information about renamings such as:
   * The specific hazard which caused the rename
-  * Which register caused the rename
-  * Which hardware register was used for the rename
+  * The register name before and after the rename
