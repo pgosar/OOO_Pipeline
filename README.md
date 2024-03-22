@@ -4,7 +4,10 @@ This document describes some of the needs of the project
 ## GCC Patching
 
 Seems like for starters, modifying this file should get us a lot of the way there, to make sure only certain instructions are defined. Then it may require removing code that uses these instructions
+
 gcc/config/aarch64/aarch64.md
+
+Modifications to gcc will be done with patch files. Instructions are in submodules/patches
 
 Some helpful links:
 
@@ -25,7 +28,7 @@ The easiest way to check for Tomosulo would be to compare the cycle count with n
 ### Useful Unit Tests
 Unit tests for Tomosulo would provide useful information about its functionality. Ideally, we should create unique tests for each hazard to ensure that it actually works. We can begin with 4 unique test cases for each type of hazard (RAR, RAW, WAR, and WAW).
 
-Given that we have a 5 stage pipeline and 41 possible instructions (each with roughly 3 possible operand orderings), we have (41^3)^5 possible orderings. 
+Given that we have a 5 stage pipeline and 41 possible instructions (each with roughly 3 possible operand orderings), we have (41^3)^5 possible orderings.
 
 ### The Gold Standard
 The gold standard would be to have a perfect simulation. This means we should have knowledge of each register's expected state during each cycle (both GPRs and hardware registers). We can then compare the state of the registers at each cycle with the state that our simluator produces.
