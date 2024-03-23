@@ -1,6 +1,9 @@
 # The Out Of Order Processor
 This document describes some of the needs of the project
 
+## Development Setup
+Before we were working with iverilog. However, we are now trying to synthesize the Verilog on an actual FPGA. We need to use dedicated software for this. We are going to use Intel Quartus Prime Lite, as this is what was recommended to interface with the DE10-Nano. Described in the "My First FPGA" article on the [FPGA page](https://www.terasic.com.tw/cgi-bin/page/archive.pl?Language=English&CategoryNo=205&No=1046&PartNo=4#contents). You need to install with Cyclone V support. 
+
 ## GCC Patching
 
 Seems like for starters, modifying this file should get us a lot of the way there, to make sure only certain instructions are defined. Then it may require removing code that uses these instructions

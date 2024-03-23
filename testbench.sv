@@ -10,8 +10,13 @@
 // - Change the re-order-buffer to use a struct
 typedef struct packed {
     logic valid;
-    logic [`GPR_IDX_SIZE-1:0] gpr_idx_a;
+    logic [`GPR_IDX_SIZE-1:0] gpr_idx;
     logic [`REG_SIZE-1:0] value;
+} rs_op;
+
+typedef struct packed {
+    rs_op op1;
+    rs_op op2;
 } rs_entry;
 
 typedef struct packed {
@@ -25,6 +30,7 @@ module core #(
 ) (
     input wire i_clk,
     input wire i_reset,
+    // input for an instruction
     output debug_info o_debug
 );
     always_ff @(posedge i_clk) begin : main
@@ -33,7 +39,7 @@ module core #(
             // NOTE(Nate): Need to use replication for expressions
             o_debug.rob <= 0;
         end else begin
-            o_debug.rs[0] <= o_debug.rs[0] + 1;
+            o_debug.rs[0] <= o_debug.rs[0].op1 + 1;
         end
     end : main
 endmodule : core
@@ -59,7 +65,15 @@ module testbench ();
         for (int i = 0; i < 8; i++) begin
             #5;
             clk = ~clk;
-            $display("clk: %b Debug: %x\n", clk, debug_data.rs[0]);
+            $display("\nclk: %b Debug: %x", clk, debug_data.rs[0]);
+            $write("Reservation Station: op1_valid: %1h | op1_value: %d | op1_gpr_idx: %d | op2_valid: %d | op2_value: %d | op2_gpr_idx: %d",
+                debug_data.rs[0].op1.valid,
+                debug_data.rs[0].op1.value,
+                debug_data.rs[0].op1.gpr_idx,
+                debug_data.rs[0].op2.valid,
+                debug_data.rs[0].op2.value,
+                debug_data.rs[0].op2.gpr_idx
+            );
         end
     end
 endmodule
