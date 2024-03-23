@@ -20,3 +20,20 @@ utcs-test: ${TEST_BENCH} ${SRC}
 
 clean:
 	rm ${EXEC}
+	rm -f ooo_testcases
+	rm -f run_arm.o
+
+
+all: clean build
+
+build:
+	gcc run_arm.c -c -o  run_arm.o
+	gcc testcases.s run_arm.o -o ooo_testcases -g
+
+verify:
+	python3 verify.py
+
+# this target is used to generate .o files. Will not be used in the production version.
+dev: clean
+	gcc -g run_arm.c -c -o run_arm.o -g
+	gcc testcases.s run_arm.o -o ooo_testcases -g -lm
