@@ -2,6 +2,22 @@
 This document describes some of the needs of the project
 
 ## Development Setup
+
+### Our FPGA
+We are developing for a DE10-Nano FPGA. Version 10-01610104-C0. The version number can be found on the back of the board, and indicates that this board is a revision C board. All documentation can be found on [Terasic's (the FPGA manufacturer) website](https://www.terasic.com.tw/cgi-bin/page/archive.pl?Language=English&CategoryNo=205&No=1046&PartNo=4#contents).
+
+### Our IDE
+iVerilog was great for learning, but as we will need to synthesize the SystemVerilog on actual hardware, we will need a more capable compiler and synthesizer. Terasic provides tools for Quartus Prime - an IDE for hardware development made by Intel. These tools allow us to interface with the actual hardware. Since the tools are made for Quartus Prime 17.0, e will be using [Quartus Prime Lite Version 17.0](https://www.intel.com/content/www/us/en/software-kit/669553/intel-quartus-prime-lite-edition-design-software-version-17-0-for-linux.html) for development. Quartus Prime Lite is the version which is free to use.
+
+In the installer, we will need the following:
+- Quartus Prime itself for synthesis.
+- ModelSim for simulating the circuits.
+- Cyclone V support for our particular style of FPGA
+*NOTE for Linux Users: The installer may hang if you try to install ModelSim or the Help docs in one go. You can work around this by running the ModelSim and Help installers separately. They are available in the `componnts` dir*
+
+### Our 
+
+As detailed in the Getting Started Guide, 
 Before we were working with iverilog. However, we are now trying to synthesize the Verilog on an actual FPGA. We need to use dedicated software for this. We are going to use Intel Quartus Prime Lite, as this is what was recommended to interface with the DE10-Nano. Described in the "My First FPGA" article on the [FPGA page](https://www.terasic.com.tw/cgi-bin/page/archive.pl?Language=English&CategoryNo=205&No=1046&PartNo=4#contents). You need to install with Cyclone V support. 
 
 ## GCC Patching
