@@ -58,15 +58,16 @@
 
     is_same_tree:
         stp     x29, x30, [sp, -32]!
+
+        //realized it later but old values need to be rpeserved for left/right calls
+        stur  x9, [sp, #16]
+        stur  x10, [sp, #24]
+
         cmp x0, #0
         b.eq .is_second_zero
 
         cmp x1, #0
         b.eq .is_other_zero
-    
-    
-
-        
         
         movz  x9, #0
         add   x9, x9, x0
@@ -78,39 +79,37 @@
         
         
         ldur  x2, [x9, 16] //get the val from x9 (technically x0)
-        ldur  x1, [x1, 16] //get the val from xq
-        cmp   x2, x1
+        ldur  x13, [x1, 16] //get the val from xq
+        cmp   x2, x13
         b.ne  .is_false
         
         //prepping parameters for recursion for left side
         ldur  x0, [x9]  //check left of x0
         ldur  x1, [x10] //check left of x1
-        stur  x9, [sp, #16]
-        stur  x10, [sp, #24]
         bl    is_same_tree
-        ldur  x9, [sp, #16]
-        ldur  x10, [sp, #24]
+        
         cbz   x0, .is_false //vals are not equao return false
         
         //prepping parameters and preserving old vals for recursion for right size
 
         ldur  x1, [x10, 8]
         ldur  x0, [x9, 8]
-        stur  x9, [sp, #16]
-        stur  x10, [sp, #24]
         bl    is_same_tree
-        ldur  x9, [sp, #16]
-        ldur  x10, [sp, #24]
-        cmp   x0, 0
-        b.ne  .is_false
         
         cmp   x0, 0
-        b.ne  .is_false
+        b.eq  .is_false
+        
+        
     .is_true:
         movz x0, #1
+        ldur  x9, [sp, #16]
+        ldur  x10, [sp, #24]
         ldp  x29, x30, [sp], 32
         ret
     .is_false:
+        movz x0, #0
+        ldur  x9, [sp, #16]
+        ldur  x10, [sp, #24]
         ldp  x29, x30, [sp], 32
         ret
 
