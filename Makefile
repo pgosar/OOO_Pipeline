@@ -27,8 +27,8 @@ clean:
 all: clean build
 
 build:
-	gcc run_arm.c -c -o  run_arm.o
-	gcc testcases.s run_arm.o -o ooo_testcases -g
+	gcc run_arm.c -c -o  run_arm.o -lm
+	gcc testcases.s run_arm.o -o ooo_testcases -g -lm
 
 verify:
 	python3 verify.py

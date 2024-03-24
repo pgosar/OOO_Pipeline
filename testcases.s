@@ -96,9 +96,7 @@
         ldur  x0, [x9, 8]
         bl    is_same_tree
         
-        cmp   x0, 0
-        b.eq  .is_false
-        
+        cbz   x0, .is_false      
         
     .is_true:
         movz x0, #1
