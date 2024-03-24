@@ -96,16 +96,17 @@
         ldur  x0, [x9, 8]
         bl    is_same_tree
         
-        cbz   x0, .is_false      
+        cbnz   x0, .is_true
         
-    .is_true:
-        movz x0, #1
+        
+    .is_false:
+        movz x0, #0
         ldur  x9, [sp, #16]
         ldur  x10, [sp, #24]
         ldp  x29, x30, [sp], 32
         ret
-    .is_false:
-        movz x0, #0
+    .is_true:
+        movz x0, #1
         ldur  x9, [sp, #16]
         ldur  x10, [sp, #24]
         ldp  x29, x30, [sp], 32
