@@ -15,10 +15,7 @@ In the installer, we will need the following:
 - Cyclone V support for our particular style of FPGA
 *NOTE for Linux Users: The installer may hang if you try to install ModelSim or the Help docs in one go. You can work around this by running the ModelSim and Help installers separately. They are available in the `componnts` dir*
 
-### Our 
-
-As detailed in the Getting Started Guide, 
-Before we were working with iverilog. However, we are now trying to synthesize the Verilog on an actual FPGA. We need to use dedicated software for this. We are going to use Intel Quartus Prime Lite, as this is what was recommended to interface with the DE10-Nano. Described in the "My First FPGA" article on the [FPGA page](https://www.terasic.com.tw/cgi-bin/page/archive.pl?Language=English&CategoryNo=205&No=1046&PartNo=4#contents). You need to install with Cyclone V support. 
+Finally, we will need the [DevKit provided by Terasic for the DE10-Nano](https://www.intel.com/content/www/us/en/design-example/714622/cyclone-v-fpga-terasic-de10-nano-development-kit-baseline-pinout.html). The 17.0 version is the latest at the time of writing and it is preferred. This is **NECESSARY** as it can prevent damage to the board due to incorrect voltage settings or pin assignment.
 
 ## GCC Patching
 
@@ -60,3 +57,10 @@ The testbench should ideally provide the following useful information every cycl
 - Information about renamings such as:
   * The specific hazard which caused the rename
   * The register name before and after the rename
+
+## Glossary
+- [**EPCS**](https://community.intel.com/t5/FPGA-Wiki/EPCS-Guide/ta-p/735919): Flash memory which can be used to configure the FPGA. This is not the only device which can configure the FPGA, however, We typically want our board to use this, rather than HPS configuration. To use this mode, it must be selected using the MSEL switches on the board (MSEL[4:0] = 5'b10010). SRAM hardware images are typically uploaded to the EPCS device via Quartus or the command line. (manual p.12)
+- **FPGA**: The field programmable gate array. A fabric which allows you to prototype and synthesize logic gates and circuits without burning them onto hardware. (manual p.13)
+- **HPS**: Hard Processor System. A traditional computer system (using a processor, RAM, cache, etc.) which exists on the same board as the FPGA and is highly integrated with it. They share an interconnect and many signals. However, many components on the board belong exclusively to either the FPGA or HPS. [Cornell's guide on the Cyclone-V HPS](https://people.ece.cornell.edu/land/courses/ece5760/DE1_SOC/HPS_INTRO_54001.pdf)
+- **JTAG**: Doesn't stand for anything. A standard for testing circuit designs. It allows you to connect debug pins to your circuit and view output information. It can also be used to directly program the FPGA chip. However, the data is volatile. Upload an image to the EPCS flash device for longer lasting storage.
+- **Switch Debouncing**: There is quite a bit of noise in analog circuitry. To smooth the data signal and prevent 'bouncing' of a signal between 1 and 0, an algorithm like the [Schmitt Trigger](https://en.wikipedia.org/wiki/Schmitt_trigger) is applied.
