@@ -8,7 +8,7 @@
     .type   all_instr, %function
     all_instr:
         
-        ldur    x0, [x0, #4]
+        dur    x0, [x0, #4]
         ldp     x0, x30, [sp], 32
         stur    x0, [x0, #8]
         stp     x0, x30, [sp, -32]!
@@ -16,15 +16,15 @@
         movk    x0, #0x456, lsl #32
         adr     x0, label
         adrp    x0, label
-        cinv    xo, x0, hi
-        cinc    xo, xo, vs
+        cinv    x0, x0, hi
+        cinc    x0, x0, vs
         cneg    x0, x0, ne
         csel    x0, x0, x0, eq
         cset    x0, lt
         csetm   x0, lt
         csinc   x0, x0, x0, mi
         csinv   x0, x0, x0, lt
-        csneg    x0, x0, ne
+        csneg    x0, x0, x0, ne
         add     x0, x0, x0
         adds    x0, x0, x0
         sub     x0, x0, x0
