@@ -19,8 +19,9 @@ http://atgreen.github.io/ggx/
 
 ### Allowed Instructions
 
-LDUR, LDP, STUR, STP, MOVK, MOVZ, ADR, ADRP, CSEL, CSINC, CSINV, CSNEG, ADD, ADDS, SUB, SUBS,
-MVN, ORR, EOR, AND, ANDS, SBFM, UBFM, B, BR, B.cond, BL, BLR, CBNZ, CBZ, RET, NOP, HLT
+LDUR, LDP, STUR, STP, MOVK, MOVZ, ADR, ADRP, CINC, CINV, CNEG, CSEL, CSET, CSETM, CSINC, CSINV,
+CSNEG, ADD, ADDS, SUB, SUBS, CMP, MVN, ORR, EOR, AND, ANDS, TST, LSL, LSR, SBFM, UBFM, ASR, B,
+BR, B.cond, BL, BLR, CBNZ, CBZ, RET, NOP, HLT
 
 ## Testcases
 Fundamentally, a test requires you to predict the correct result, and then compare the correct result to the acquired result.
