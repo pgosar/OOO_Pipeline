@@ -16,13 +16,15 @@
         movk    x0, #0x456, lsl #32
         adr     x0, label
         adrp    x0, label
+        cinv    xo, x0, hi
+        cinc    xo, xo, vs
         cneg    x0, x0, ne
         csel    x0, x0, x0, eq
         cset    x0, lt
         csetm   x0, lt
         csinc   x0, x0, x0, mi
         csinv   x0, x0, x0, lt
-        cneg    x0, x0, ne
+        csneg    x0, x0, ne
         add     x0, x0, x0
         adds    x0, x0, x0
         sub     x0, x0, x0
