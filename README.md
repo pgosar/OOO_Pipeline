@@ -1,7 +1,9 @@
 # The Out Of Order Processor
 This document describes some of the needs of the project
 
+
 ## GCC Patching
+
 
 Seems like for starters, modifying this file should get us a lot of the way there, to make sure only certain instructions are defined. Then it may require removing code that uses these instructions
 
@@ -14,6 +16,11 @@ Some helpful links:
 https://kristerw.blogspot.com/2017/08/writing-gcc-backend_4.html
 
 http://atgreen.github.io/ggx/
+
+### Allowed Instructions
+
+LDUR, LDP, STUR, STP, MOVK, MOVZ, ADR, ADRP, CSEL, CSINC, CSINV, CSNEG, ADD, ADDS, SUB, SUBS,
+MVN, ORR, EOR, AND, ANDS, SBFM, UBFM, B, BR, B.cond, BL, BLR, CBNZ, CBZ, RET, NOP, HLT
 
 ## Testcases
 Fundamentally, a test requires you to predict the correct result, and then compare the correct result to the acquired result.
