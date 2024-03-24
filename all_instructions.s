@@ -24,7 +24,7 @@
         csetm   x0, lt
         csinc   x0, x0, x0, mi
         csinv   x0, x0, x0, lt
-        csneg    x0, x0, x0, ne
+        csneg   x0, x0, x0, ne
         add     x0, x0, x0
         adds    x0, x0, x0
         sub     x0, x0, x0
