@@ -57,7 +57,7 @@
     .type   is_same_tree, %function
 
     is_same_tree:
-
+        stp     x29, x30, [sp, -32]!
         cmp x0, #0
         b.eq .is_second_zero
 
@@ -66,7 +66,7 @@
     
     
 
-        stp     x29, x30, [sp, -32]!
+        
         
         movz  x9, #0
         add   x9, x9, x0
