@@ -8,7 +8,7 @@
     .type   all_instr, %function
     all_instr:
         
-        dur    x0, [x0, #4]
+        ldur    x0, [x0, #4]
         ldp     x0, x30, [sp], 32
         stur    x0, [x0, #8]
         stp     x0, x30, [sp, -32]!
