@@ -34,7 +34,7 @@
         orr     x0, x0, x0
         eor     x0, x0, x0
         and     x0, x0, x0
-        and     x0, x0, x0
+        ands    x0, x0, x0
         tst     x0, x0
         lsl     x0, x0, #3
         lsr     x0, x0, #2
