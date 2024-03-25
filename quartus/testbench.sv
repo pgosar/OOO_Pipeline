@@ -26,7 +26,7 @@ typedef struct packed {
 
 module core #(
     parameter int RS_SIZE = 2,
-    parameter int RB_SIZE = 2
+    parameter int ROB_SIZE = 2
 ) (
     input wire i_clk,
     input wire i_reset,
