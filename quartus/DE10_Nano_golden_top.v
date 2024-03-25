@@ -136,15 +136,18 @@ module DE10_Nano_golden_top(
 //=======================================================
 
 
-
-
-
 //=======================================================
 //  Structural coding
 //=======================================================
 
+wire [7:0] KEY_N;
+assign KEY_N = KEY;
 
-
+assign LED[0] = ~KEY_N[0];
+assign LED[1] = ~KEY_N[1];
+assign LED[3] = ~KEY_N[1] | ~KEY_N[0];
+assign LED[4] = ~KEY_N[1] & ~KEY_N[0];
+assign LED[5] = ~KEY_N[1] ^ ~KEY_N[0];
 
 
 endmodule

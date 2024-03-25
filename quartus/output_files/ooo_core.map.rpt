@@ -1,5 +1,5 @@
 Analysis & Synthesis report for ooo_core
-Sat Mar 23 15:43:06 2024
+Sun Mar 24 18:14:34 2024
 Quartus Prime Version 17.0.0 Build 595 04/25/2017 SJ Lite Edition
 
 
@@ -10,7 +10,13 @@ Quartus Prime Version 17.0.0 Build 595 04/25/2017 SJ Lite Edition
   2. Analysis & Synthesis Summary
   3. Analysis & Synthesis Settings
   4. Parallel Compilation
-  5. Analysis & Synthesis Messages
+  5. Analysis & Synthesis Source Files Read
+  6. Analysis & Synthesis Resource Usage Summary
+  7. Analysis & Synthesis Resource Utilization by Entity
+  8. General Register Statistics
+  9. Post-Synthesis Netlist Statistics for Top Partition
+ 10. Elapsed Time Per Partition
+ 11. Analysis & Synthesis Messages
 
 
 
@@ -34,22 +40,27 @@ agreement for further details.
 
 
 
-+---------------------------------------------------------------------------+
-; Analysis & Synthesis Summary                                              ;
-+-----------------------------+---------------------------------------------+
-; Analysis & Synthesis Status ; Failed - Sat Mar 23 15:43:06 2024           ;
-; Quartus Prime Version       ; 17.0.0 Build 595 04/25/2017 SJ Lite Edition ;
-; Revision Name               ; ooo_core                                    ;
-; Top-level Entity Name       ; DE10_Nano_golden_top                        ;
-; Family                      ; Cyclone V                                   ;
-; Logic utilization (in ALMs) ; N/A until Partition Merge                   ;
-; Total registers             ; N/A until Partition Merge                   ;
-; Total pins                  ; N/A until Partition Merge                   ;
-; Total virtual pins          ; N/A until Partition Merge                   ;
-; Total block memory bits     ; N/A until Partition Merge                   ;
-; Total PLLs                  ; N/A until Partition Merge                   ;
-; Total DLLs                  ; N/A until Partition Merge                   ;
-+-----------------------------+---------------------------------------------+
++-------------------------------------------------------------------------------+
+; Analysis & Synthesis Summary                                                  ;
++---------------------------------+---------------------------------------------+
+; Analysis & Synthesis Status     ; Successful - Sun Mar 24 18:14:34 2024       ;
+; Quartus Prime Version           ; 17.0.0 Build 595 04/25/2017 SJ Lite Edition ;
+; Revision Name                   ; ooo_core                                    ;
+; Top-level Entity Name           ; DE10_Nano_golden_top                        ;
+; Family                          ; Cyclone V                                   ;
+; Logic utilization (in ALMs)     ; N/A                                         ;
+; Total registers                 ; 0                                           ;
+; Total pins                      ; 145                                         ;
+; Total virtual pins              ; 0                                           ;
+; Total block memory bits         ; 0                                           ;
+; Total DSP Blocks                ; 0                                           ;
+; Total HSSI RX PCSs              ; 0                                           ;
+; Total HSSI PMA RX Deserializers ; 0                                           ;
+; Total HSSI TX PCSs              ; 0                                           ;
+; Total HSSI PMA TX Serializers   ; 0                                           ;
+; Total PLLs                      ; 0                                           ;
+; Total DLLs                      ; 0                                           ;
++---------------------------------+---------------------------------------------+
 
 
 +-----------------------------------------------------------------------------------------------------------------------------+
@@ -155,40 +166,270 @@ agreement for further details.
 +----------------------------+-------------+
 
 
++---------------------------------------------------------------------------------------------------------------------------------------------------+
+; Analysis & Synthesis Source Files Read                                                                                                            ;
++----------------------------------+-----------------+------------------------+-----------------------------------------------------------+---------+
+; File Name with User-Entered Path ; Used in Netlist ; File Type              ; File Name with Absolute Path                              ; Library ;
++----------------------------------+-----------------+------------------------+-----------------------------------------------------------+---------+
+; DE10_Nano_golden_top.v           ; yes             ; User Verilog HDL File  ; /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v ;         ;
++----------------------------------+-----------------+------------------------+-----------------------------------------------------------+---------+
+
+
++------------------------------------------------------------+
+; Analysis & Synthesis Resource Usage Summary                ;
++---------------------------------------------+--------------+
+; Resource                                    ; Usage        ;
++---------------------------------------------+--------------+
+; Estimate of Logic utilization (ALMs needed) ; 2            ;
+;                                             ;              ;
+; Combinational ALUT usage for logic          ; 3            ;
+;     -- 7 input functions                    ; 0            ;
+;     -- 6 input functions                    ; 0            ;
+;     -- 5 input functions                    ; 0            ;
+;     -- 4 input functions                    ; 0            ;
+;     -- <=3 input functions                  ; 3            ;
+;                                             ;              ;
+; Dedicated logic registers                   ; 0            ;
+;                                             ;              ;
+; I/O pins                                    ; 145          ;
+;                                             ;              ;
+; Total DSP Blocks                            ; 0            ;
+;                                             ;              ;
+; Maximum fan-out node                        ; KEY[0]~input ;
+; Maximum fan-out                             ; 4            ;
+; Total fan-out                               ; 251          ;
+; Average fan-out                             ; 0.65         ;
++---------------------------------------------+--------------+
+
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Analysis & Synthesis Resource Utilization by Entity                                                                                                                                               ;
++----------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+-----------------------+----------------------+--------------+
+; Compilation Hierarchy Node ; Combinational ALUTs ; Dedicated Logic Registers ; Block Memory Bits ; DSP Blocks ; Pins ; Virtual Pins ; Full Hierarchy Name   ; Entity Name          ; Library Name ;
++----------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+-----------------------+----------------------+--------------+
+; |DE10_Nano_golden_top      ; 3 (3)               ; 0 (0)                     ; 0                 ; 0          ; 145  ; 0            ; |DE10_Nano_golden_top ; DE10_Nano_golden_top ; work         ;
++----------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+-----------------------+----------------------+--------------+
+Note: For table entries with two numbers listed, the numbers in parentheses indicate the number of resources of the given type used by the specific entity alone. The numbers listed outside of parentheses indicate the total resources of the given type used by the specific entity and all of its sub-entities in the hierarchy.
+
+
++------------------------------------------------------+
+; General Register Statistics                          ;
++----------------------------------------------+-------+
+; Statistic                                    ; Value ;
++----------------------------------------------+-------+
+; Total registers                              ; 0     ;
+; Number of registers using Synchronous Clear  ; 0     ;
+; Number of registers using Synchronous Load   ; 0     ;
+; Number of registers using Asynchronous Clear ; 0     ;
+; Number of registers using Asynchronous Load  ; 0     ;
+; Number of registers using Clock Enable       ; 0     ;
+; Number of registers using Preset             ; 0     ;
++----------------------------------------------+-------+
+
+
++-----------------------------------------------------+
+; Post-Synthesis Netlist Statistics for Top Partition ;
++-----------------------+-----------------------------+
+; Type                  ; Count                       ;
++-----------------------+-----------------------------+
+; arriav_io_obuf        ; 95                          ;
+; arriav_lcell_comb     ; 7                           ;
+;     normal            ; 7                           ;
+;         0 data inputs ; 1                           ;
+;         1 data inputs ; 3                           ;
+;         2 data inputs ; 3                           ;
+; boundary_port         ; 145                         ;
+;                       ;                             ;
+; Max LUT depth         ; 2.00                        ;
+; Average LUT depth     ; 0.12                        ;
++-----------------------+-----------------------------+
+
+
++-------------------------------+
+; Elapsed Time Per Partition    ;
++----------------+--------------+
+; Partition Name ; Elapsed Time ;
++----------------+--------------+
+; Top            ; 00:00:00     ;
++----------------+--------------+
+
+
 +-------------------------------+
 ; Analysis & Synthesis Messages ;
 +-------------------------------+
 Info: *******************************************************************
 Info: Running Quartus Prime Analysis & Synthesis
     Info: Version 17.0.0 Build 595 04/25/2017 SJ Lite Edition
-    Info: Processing started: Sat Mar 23 15:42:59 2024
+    Info: Processing started: Sun Mar 24 18:14:27 2024
 Info: Command: quartus_map --read_settings_files=on --write_settings_files=off ooo_core -c ooo_core
 Warning (18236): Number of processors has not been specified which may cause overloading on shared machines.  Set the global assignment NUM_PARALLEL_PROCESSORS in your QSF to an appropriate value for best performance.
 Info (20030): Parallel compilation is enabled and will use 4 of the 4 processors detected
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(189) near text: "op";  expecting "=". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 189
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(189) near text: "<";  expecting "<=", or "=". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 189
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(190) near text: "i";  expecting "=". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 190
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(190) near text: "<";  expecting "<=", or "=". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 190
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(190) near text: "+";  expecting "<=", or "=". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 190
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(191) near text: "j";  expecting "=". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 191
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(191) near text: "<";  expecting "<=", or "=". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 191
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(191) near text: "+";  expecting "<=", or "=". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 191
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(204) near text: ":";  expecting "endmodule". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 204
-Error (10839): Verilog HDL error at DE10_Nano_golden_top.v(219): using a closing label on a design unit is a SystemVerilog feature File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 219
-Error (10112): Ignored design unit "DE10_Nano_golden_top" at DE10_Nano_golden_top.v(36) due to previous errors File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 36
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(244) near text: "for";  expecting "endmodule". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 244
-Error (10149): Verilog HDL Declaration error at DE10_Nano_golden_top.v(245): identifier "row" is already declared in the present scope File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 245
-Error (10149): Verilog HDL Declaration error at DE10_Nano_golden_top.v(256): identifier "numShifterRows" is already declared in the present scope File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 256
-Error (10839): Verilog HDL error at DE10_Nano_golden_top.v(266): using a closing label on a design unit is a SystemVerilog feature File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 266
-Error (10112): Ignored design unit "right_shift_rotate" at DE10_Nano_golden_top.v(222) due to previous errors File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 222
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(283) near text: "for";  expecting "endmodule". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 283
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(313) near text: "end";  expecting "endmodule". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 313
-Error (10170): Verilog HDL syntax error at DE10_Nano_golden_top.v(323) near text: "for";  expecting "endmodule". Check for and fix any syntax errors that appear immediately before or at the specified keyword. The Intel FPGA Knowledge Database contains many articles with specific details on how to resolve this error. Visit the Knowledge Database at https://www.altera.com/support/support-resources/knowledge-base/search.html and search for this specific error message number. File: /home/nate/ut/sp24/aca/oo2/DE10_Nano_golden_top.v Line: 323
-Info (12021): Found 0 design units, including 0 entities, in source file DE10_Nano_golden_top.v
-Error: Quartus Prime Analysis & Synthesis was unsuccessful. 19 errors, 1 warning
-    Error: Peak virtual memory: 916 megabytes
-    Error: Processing ended: Sat Mar 23 15:43:06 2024
-    Error: Elapsed time: 00:00:07
-    Error: Total CPU time (on all processors): 00:00:17
+Info (12021): Found 1 design units, including 1 entities, in source file DE10_Nano_golden_top.v
+    Info (12023): Found entity 1: DE10_Nano_golden_top File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 36
+Info (12127): Elaborating entity "DE10_Nano_golden_top" for the top level hierarchy
+Warning (10034): Output port "HDMI_TX_D" at DE10_Nano_golden_top.v(65) has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+Warning (10034): Output port "LED[7..6]" at DE10_Nano_golden_top.v(127) has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 127
+Warning (10034): Output port "LED[2]" at DE10_Nano_golden_top.v(127) has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 127
+Warning (10034): Output port "ADC_CONVST" at DE10_Nano_golden_top.v(39) has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 39
+Warning (10034): Output port "ADC_SCK" at DE10_Nano_golden_top.v(40) has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 40
+Warning (10034): Output port "ADC_SDI" at DE10_Nano_golden_top.v(41) has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 41
+Warning (10034): Output port "HDMI_TX_CLK" at DE10_Nano_golden_top.v(64) has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 64
+Warning (10034): Output port "HDMI_TX_DE" at DE10_Nano_golden_top.v(66) has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 66
+Warning (10034): Output port "HDMI_TX_HS" at DE10_Nano_golden_top.v(67) has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 67
+Warning (10034): Output port "HDMI_TX_VS" at DE10_Nano_golden_top.v(69) has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 69
+Warning (13039): The following bidirectional pins have no drivers
+    Warning (13040): bidirectional pin "ARDUINO_IO[0]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[1]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[2]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[3]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[4]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[5]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[6]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[7]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[8]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[9]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[10]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[11]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[12]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[13]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[14]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_IO[15]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 45
+    Warning (13040): bidirectional pin "ARDUINO_RESET_N" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 46
+    Warning (13040): bidirectional pin "GPIO_0[0]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[1]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[2]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[3]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[4]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[5]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[6]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[7]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[8]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[9]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[10]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[11]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[12]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[13]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[14]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[15]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[16]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[17]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[18]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[19]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[20]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[21]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[22]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[23]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[24]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[25]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[26]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[27]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[28]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[29]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[30]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[31]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[32]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[33]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[34]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_0[35]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 54
+    Warning (13040): bidirectional pin "GPIO_1[0]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[1]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[2]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[3]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[4]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[5]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[6]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[7]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[8]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[9]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[10]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[11]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[12]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[13]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[14]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[15]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[16]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[17]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[18]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[19]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[20]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[21]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[22]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[23]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[24]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[25]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[26]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[27]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[28]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[29]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[30]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[31]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[32]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[33]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[34]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "GPIO_1[35]" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 55
+    Warning (13040): bidirectional pin "HDMI_I2C_SCL" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 58
+    Warning (13040): bidirectional pin "HDMI_I2C_SDA" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 59
+    Warning (13040): bidirectional pin "HDMI_I2S" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 60
+    Warning (13040): bidirectional pin "HDMI_LRCLK" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 61
+    Warning (13040): bidirectional pin "HDMI_MCLK" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 62
+    Warning (13040): bidirectional pin "HDMI_SCLK" has no driver File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 63
+Warning (13024): Output pins are stuck at VCC or GND
+    Warning (13410): Pin "ADC_CONVST" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 39
+    Warning (13410): Pin "ADC_SCK" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 40
+    Warning (13410): Pin "ADC_SDI" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 41
+    Warning (13410): Pin "HDMI_TX_CLK" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 64
+    Warning (13410): Pin "HDMI_TX_D[0]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[1]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[2]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[3]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[4]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[5]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[6]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[7]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[8]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[9]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[10]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[11]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[12]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[13]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[14]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[15]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[16]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[17]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[18]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[19]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[20]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[21]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[22]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_D[23]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 65
+    Warning (13410): Pin "HDMI_TX_DE" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 66
+    Warning (13410): Pin "HDMI_TX_HS" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 67
+    Warning (13410): Pin "HDMI_TX_VS" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 69
+    Warning (13410): Pin "LED[2]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 127
+    Warning (13410): Pin "LED[6]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 127
+    Warning (13410): Pin "LED[7]" is stuck at GND File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 127
+Info (286030): Timing-Driven Synthesis is running
+Info (16010): Generating hard_block partition "hard_block:auto_generated_inst"
+    Info (16011): Adding 0 node(s), including 0 DDIO, 0 PLL, 0 transceiver and 0 LCELL
+Warning (21074): Design contains 9 input pin(s) that do not drive logic
+    Warning (15610): No output dependent on input pin "ADC_SDO" File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 42
+    Warning (15610): No output dependent on input pin "FPGA_CLK1_50" File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 49
+    Warning (15610): No output dependent on input pin "FPGA_CLK2_50" File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 50
+    Warning (15610): No output dependent on input pin "FPGA_CLK3_50" File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 51
+    Warning (15610): No output dependent on input pin "HDMI_TX_INT" File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 68
+    Warning (15610): No output dependent on input pin "SW[0]" File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 131
+    Warning (15610): No output dependent on input pin "SW[1]" File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 131
+    Warning (15610): No output dependent on input pin "SW[2]" File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 131
+    Warning (15610): No output dependent on input pin "SW[3]" File: /home/nate/ut/sp24/aca/ooo/quartus/DE10_Nano_golden_top.v Line: 131
+Info (21057): Implemented 148 device resources after synthesis - the final resource count might be different
+    Info (21058): Implemented 11 input pins
+    Info (21059): Implemented 39 output pins
+    Info (21060): Implemented 95 bidirectional pins
+    Info (21061): Implemented 3 logic cells
+Info: Quartus Prime Analysis & Synthesis was successful. 0 errors, 152 warnings
+    Info: Peak virtual memory: 1006 megabytes
+    Info: Processing ended: Sun Mar 24 18:14:34 2024
+    Info: Elapsed time: 00:00:07
+    Info: Total CPU time (on all processors): 00:00:17
 
 
