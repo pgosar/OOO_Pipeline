@@ -7,7 +7,7 @@
     .global all_instr
     .type   all_instr, %function
     all_instr:
-        
+
         ldur    x0, [x0, #4]
         ldp     x0, x30, [sp], 32
         stur    x0, [x0, #8]
@@ -25,15 +25,15 @@
         csinc   x0, x0, x0, mi
         csinv   x0, x0, x0, lt
         csneg   x0, x0, x0, ne
-        add     x0, x0, x0
+        add     x0, x0, #4095
         adds    x0, x0, x0
-        sub     x0, x0, x0
+        sub     x0, x0, #4095
         subs    x0, x0, x0
         cmp     x0, x0
         mvn     x0, x0
         orr     x0, x0, x0
         eor     x0, x0, x0
-        and     x0, x0, x0
+        and     x0, x0, #1024
         ands    x0, x0, x0
         tst     x0, x0
         lsl     x0, x0, #3
