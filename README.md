@@ -17,6 +17,8 @@ In the installer, we will need the following:
 
 Finally, we will need the [DevKit provided by Terasic for the DE10-Nano](https://www.intel.com/content/www/us/en/design-example/714622/cyclone-v-fpga-terasic-de10-nano-development-kit-baseline-pinout.html). The 17.0 version is the latest at the time of writing and it is preferred. This is **NECESSARY** as it can prevent damage to the board due to incorrect voltage settings or pin assignment.
 
+To upload to the FPGA over JTAG, you need write access to a serial port. Otherwise you get "no hardware detected". [Workaround on arch linux here](https://wiki.archlinux.org/title/Intel_Quartus_Prime#USB-Blaster_not_working)
+
 ## GCC Patching
 
 Seems like for starters, modifying this file should get us a lot of the way there, to make sure only certain instructions are defined. Then it may require removing code that uses these instructions
@@ -57,6 +59,24 @@ The testbench should ideally provide the following useful information every cycl
 - Information about renamings such as:
   * The specific hazard which caused the rename
   * The register name before and after the rename
+
+### The Vision
+We have some questions:
+- How do we do output.
+  * Lowkey don't have to worry about it now, since we test using Verilator
+  * The idea is either to use LEDs or output using GPIO pins
+- MMIO, what's that about? 
+- How to load memory onto it?
+  * How to access said memory
+  * Where are the bounds of the memory
+- How to load an elf binary
+  * do we even need headers if we're using very simple ch-ARM files?
+- What debug information do we need?
+  * reginfo (including PC)
+  * reservation stations
+  * reorder buffer
+  * instr at each stage of pipeline
+- *Once we can start loading things from some PC address, things become a little more trivial.*
 
 ## Glossary
 - [**EPCS**](https://community.intel.com/t5/FPGA-Wiki/EPCS-Guide/ta-p/735919): Flash memory which can be used to configure the FPGA. This is not the only device which can configure the FPGA, however, We typically want our board to use this, rather than HPS configuration. To use this mode, it must be selected using the MSEL switches on the board (MSEL[4:0] = 5'b10010). SRAM hardware images are typically uploaded to the EPCS device via Quartus or the command line. (manual p.12)
