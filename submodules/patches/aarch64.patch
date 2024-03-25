@@ -1,8 +1,27 @@
-diff --git i/gcc/config/aarch64/aarch64.md w/gcc/config/aarch64/aarch64.md
-index 385a669b9b3..846e8a6804f 100644
---- i/gcc/config/aarch64/aarch64.md
-+++ w/gcc/config/aarch64/aarch64.md
-@@ -584,56 +584,6 @@
+diff --git a/gcc/config/aarch64/aarch64.md b/gcc/config/aarch64/aarch64.md
+index 385a669b9b3..329ff269ae7 100644
+--- a/gcc/config/aarch64/aarch64.md
++++ b/gcc/config/aarch64/aarch64.md
+@@ -565,74 +565,25 @@
+ ;; Pipeline descriptions and scheduling
+ ;; -------------------------------------------------------------------
+ 
+-;; Processor types.
+-(include "aarch64-tune.md")
+ 
+ ;; Scheduling
+-(include "../arm/cortex-a53.md")
+-(include "../arm/cortex-a57.md")
+-(include "../arm/exynos-m1.md")
+-(include "falkor.md")
+-(include "saphira.md")
+-(include "thunderx.md")
+-(include "../arm/xgene1.md")
+-(include "thunderx2t99.md")
+-(include "tsv110.md")
+-(include "thunderx3t110.md")
+ 
+ ;; -------------------------------------------------------------------
  ;; Jumps and other miscellaneous insns
  ;; -------------------------------------------------------------------
  
@@ -26,10 +45,14 @@ index 385a669b9b3..846e8a6804f 100644
 -  [(unspec_volatile:DI [(match_operand 0 "aarch64_sysreg_string" "")
 -			(match_operand:DI 1 "register_operand" "rZ")]
 -		       UNSPEC_SYSREG_WDI)]
--  ""
++(define_insn "jump"
++  [(set (pc) (label_ref (match_operand 0 "" "")))]
+   ""
 -  "msr\t%0, %x1"
 -)
--
++  "b\\t%l0"
++  [(set_attr "type" "branch")])
+ 
 -(define_insn "aarch64_write_sysregti"
 - [(unspec_volatile:TI [(match_operand 0 "aarch64_sysreg_string" "")
 -		       (match_operand:TI 1 "register_operand" "r")]
@@ -37,10 +60,10 @@ index 385a669b9b3..846e8a6804f 100644
 - "TARGET_D128"
 - "msrr\t%x0, %x1, %H1"
 -)
--
--(define_insn "indirect_jump"
--  [(set (pc) (match_operand:DI 0 "register_operand" "r"))]
--  ""
+ 
+ (define_insn "indirect_jump"
+   [(set (pc) (match_operand:DI 0 "register_operand" "r"))]
+   ""
 -  {
 -    output_asm_insn ("br\\t%0", operands);
 -    return aarch64_sls_barrier (aarch64_harden_sls_retbr_p ());
@@ -55,11 +78,12 @@ index 385a669b9b3..846e8a6804f 100644
 -  "b\\t%l0"
 -  [(set_attr "type" "branch")]
 -)
--
++  "br\\t%0"
++  [(set_attr "type" "branch")])
+ 
  (define_expand "cbranch<mode>4"
    [(set (pc) (if_then_else (match_operator 0 "aarch64_comparison_operator"
- 			    [(match_operand:GPI 1 "register_operand")
-@@ -672,201 +622,6 @@
+@@ -672,201 +623,6 @@
    ""
    "")
  
@@ -261,7 +285,56 @@ index 385a669b9b3..846e8a6804f 100644
  (define_expand "casesi"
    [(match_operand:SI 0 "register_operand")	; Index
     (match_operand:SI 1 "const_int_operand")	; Lower bound
-@@ -1509,17 +1264,6 @@
+@@ -953,48 +709,6 @@
+   [(set_attr "type" "no_insn")]
+ )
+ 
+-(define_insn "prefetch"
+-  [(prefetch (match_operand:DI 0 "aarch64_prefetch_operand" "Dp")
+-            (match_operand:QI 1 "const_int_operand" "")
+-            (match_operand:QI 2 "const_int_operand" ""))]
+-  ""
+-  {
+-    const char * pftype[2][4] =
+-    {
+-      {"prfm\\tPLDL1STRM, %0",
+-       "prfm\\tPLDL3KEEP, %0",
+-       "prfm\\tPLDL2KEEP, %0",
+-       "prfm\\tPLDL1KEEP, %0"},
+-      {"prfm\\tPSTL1STRM, %0",
+-       "prfm\\tPSTL3KEEP, %0",
+-       "prfm\\tPSTL2KEEP, %0",
+-       "prfm\\tPSTL1KEEP, %0"},
+-    };
+-
+-    int locality = INTVAL (operands[2]);
+-
+-    gcc_assert (IN_RANGE (locality, 0, 3));
+-
+-    /* PRFM accepts the same addresses as a 64-bit LDR so wrap
+-       the address into a DImode MEM so that aarch64_print_operand knows
+-       how to print it.  */
+-    operands[0] = gen_rtx_MEM (DImode, operands[0]);
+-    return pftype[INTVAL(operands[1])][locality];
+-  }
+-  [(set_attr "type" "load_4")]
+-)
+-
+-(define_insn "aarch64_pldx"
+-  [(unspec [(match_operand 0 "" "")
+-	    (match_operand:DI 1 "aarch64_prefetch_operand" "Dp")] UNSPEC_PLDX)]
+-  ""
+-  {
+-    operands[1] = gen_rtx_MEM (DImode, operands[1]);
+-    return "prfm\\t%0, %1";
+-  }
+-  [(set_attr "type" "load_4")]
+-)
+-
+ (define_insn "trap"
+   [(trap_if (const_int 1) (const_int 8))]
+   ""
+@@ -1509,17 +1223,6 @@
    }
  )
  
@@ -279,7 +352,147 @@ index 385a669b9b3..846e8a6804f 100644
  ;; Match MOVK as a normal AND and IOR operation.
  (define_insn "aarch64_movk<mode>"
    [(set (match_operand:GPI 0 "register_operand" "=r")
-@@ -1962,302 +1706,6 @@
+@@ -1742,139 +1445,6 @@
+   }
+ )
+ 
+-(define_expand "aarch64_cpymemdi"
+-  [(parallel
+-     [(set (match_operand 2) (const_int 0))
+-      (clobber (match_dup 3))
+-      (clobber (match_dup 4))
+-      (clobber (reg:CC CC_REGNUM))
+-      (set (match_operand 0)
+-	   (unspec:BLK [(match_operand 1) (match_dup 2)] UNSPEC_CPYMEM))])]
+-  "TARGET_MOPS"
+-  {
+-    operands[3] = XEXP (operands[0], 0);
+-    operands[4] = XEXP (operands[1], 0);
+-  }
+-)
+-
+-(define_insn "*aarch64_cpymemdi"
+-  [(set (match_operand:DI 2 "register_operand" "+&r") (const_int 0))
+-   (clobber (match_operand:DI 0 "register_operand" "+&r"))
+-   (clobber (match_operand:DI 1 "register_operand" "+&r"))
+-   (clobber (reg:CC CC_REGNUM))
+-   (set (mem:BLK (match_dup 0))
+-        (unspec:BLK [(mem:BLK (match_dup 1)) (match_dup 2)] UNSPEC_CPYMEM))]
+-  "TARGET_MOPS"
+-  "cpyfp\t[%x0]!, [%x1]!, %x2!\;cpyfm\t[%x0]!, [%x1]!, %x2!\;cpyfe\t[%x0]!, [%x1]!, %x2!"
+-  [(set_attr "length" "12")]
+-)
+-
+-;; 0 is dst
+-;; 1 is src
+-;; 2 is size of copy in bytes
+-;; 3 is alignment
+-
+-(define_expand "cpymemdi"
+-  [(match_operand:BLK 0 "memory_operand")
+-   (match_operand:BLK 1 "memory_operand")
+-   (match_operand:DI 2 "general_operand")
+-   (match_operand:DI 3 "immediate_operand")]
+-   ""
+-{
+-  if (aarch64_expand_cpymem (operands, false))
+-    DONE;
+-  FAIL;
+-}
+-)
+-
+-(define_expand "aarch64_movmemdi"
+-  [(parallel
+-     [(set (match_operand 2) (const_int 0))
+-      (clobber (match_dup 3))
+-      (clobber (match_dup 4))
+-      (clobber (reg:CC CC_REGNUM))
+-      (set (match_operand 0)
+-	   (unspec:BLK [(match_operand 1) (match_dup 2)] UNSPEC_MOVMEM))])]
+-  "TARGET_MOPS"
+-  {
+-    operands[3] = XEXP (operands[0], 0);
+-    operands[4] = XEXP (operands[1], 0);
+-  }
+-)
+-
+-(define_insn "*aarch64_movmemdi"
+-  [(parallel [
+-   (set (match_operand:DI 2 "register_operand" "+&r") (const_int 0))
+-   (clobber (match_operand:DI 0 "register_operand" "+&r"))
+-   (clobber (match_operand:DI 1 "register_operand" "+&r"))
+-   (clobber (reg:CC CC_REGNUM))
+-   (set (mem:BLK (match_dup 0))
+-        (unspec:BLK [(mem:BLK (match_dup 1)) (match_dup 2)] UNSPEC_MOVMEM))])]
+- "TARGET_MOPS"
+- "cpyp\t[%x0]!, [%x1]!, %x2!\;cpym\t[%x0]!, [%x1]!, %x2!\;cpye\t[%x0]!, [%x1]!, %x2!"
+- [(set_attr "length" "12")]
+-)
+-
+-;; 0 is dst
+-;; 1 is src
+-;; 2 is size of copy in bytes
+-;; 3 is alignment
+-
+-(define_expand "movmemdi"
+-  [(match_operand:BLK 0 "memory_operand")
+-   (match_operand:BLK 1 "memory_operand")
+-   (match_operand:DI 2 "general_operand")
+-   (match_operand:DI 3 "immediate_operand")]
+-   ""
+-{
+-  if (aarch64_expand_cpymem (operands, true))
+-    DONE;
+-  FAIL;
+-}
+-)
+-
+-(define_expand "aarch64_setmemdi"
+-  [(parallel
+-     [(set (match_operand 2) (const_int 0))
+-      (clobber (match_dup 3))
+-      (clobber (reg:CC CC_REGNUM))
+-      (set (match_operand 0)
+-	   (unspec:BLK [(match_operand 1)
+-			(match_dup 2)] UNSPEC_SETMEM))])]
+-  "TARGET_MOPS"
+-  {
+-    operands[3] = XEXP (operands[0], 0);
+-  }
+-)
+-
+-(define_insn "*aarch64_setmemdi"
+-  [(set (match_operand:DI 2 "register_operand" "+&r") (const_int 0))
+-   (clobber (match_operand:DI 0 "register_operand" "+&r"))
+-   (clobber (reg:CC CC_REGNUM))
+-   (set (mem:BLK (match_dup 0))
+-        (unspec:BLK [(match_operand:QI 1 "aarch64_reg_or_zero" "rZ")
+-		     (match_dup 2)] UNSPEC_SETMEM))]
+-  "TARGET_MOPS"
+-  "setp\t[%x0]!, %x2!, %x1\;setm\t[%x0]!, %x2!, %x1\;sete\t[%x0]!, %x2!, %x1"
+-  [(set_attr "length" "12")]
+-)
+-
+-;; 0 is dst
+-;; 1 is val
+-;; 2 is size of copy in bytes
+-;; 3 is alignment
+-(define_expand "setmemdi"
+-  [(set (match_operand:BLK 0 "memory_operand")     ;; Dest
+-        (match_operand:QI  2 "nonmemory_operand")) ;; Value
+-   (use (match_operand:DI  1 "general_operand")) ;; Length
+-   (match_operand          3 "immediate_operand")] ;; Align
+- ""
+- {
+-  if (aarch64_expand_setmem (operands))
+-    DONE;
+-
+-  FAIL;
+-})
+ 
+ (define_insn "*load_pair_<ldst_sz>"
+   [(set (match_operand:GPI 0 "aarch64_ldp_reg_operand")
+@@ -1962,302 +1532,6 @@
    }
  )
  
@@ -582,7 +795,7 @@ index 385a669b9b3..846e8a6804f 100644
  ;; -------------------------------------------------------------------
  ;; Simple arithmetic
  ;; -------------------------------------------------------------------
-@@ -2319,22 +1767,6 @@
+@@ -2319,22 +1593,6 @@
    ;; The "alu_imm" types for INC/DEC and ADDVL/ADDPL are just placeholders.
  )
  
@@ -605,7 +818,7 @@ index 385a669b9b3..846e8a6804f 100644
  ;; If there's a free register, and we can load the constant with a
  ;; single instruction, do so.  This has a chance to improve scheduling.
  (define_peephole2
-@@ -2760,8 +2192,8 @@
+@@ -2760,8 +2018,8 @@
  (define_insn "*adds_<optab><ALLX:mode>_shift_<GPI:mode>"
    [(set (reg:CC_NZ CC_REGNUM)
  	(compare:CC_NZ
@@ -616,7 +829,7 @@ index 385a669b9b3..846e8a6804f 100644
  		     (match_operand:ALLX 1 "register_operand" "r"))
  		    (match_operand 2 "aarch64_imm3" "Ui3"))
  		   (match_operand:GPI 3 "register_operand" "rk"))
-@@ -2779,7 +2211,7 @@
+@@ -2779,7 +2037,7 @@
    [(set (reg:CC_NZ CC_REGNUM)
  	(compare:CC_NZ
  	 (minus:GPI (match_operand:GPI 1 "register_operand" "rk")
@@ -625,7 +838,7 @@ index 385a669b9b3..846e8a6804f 100644
  		     (ANY_EXTEND:GPI
  		      (match_operand:ALLX 2 "register_operand" "r"))
  		     (match_operand 3 "aarch64_imm3" "Ui3")))
-@@ -4310,102 +3742,6 @@
+@@ -4310,102 +3568,6 @@
    [(set_attr "type" "csel")]
  )
  
@@ -728,7 +941,235 @@ index 385a669b9b3..846e8a6804f 100644
  ;; There are two canonical forms for `cmp ? -1 : a`.
  ;; This is the second form and is here to help combine.
  ;; Support `-(cmp) | a` into `cmp ? -1 : a` to be canonical in the backend.
-@@ -8040,196 +7376,6 @@
+@@ -5278,105 +4440,6 @@
+   [(set_attr "type" "logics_shift_imm")]
+ )
+ 
+-(define_insn "clz<mode>2"
+-  [(set (match_operand:GPI 0 "register_operand" "=r")
+-	(clz:GPI (match_operand:GPI 1 "register_operand" "r")))]
+-  ""
+-  "clz\\t%<w>0, %<w>1"
+-  [(set_attr "type" "clz")]
+-)
+-
+-(define_expand "ffs<mode>2"
+-  [(match_operand:GPI 0 "register_operand")
+-   (match_operand:GPI 1 "register_operand")]
+-  ""
+-  {
+-    rtx ccreg = aarch64_gen_compare_reg (EQ, operands[1], const0_rtx);
+-    rtx x = gen_rtx_NE (VOIDmode, ccreg, const0_rtx);
+-
+-    emit_insn (gen_aarch64_rbit (<MODE>mode, operands[0], operands[1]));
+-    emit_insn (gen_clz<mode>2 (operands[0], operands[0]));
+-    emit_insn (gen_csinc3<mode>_insn (operands[0], x, operands[0], const0_rtx));
+-    DONE;
+-  }
+-)
+-
+-(define_insn "*aarch64_popcount<mode>2_cssc_insn"
+-  [(set (match_operand:GPI 0 "register_operand" "=r")
+-        (popcount:GPI (match_operand:GPI 1 "register_operand" "r")))]
+-  "TARGET_CSSC"
+-  "cnt\\t%<w>0, %<w>1"
+-  [(set_attr "type" "clz")]
+-)
+-
+-;; The CSSC instructions can do popcount in the GP registers directly through
+-;; CNT.  If it is not available then we can use CNT on the Advanced SIMD side
+-;; through:
+-;; MOV	v.1d, x0
+-;; CNT	v1.8b, v.8b
+-;; ADDV b2, v1.8b
+-;; MOV	w0, v2.b[0]
+-
+-(define_expand "popcount<mode>2"
+-  [(set (match_operand:GPI 0 "register_operand")
+-	(popcount:GPI (match_operand:GPI 1 "register_operand")))]
+-  "TARGET_CSSC || TARGET_SIMD"
+-{
+-  if (!TARGET_CSSC)
+-    {
+-      rtx v = gen_reg_rtx (V8QImode);
+-      rtx v1 = gen_reg_rtx (V8QImode);
+-      rtx in = operands[1];
+-      rtx out = operands[0];
+-      if(<MODE>mode == SImode)
+-	{
+-	  rtx tmp;
+-	  tmp = gen_reg_rtx (DImode);
+-	  /* If we have SImode, zero extend to DImode, pop count does
+-	     not change if we have extra zeros. */
+-	  emit_insn (gen_zero_extendsidi2 (tmp, in));
+-	  in = tmp;
+-	}
+-      emit_move_insn (v, gen_lowpart (V8QImode, in));
+-      emit_insn (gen_popcountv8qi2 (v1, v));
+-      emit_insn (gen_aarch64_zero_extend<mode>_reduc_plus_v8qi (out, v1));
+-      DONE;
+-    }
+-})
+-
+-(define_insn "clrsb<mode>2"
+-  [(set (match_operand:GPI 0 "register_operand" "=r")
+-        (clrsb:GPI (match_operand:GPI 1 "register_operand" "r")))]
+-  ""
+-  "cls\\t%<w>0, %<w>1"
+-  [(set_attr "type" "clz")]
+-)
+-
+-(define_insn "@aarch64_rbit<mode>"
+-  [(set (match_operand:GPI 0 "register_operand" "=r")
+-	(unspec:GPI [(match_operand:GPI 1 "register_operand" "r")] UNSPEC_RBIT))]
+-  ""
+-  "rbit\\t%<w>0, %<w>1"
+-  [(set_attr "type" "rbit")]
+-)
+-
+-;; Split after reload into RBIT + CLZ.  Since RBIT is represented as an UNSPEC
+-;; it is unlikely to fold with any other operation, so keep this as a CTZ
+-;; expression and split after reload to enable scheduling them apart if
+-;; needed.  For TARGET_CSSC we have a single CTZ instruction that can do this.
+-
+-(define_insn_and_split "ctz<mode>2"
+- [(set (match_operand:GPI           0 "register_operand" "=r")
+-       (ctz:GPI (match_operand:GPI  1 "register_operand" "r")))]
+-  ""
+-  { return TARGET_CSSC ? "ctz\\t%<w>0, %<w>1" : "#"; }
+-  "reload_completed && !TARGET_CSSC"
+-  [(const_int 0)]
+-  "
+-  emit_insn (gen_aarch64_rbit (<MODE>mode, operands[0], operands[1]));
+-  emit_insn (gen_clz<mode>2 (operands[0], operands[0]));
+-  DONE;
+-")
+ 
+ (define_insn "*and<mode>_compare0"
+   [(set (reg:CC_Z CC_REGNUM)
+@@ -7607,48 +6670,6 @@
+   [(set_attr "length" "0")]
+ )
+ 
+-(define_insn "aarch64_fjcvtzs"
+-  [(set (match_operand:SI 0 "register_operand" "=r")
+-	(unspec:SI [(match_operand:DF 1 "register_operand" "w")]
+-		   UNSPEC_FJCVTZS))
+-   (clobber (reg:CC CC_REGNUM))]
+-  "TARGET_JSCVT"
+-  "fjcvtzs\\t%w0, %d1"
+-  [(set_attr "type" "f_cvtf2i")]
+-)
+-
+-;; Pointer authentication patterns are always provided.  In architecture
+-;; revisions prior to ARMv8.3-A these HINT instructions operate as NOPs.
+-;; This lets the user write portable software which authenticates pointers
+-;; when run on something which implements ARMv8.3-A, and which runs
+-;; correctly, but does not authenticate pointers, where ARMv8.3-A is not
+-;; implemented.
+-
+-;; Signing/Authenticating R30 using SP as the salt.
+-
+-(define_insn "<pauth_mnem_prefix>sp"
+-  [(set (reg:DI R30_REGNUM)
+-	(unspec:DI [(reg:DI R30_REGNUM) (reg:DI SP_REGNUM)] PAUTH_LR_SP))]
+-  ""
+-  "hint\t<pauth_hint_num> // <pauth_mnem_prefix>sp";
+-)
+-
+-;; Signing/Authenticating X17 using X16 as the salt.
+-
+-(define_insn "<pauth_mnem_prefix>1716"
+-  [(set (reg:DI R17_REGNUM)
+-	(unspec:DI [(reg:DI R17_REGNUM) (reg:DI R16_REGNUM)] PAUTH_17_16))]
+-  ""
+-  "hint\t<pauth_hint_num> // <pauth_mnem_prefix>1716";
+-)
+-
+-;; Stripping the signature in R30.
+-
+-(define_insn "xpaclri"
+-  [(set (reg:DI R30_REGNUM) (unspec:DI [(reg:DI R30_REGNUM)] UNSPEC_XPACLRI))]
+-  ""
+-  "hint\t7 // xpaclri"
+-)
+ 
+ ;; Save X30 in the X18-based POST_INC stack (consistent with clang).
+ (define_expand "scs_push"
+@@ -7820,13 +6841,6 @@
+   "msr\\t<fpscr_name>, %0"
+   [(set_attr "type" "mrs")])
+ 
+-;; Read into the Floating-point Status or Control Register.
+-(define_insn "@aarch64_get_<fpscr_name><GPI:mode>"
+-  [(set (match_operand:GPI 0 "register_operand" "=r")
+-        (unspec_volatile:GPI [(const_int 0)] GET_FPSCR))]
+-  ""
+-  "mrs\\t%0, <fpscr_name>"
+-  [(set_attr "type" "mrs")])
+ 
+ ;; Define the subtract-one-and-jump insns so loop.c
+ ;; knows what to generate.
+@@ -7880,58 +6894,9 @@
+   [(set_attr "type" "csel")]
+ )
+ 
+-;; Like speculation_tracker, but track the inverse condition.
+-(define_insn "speculation_tracker_rev"
+-  [(set (reg:DI SPECULATION_TRACKER_REGNUM)
+-	(unspec:DI [(reg:DI SPECULATION_TRACKER_REGNUM) (match_operand 0)]
+-	 UNSPEC_SPECULATION_TRACKER_REV))]
+-  ""
+-  {
+-    operands[1] = gen_rtx_REG (DImode, SPECULATION_TRACKER_REGNUM);
+-    output_asm_insn ("csel\\t%1, %1, xzr, %M0", operands);
+-    return "";
+-  }
+-  [(set_attr "type" "csel")]
+-)
+-
+-;; BTI <target> instructions
+-(define_insn "bti_noarg"
+-  [(unspec_volatile [(const_int 0)] UNSPECV_BTI_NOARG)]
+-  ""
+-  "hint\t32 // bti"
+-  [(set_attr "type" "no_insn")]
+-)
+-
+-(define_insn "bti_c"
+-  [(unspec_volatile [(const_int 0)] UNSPECV_BTI_C)]
+-  ""
+-  "hint\t34 // bti c"
+-  [(set_attr "type" "no_insn")]
+-)
+-
+-(define_insn "bti_j"
+-  [(unspec_volatile [(const_int 0)] UNSPECV_BTI_J)]
+-  ""
+-  "hint\t36 // bti j"
+-  [(set_attr "type" "no_insn")]
+-)
+ 
+-(define_insn "bti_jc"
+-  [(unspec_volatile [(const_int 0)] UNSPECV_BTI_JC)]
+-  ""
+-  "hint\t38 // bti jc"
+-  [(set_attr "type" "no_insn")]
+-)
+ 
+ ;; Hard speculation barrier.
+-(define_insn "speculation_barrier"
+-  [(unspec_volatile [(const_int 0)] UNSPECV_SPECULATION_BARRIER)]
+-  ""
+-  "isb\;dsb\\tsy"
+-  [(set_attr "length" "8")
+-   (set_attr "type" "block")
+-   (set_attr "speculation_barrier" "true")]
+-)
+ 
+ ;; Support for __builtin_speculation_safe_value when we have speculation
+ ;; tracking enabled.  Use the speculation tracker to decide whether to
+@@ -8040,196 +7005,6 @@
    [(set_attr "type" "f_rint<stype>")]
  )
  
@@ -925,3 +1366,39 @@ index 385a669b9b3..846e8a6804f 100644
  (define_insn "patchable_area"
    [(unspec_volatile [(match_operand 0 "const_int_operand")
  		     (match_operand 1 "const_int_operand")]
+@@ -8243,35 +7018,6 @@
+   [(set (attr "length") (symbol_ref "INTVAL (operands[0])"))]
+ )
+ 
+-(define_insn "aarch64_save_nzcv"
+-  [(set (match_operand:DI 0 "register_operand" "=r")
+-	(unspec:DI [(reg:CC CC_REGNUM)] UNSPEC_SAVE_NZCV))]
+-  ""
+-  "mrs\t%0, nzcv"
+-)
+-
+-(define_insn "aarch64_restore_nzcv"
+-  [(set (reg:CC CC_REGNUM)
+-	(unspec:CC [(match_operand:DI 0 "register_operand" "r")]
+-		   UNSPEC_RESTORE_NZCV))]
+-  ""
+-  "msr\tnzcv, %0"
+-)
+-
+-;; AdvSIMD Stuff
+-(include "aarch64-simd.md")
+-
+-;; Atomic Operations
+-(include "atomics.md")
+ 
+ ;; ldp/stp peephole patterns
+ (include "aarch64-ldpstp.md")
+-
+-;; SVE.
+-(include "aarch64-sve.md")
+-
+-;; SVE2.
+-(include "aarch64-sve2.md")
+-
+-;; SME and extensions
+-(include "aarch64-sme.md")
