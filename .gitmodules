@@ -1,4 +1,8 @@
 [submodule "submodules/gcc"]
 	path = submodules/gcc
 	url = https://github.com/gcc-mirror/gcc
-	branch = master
+  branch = master
+
+[submodule "submodules/llvm-project"]
+	path = submodules/llvm-project
+	url = https://github.com/llvm/llvm-project.git
