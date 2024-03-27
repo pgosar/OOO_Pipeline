@@ -20,7 +20,7 @@ def format_B1 : Format<7>;
 def format_B2 : Format<8>;
 def format_B3 : Format<9>;
 
-def S  : Format<10>;
+def format_S  : Format<10>;
 
 // Generic chARMv3 instruction format 
 // Note (Namish): is it worth codifying the difference between pseudo instructions 
