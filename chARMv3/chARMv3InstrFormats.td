@@ -50,7 +50,7 @@ class chARMInst<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinC
 // M Format instruction class in chARMv3 : 
 //===----------------------------------------------------------------------===//
 class M<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass itin>
-          : chARMInst<oops, iops, asmstr, pattern, itin, format_RI>
+          : chARMInst<oops, iops, asmstr, pattern, itin, format_M>
 {
     bits<11> op;
     bits<9> simm9;
@@ -68,7 +68,7 @@ class M<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass iti
 // M2 Format instruction class in chARMv3 : 
 //===----------------------------------------------------------------------===//
 class M2<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass itin>
-          : chARMInst<oops, iops, asmstr, pattern, itin, format_RI>
+          : chARMInst<oops, iops, asmstr, pattern, itin, format_M2>
 {
     bits<10> op;
     bits<9> simm7;
@@ -87,7 +87,7 @@ class M2<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass it
 // I1 Format instruction class in chARMv3 : 
 //===----------------------------------------------------------------------===//
 class I1<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass itin>
-          : chARMInst<oops, iops, asmstr, pattern, itin, format_RI>
+          : chARMInst<oops, iops, asmstr, pattern, itin, format_I1>
 {
     bits<9> op;
     bits<2> hw;
@@ -104,7 +104,7 @@ class I1<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass it
 // I2 Format instruction class in chARMv3 : 
 //===----------------------------------------------------------------------===//
 class I2<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass itin>
-          : chARMInst<oops, iops, asmstr, pattern, itin, format_RI>
+          : chARMInst<oops, iops, asmstr, pattern, itin, format_I2>
 {
     bits<8> op;
     bits<19> simm19;
@@ -119,7 +119,7 @@ class I2<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass it
 // RC Format instruction class in chARMv3 : 
 //===----------------------------------------------------------------------===//
 class RC<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass itin>
-          : chARMInst<oops, iops, asmstr, pattern, itin, format_RI>
+          : chARMInst<oops, iops, asmstr, pattern, itin, format_RC>
 {
     bits<8> op;
     bits<5> Rm;
@@ -140,7 +140,7 @@ class RC<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass it
 // RR Format instruction class in chARMv3 : 
 //===----------------------------------------------------------------------===//
 class RR<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass itin>
-          : chARMInst<oops, iops, asmstr, pattern, itin, format_RI>
+          : chARMInst<oops, iops, asmstr, pattern, itin, format_RR>
 {
     bits<8> op;
     bits<5> Rm;
@@ -176,7 +176,7 @@ class RI<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass it
 // B1 Format instruction class in chARMv3 : 
 //===----------------------------------------------------------------------===//
 class B1<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass itin>
-          : chARMInst<oops, iops, asmstr, pattern, itin, format_RI>
+          : chARMInst<oops, iops, asmstr, pattern, itin, format_B1>
 {
     bits<6> op;
     bits<26> simm26;
@@ -189,7 +189,7 @@ class B1<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass it
 // B2 Format instruction class in chARMv3 : 
 //===----------------------------------------------------------------------===//
 class B2<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass itin>
-          : chARMInst<oops, iops, asmstr, pattern, itin, format_RI>
+          : chARMInst<oops, iops, asmstr, pattern, itin, format_B2>
 {
     bits<8> op;
     bits<19> simm19;
@@ -205,7 +205,7 @@ class B2<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass it
 // B3 Format instruction class in chARMv3 : 
 //===----------------------------------------------------------------------===//
 class B3<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass itin>
-          : chARMInst<oops, iops, asmstr, pattern, itin, format_RI>
+          : chARMInst<oops, iops, asmstr, pattern, itin, format_B3>
 {
     bits<11> op;
     bits<5> Rn;
@@ -220,7 +220,7 @@ class B3<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass it
 // S Format instruction class in chARMv3 : 
 //===----------------------------------------------------------------------===//
 class S<dag oops, dag iops, string asmstr, list<dag> pattern, InstrItinClass itin>
-          : chARMInst<oops, iops, asmstr, pattern, itin, format_RI>
+          : chARMInst<oops, iops, asmstr, pattern, itin, format_S>
 {
     bits<11> op;
 
