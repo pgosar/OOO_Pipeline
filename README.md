@@ -53,6 +53,10 @@ Calculating these expected states may need to be done by hand (ie. on paper, in 
 It would be useful to do this for at least one or two fairly complex test cases.
 
 ## The Testbench
+**2024-03-29 (Nate):** Me and Kavya decided that the best way to implement a testbench is by using the HPS on the board itself. We can connect to it with the following command: `screen /dev/tty 115200`, **BUT** you must replace `/dev/tty` with the name of the connected tty device. In my case this is `/dev/ttyACM0`. This will be different in every case you can find the latest USB connected using either the `lsusb` command or the `dmesg | grep 'tty'` command.
+
+From here, we have access to a Linux environment which also has direct access to the FPGA ports. Our intention is to create a program which loads in ELF files, extracts the binary instructions from them, and sends them to the FPGA. It then waits for a response back from the FPGA and will print out the results.
+
 The testbench should ideally provide the following useful information every cycle to be able to debug Tomosulo and correctness:
 - GPR contents
 - Hardware register contents
