@@ -33,15 +33,15 @@ http://atgreen.github.io/ggx/
 ## Testcases
 Fundamentally, a test requires you to predict the correct result, and then compare the correct result to the acquired result.
 
-We need to test for both correctness of our program result, and for the correct implementation of Tomosulo. Both of these can be incorrect independently.
+We need to test for both correctness of our program result, and for the correct implementation of Tomasulo. Both of these can be incorrect independently.
 
 ### Basic Functionality Tests
 The easiest way to test for correctness is to run a testcase twice. Once on an actual ARM machine, and the other inside of our emulator. We then only need to check th results.
 
-The easiest way to check for Tomosulo would be to compare the cycle count with no Tomosulo implemented with the cycle count with Tomosulo implemented. If there are hazards in the assembly, Tomosulo should always result in some speedup. If there is no speedup, then our tomosulo is not working.
+The easiest way to check for Tomasulo would be to compare the cycle count with no Tomasulo implemented with the cycle count with Tomasulo implemented. If there are hazards in the assembly, Tomasulo should always result in some speedup. If there is no speedup, then our tomosulo is not working.
 
 ### Useful Unit Tests
-Unit tests for Tomosulo would provide useful information about its functionality. Ideally, we should create unique tests for each hazard to ensure that it actually works. We can begin with 4 unique test cases for each type of hazard (RAR, RAW, WAR, and WAW).
+Unit tests for Tomasulo would provide useful information about its functionality. Ideally, we should create unique tests for each hazard to ensure that it actually works. We can begin with 4 unique test cases for each type of hazard (RAR, RAW, WAR, and WAW).
 
 Given that we have a 5 stage pipeline and 41 possible instructions (each with roughly 3 possible operand orderings), we have (41^3)^5 possible orderings. 
 
@@ -58,7 +58,7 @@ Furthermore, loads and stores in our assembly assembly language are relying on v
 
 From here, we have access to a Linux environment which also has direct access to the FPGA ports. Our intention is to create a program which loads in ELF files, extracts the binary instructions from them, and sends them to the FPGA. It then waits for a response back from the FPGA and will print out the results.
 
-The testbench should ideally provide the following useful information every cycle to be able to debug Tomosulo and correctness:
+The testbench should ideally provide the following useful information every cycle to be able to debug Tomasulo and correctness:
 - GPR contents
 - Hardware register contents
 - Information about renamings such as:
