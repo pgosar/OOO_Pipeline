@@ -46,10 +46,8 @@
         sub x0, x0, #1
         ret
 
-    
-
     .size   binary_search, .-binary_search
-    // ... and ends with the .size above this line.
+
 
 
     .align  2
@@ -58,7 +56,6 @@
     .type   is_same_tree, %function
 
     //This function goes through two trees and check if the values are the same
-
 
     is_same_tree:
         stp     x29, x30, [sp, -32]!
@@ -102,7 +99,6 @@
         
         cbnz   x0, .is_true
         
-        
     .is_false:
         movz x0, #0
         ldur  x9, [sp, #16]
@@ -128,7 +124,5 @@
         b.eq .is_true
         movz x0, #0
         b.ne .is_false
-       
 
     .size   is_same_tree, .-is_same_tree
-    // ... and ends with the .size above this line.
