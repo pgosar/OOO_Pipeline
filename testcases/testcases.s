@@ -1,8 +1,6 @@
     .arch armv8-a
     .text
-    // Code for all functions go here.
 
-    // ***** WEEK 1 deliverables *****
     .align  2
     .p2align 3,,7
     .global binary_search
