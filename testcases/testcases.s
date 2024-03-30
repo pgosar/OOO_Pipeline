@@ -73,7 +73,7 @@
         movz  x9, #0
         add   x9, x9, x0
         orr   x0, x1, x0
-        cbz   x0, .is_true //if both are null return true
+        cbz   x0, .is_true // will also return true if both are null
 
         movz  x10, #0
         add   x10, x10, x1 // move x0 t0 x10
