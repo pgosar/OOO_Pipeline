@@ -8,6 +8,8 @@
     .global binary_search
     .type   binary_search, %function
 
+    //This function goes through the array sorted array and performs binary search to find the target
+
     binary_search:
         movz x3, #0 // initialization of left
         movz x4, #0 // initialization of right
@@ -32,6 +34,7 @@
         b .loop
 
     .returnMid:
+        //once we find the target return
         sub x0, x0, x0
         add x0, x0, x5
         ret
@@ -55,6 +58,9 @@
     .p2align 3,,7
     .global is_same_tree
     .type   is_same_tree, %function
+
+    //This function goes through two trees and check if the values are the same
+
 
     is_same_tree:
         stp     x29, x30, [sp, -32]!
