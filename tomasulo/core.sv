@@ -53,7 +53,7 @@ typedef enum logic[5:0] {
     hlt    = 6'b101010   
 } opcodes;
 
-module decode(
+module instruction_parser(
     input logic [31:0] insnbits,
     input logic clk_in,
     output logic [5:0] opcode
