@@ -165,3 +165,93 @@ always_ff @(posedge clk_in) begin : main_controller
 end
 
 endmodule
+
+
+
+module tomasulo_execute (
+    input clk,                 // Clock signal
+    input reset,               // Reset signal
+    input [5:0] opcode,        // Operation code are we changing it to ALUop like se
+    input [4:0] src1,           // Source register 1
+    input [4:0] src2,           // Source register 2
+    input [6:0] imm,           // Immediate value
+    input [1:0] dst_res_station,       // Destination reservation station
+    input ready_or_not,             // Reservation station busy signal
+    input [1:0] dest,          // Destination register
+    input [31:0] result_in,    // Input result from functional unit
+    output reg busy,           // Execute stage busy signal
+    output reg [31:0] result_out, // Output result
+    output reg write_enable        // Write enable for reservation station
+);
+
+// Define states for the execution stage
+parameter S_IDLE = 2'b00;
+parameter S_EXECUTING = 2'b01;
+
+// Internal signals
+reg [1:0] state;
+reg [63:0] result;
+
+always @ (posedge clk or posedge reset) begin
+    if (reset) begin
+        state <= S_IDLE;
+        result <= 32'b0;
+        busy <= 1'b0;
+    end
+    else begin
+        case (state)
+            S_IDLE: begin
+                // Check if reservation station is available
+                if (!ready_or_not) begin
+                    // Start execution
+                    state <= S_EXECUTING;
+                    busy <= 1'b1;
+                    // Perform operation based on opcode
+                    
+                end
+            end
+            S_EXECUTING: begin
+                // Wait for functional unit result
+                
+            end
+        endcase
+    end
+end
+
+endmodule
+
+
+module regfile(
+    input wire [4:0] read_reg1, // Input read register 1 index
+    input wire [4:0] read_reg2, // Input read register 2 index
+    input wire [4:0] write_reg, // Input write register index
+    input wire [31:0] write_data, // Input data to be written
+    input wire write_enable, // Write enable signal
+    input wire reset,
+    input wire clk,
+    output reg [31:0] read_data1, // Output read data 1
+    output reg [31:0] read_data2 // Output read data 2
+);
+
+reg [31:0] registers [31:0]; // Array of 32 32-bit registers
+integer i;
+always @(posedge clk or negedge reset) begin
+    if (!reset) begin
+        // Reset all registers to zero
+        for (i = 0; i < 32; i = i + 1) begin
+            registers[i] <= 32'h00000000;
+        end
+    end
+    else begin
+        // Read data from registers
+        read_data1 <= registers[read_reg1];
+        read_data2 <= registers[read_reg2];
+        
+        // Write data to register if write_enable is high
+        if (write_enable) begin
+            registers[write_reg] <= write_data;
+        end
+    end
+end
+
+endmodule
