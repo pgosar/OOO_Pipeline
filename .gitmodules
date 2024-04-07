@@ -5,4 +5,5 @@
 
 [submodule "submodules/llvm-project"]
 	path = submodules/llvm-project
-	url = https://github.com/llvm/llvm-project.git
+	url = https://github.com/jwong101/llvm-mirror.git
+	branch = main
