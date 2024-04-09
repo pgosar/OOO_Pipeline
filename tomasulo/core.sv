@@ -202,8 +202,8 @@ module ArithmeticExecuteUnit(
 );
 
 
-reg [2:0] currentstate, nextstate;
-reg [63:0] result_reg;
+logic [2:0] currentstate, nextstate;
+logic [63:0] result_reg;
 
 
 always_ff @( posedge clk ) begin : main_switch
@@ -297,11 +297,11 @@ module regfile(
     input logic write_enable, // Write enable signal
     input logic reset,
     input logic clk,
-    output reg [63:0] read_data1, // Output read data 1
-    output reg [63:0] read_data2 // Output read data 2
+    output logic [63:0] read_data1, // Output read data 1
+    output logic [63:0] read_data2 // Output read data 2
 );
 
-reg [63:0] registers [63:0]; // Array of 32 32-bit registers
+logic [63:0] registers [63:0]; // Array of 32 32-bit registers
 integer i;
 always @(posedge clk or negedge reset) begin
     if (!reset) begin
