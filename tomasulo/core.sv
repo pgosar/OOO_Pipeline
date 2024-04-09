@@ -53,6 +53,28 @@ typedef enum logic[5:0] {
     hlt    = 6'b101010   
 } opcodes;
 
+typedef enum logic [4:0] {
+    PLUS_OP,    // vala + (valb << valhw)
+    MINUS_OP,   // vala - (valb << valhw)
+    INV_OP,     // vala | (~valb)
+    OR_OP,      // vala | valb
+    EOR_OP,     // vala ^ valb
+    AND_OP,     // vala & valb
+    MOV_OP,     // vala | (valb << valhw)
+    LSL_OP,     // vala << (valb & 0x3FUL)
+    LSR_OP,     // vala >>L (valb & 0x3FUL)
+    ASR_OP,     // vala >>A (valb & 0x3FUL)
+    PASS_A_OP,  // vala
+    CSEL_OP,    
+    CSINV_OP,   
+    CSINC_OP,   
+    CSNEG_OP,   
+    CBZ_OP,     
+    CBNZ_OP,   
+    ERROR_OP
+} alu_op_t;
+
+
 module instruction_parser(
     input logic [31:0] insnbits,
     input logic clk_in,
@@ -167,79 +189,125 @@ end
 endmodule
 
 
-
-module tomasulo_execute (
-    input clk,                 // Clock signal
-    input reset,               // Reset signal
-    input [5:0] opcode,        // Operation code are we changing it to ALUop like se
-    input [4:0] src1,           // Source register 1
-    input [4:0] src2,           // Source register 2
-    input [6:0] imm,           // Immediate value
-    input [1:0] dst_res_station,       // Destination reservation station
-    input ready_or_not,             // Reservation station busy signal
-    input [1:0] dest,          // Destination register
-    input [31:0] result_in,    // Input result from functional unit
-    output reg busy,           // Execute stage busy signal
-    output reg [31:0] result_out, // Output result
-    output reg write_enable        // Write enable for reservation station
+module ArithmeticExecuteUnit(
+    input logic clk,       // Clock
+    input logic rst,       // Reset
+    input logic start,     // Start signal to initiate the operation
+    input logic [4:0] ALUop,
+    input logic [63:0] alu_vala,
+    input logic [63:0] alu_valb,
+    input logic [5:0] alu_valhw,
+    output logic [63:0] res,
+    output logic done    // Done signal indicating operation completion
 );
 
-// Define states for the execution stage
-parameter S_IDLE = 2'b00;
-parameter S_EXECUTING = 2'b01;
 
-// Internal signals
-reg [1:0] state;
-reg [63:0] result;
+reg [2:0] currentstate, nextstate;
+reg [63:0] result_reg;
 
-always @ (posedge clk or posedge reset) begin
-    if (reset) begin
-        state <= S_IDLE;
-        result <= 32'b0;
-        busy <= 1'b0;
+
+always_ff @( posedge clk ) begin : main_switch
+        if (!rst) begin
+            result_reg <= 0;
+            currentstate <= 0;
+            done <= 0;
+        end else
+        begin
+            case (currentstate)
+                S0: begin : S0_case
+                    case(ALUop)
+                        PLUS_OP: result_reg <= alu_vala + alu_valb;
+                        MINUS_OP: result_reg <= alu_vala - alu_valb;
+                        INV_OP: result_reg <= alu_vala | (~alu_valb);
+                        OR_OP: result_reg <= alu_vala | alu_valb;
+                        EOR_OP: result_reg <= alu_vala ^ alu_valb;
+                        AND_OP: result_reg <= alu_vala & alu_valb;
+                        MOV_OP: result_reg <= alu_vala | (alu_valb << alu_valhw);
+                        CSNEG_OP: result_reg <= ~alu_valb + 1;
+                        CSINC_OP: result_reg <= alu_valb + 1;
+                        CSINV_OP: result_reg <= ~alu_valb;
+                        CSEL_OP: result_reg <= alu_valb;
+                        PASS_A_OP: result_reg <= alu_vala;
+                        default: result_reg <= 64'b0; // Default behavior, assuming no operation
+                    endcase
+                    nextstate <= S1;
+                end : S0_case
+                S1 : begin : S1_case
+                    res <= result_reg;
+                end : S1_case
+                default: ;
+            endcase
+        end
+    end : main_switch
+
+
+
+
+endmodule
+
+module ubfm_module(
+    input logic [63:0] i_val_a,
+    input logic clk,
+    input logic rst,
+    input logic [5:0] imms,
+    input logic [5:0] immr,
+    output logic [63:0] res
+    );
+
+always_ff @(posedge clk) begin : main_switch
+    if (!rst) begin
+        res <= 0;
+    end else if (imms >= immr) begin
+        res = (i_val_a >> immr) & ((1 << (imms - immr + 1)) - 1); 
+    end else begin
+        res = (i_val_a & ((1 << (imms + 1)) - 1)) << immr;
     end
-    else begin
-        case (state)
-            S_IDLE: begin
-                // Check if reservation station is available
-                if (!ready_or_not) begin
-                    // Start execution
-                    state <= S_EXECUTING;
-                    busy <= 1'b1;
-                    // Perform operation based on opcode
-                    
-                end
-            end
-            S_EXECUTING: begin
-                // Wait for functional unit result
-                
-            end
-        endcase
+end
+
+endmodule
+
+module sbfm_module(
+    input logic signed [63:0] val_a,
+    input logic clk,
+    input logic rst,
+    input logic signed [5:0] imms,
+    input logic signed [5:0] immr,
+    output logic signed [63:0] res
+    );
+
+always_ff @(posedge clk) begin : main_switch
+    if (!rst) begin
+        res <= 0;
+    end else if (imms >= immr) begin
+        res = (val_a >> immr) & ((1 << (imms - immr + 1)) - 1); 
+    end else begin
+        res = (val_a & ((1 << (imms + 1)) - 1)) << immr;
     end
 end
 
 endmodule
 
 
+
 module regfile(
-    input wire [4:0] read_reg1, // Input read register 1 index
-    input wire [4:0] read_reg2, // Input read register 2 index
-    input wire [4:0] write_reg, // Input write register index
-    input wire [31:0] write_data, // Input data to be written
-    input wire write_enable, // Write enable signal
-    input wire reset,
-    input wire clk,
-    output reg [31:0] read_data1, // Output read data 1
-    output reg [31:0] read_data2 // Output read data 2
+    input logic [4:0] read_reg1, // Input read register 1 index
+    input logic [4:0] read_reg2, // Input read register 2 index
+    input logic [4:0] write_reg, // Input write register index
+    input logic [63:0] write_data, // Input data to be written
+    input logic write_enable, // Write enable signal
+    input logic reset,
+    input logic clk,
+    output reg [63:0] read_data1, // Output read data 1
+    output reg [63:0] read_data2 // Output read data 2
 );
 
-reg [31:0] registers [31:0]; // Array of 32 32-bit registers
+reg [63:0] registers [63:0]; // Array of 32 32-bit registers
 integer i;
 always @(posedge clk or negedge reset) begin
     if (!reset) begin
         // Reset all registers to zero
         for (i = 0; i < 32; i = i + 1) begin
-            registers[i] <= 32'h00000000;
+            registers[i] <= 64'h0000000000000000;
         end
     end
     else begin
