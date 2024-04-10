@@ -64,7 +64,7 @@ module ArithmeticExecuteUnit_tb;
     logic [63:0] alu_valb;
     logic [5:0] alu_valhw;
 
-\    logic [63:0] res;
+    logic [63:0] res;
     logic done;
 
     ArithmeticExecuteUnit dut (
@@ -80,7 +80,7 @@ module ArithmeticExecuteUnit_tb;
     );
 
     initial begin
-        clk = 0;
+        clk <= 0;
         forever #5 clk = ~clk; // 100 MHz clock
     end
 
@@ -89,21 +89,21 @@ module ArithmeticExecuteUnit_tb;
         $dumpvars(0, ArithmeticExecuteUnit_tb); // Dump all signals
 
         // Reset
-        // rst = 1;
-        // #10;
+        rst = 1;
+        #10;
         rst = 0;
-        // #10;
+        #10;
 
         // Test case 1 - posedge clock
-        @(posedge clk);
+        @(negedge clk);
         start = 1;
         ALUop = 3'b000; 
         alu_vala = 64'h0000000000000001; 
         alu_valb = 64'h0000000000000001; 
         alu_valhw = 6'h00;
-        @(posedge clk);
+        #10
         start = 0;
-        @(posedge clk);
+        #10
         if (res !== 64'h0000000000000002) begin
             $display("Test case 1 failed. Expected: 64'h0000000000000002, Got: %h", res);
             $finish;

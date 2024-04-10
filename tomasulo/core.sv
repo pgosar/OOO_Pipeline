@@ -197,7 +197,12 @@ module ArithmeticExecuteUnit(
     input logic [63:0] alu_vala,
     input logic [63:0] alu_valb,
     input logic [5:0] alu_valhw,
+    input logic set_CC,
+    input logic [4:0] cond,
+    output logic cond_val,
     output logic [63:0] res,
+    output logic [3:0] nzcv,
+
     output logic done    // Done signal indicating operation completion
 );
 
@@ -206,39 +211,30 @@ logic [2:0] currentstate, nextstate;
 logic [63:0] result_reg;
 
 
-always_ff @( posedge clk ) begin : main_switch
-        if (!rst) begin
-            result_reg <= 0;
-            currentstate <= 0;
-            done <= 0;
-        end else
-        begin
-            case (currentstate)
-                S0: begin : S0_case
-                    case(ALUop)
-                        PLUS_OP: result_reg <= alu_vala + alu_valb;
-                        MINUS_OP: result_reg <= alu_vala - alu_valb;
-                        INV_OP: result_reg <= alu_vala | (~alu_valb);
-                        OR_OP: result_reg <= alu_vala | alu_valb;
-                        EOR_OP: result_reg <= alu_vala ^ alu_valb;
-                        AND_OP: result_reg <= alu_vala & alu_valb;
-                        MOV_OP: result_reg <= alu_vala | (alu_valb << alu_valhw);
-                        CSNEG_OP: result_reg <= ~alu_valb + 1;
-                        CSINC_OP: result_reg <= alu_valb + 1;
-                        CSINV_OP: result_reg <= ~alu_valb;
-                        CSEL_OP: result_reg <= alu_valb;
-                        PASS_A_OP: result_reg <= alu_vala;
-                        default: result_reg <= 64'b0; // Default behavior, assuming no operation
-                    endcase
-                    nextstate <= S1;
-                end : S0_case
-                S1 : begin : S1_case
-                    res <= result_reg;
-                end : S1_case
-                default: ;
-            endcase
-        end
-    end : main_switch
+always_comb begin : main_switch
+    casez(ALUop)
+        PLUS_OP: result_reg = alu_vala + alu_valb;
+        MINUS_OP: result_reg = alu_vala - alu_valb;
+        INV_OP: result_reg = alu_vala | (~alu_valb);
+        OR_OP: result_reg = alu_vala | alu_valb;
+        EOR_OP: result_reg = alu_vala ^ alu_valb;
+        AND_OP: result_reg = alu_vala & alu_valb;
+        MOV_OP: result_reg = alu_vala | (alu_valb << alu_valhw);
+        CSNEG_OP: result_reg = ~alu_valb + 1;
+        CSINC_OP: result_reg = alu_valb + 1;
+        CSINV_OP: result_reg = ~alu_valb;
+        CSEL_OP: result_reg = alu_valb;
+        PASS_A_OP: result_reg = alu_vala;
+        default: result_reg = 64'b0; // Default behavior, assuming no operation
+    endcase
+    res = result_reg;
+
+    if(set_CC) begin
+        N = ((res & 0x8000000000000000) != 0); // Assign value to N
+        Z = (res == 0); // Assign value to Z
+    end
+
+end
 
 
 
@@ -301,7 +297,7 @@ module regfile(
     output logic [63:0] read_data2 // Output read data 2
 );
 
-logic [63:0] registers [63:0]; // Array of 32 32-bit registers
+logic [63:0] registers [63:0]; // Array of 32 64-bit registers
 integer i;
 always @(posedge clk or negedge reset) begin
     if (!reset) begin
