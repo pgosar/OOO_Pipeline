@@ -54,8 +54,8 @@ typedef enum logic[5:0] {
 } opcodes;    
 
 typedef enum logic [4:0] {
-    PLUS_OP,    // vala + (valb << valhw)
-    MINUS_OP,   // vala - (valb << valhw)
+    PLUS_OP,    // vala + valb
+    MINUS_OP,   // vala - valb
     INV_OP,     // vala | (~valb)
     OR_OP,      // vala | valb
     EOR_OP,     // vala ^ valb
@@ -225,7 +225,7 @@ always_comb begin : main_switch
         CSINV_OP: result_reg = ~alu_valb;
         CSEL_OP: result_reg = alu_valb;
         PASS_A_OP: result_reg = alu_vala;
-        default: result_reg = 64'b0; // Default behavior, assuming no operation
+        default: result_reg = 64'b0;
     endcase
     res = result_reg;
 
