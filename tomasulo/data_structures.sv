@@ -1,5 +1,5 @@
 `define RS_SIZE 8
-`define ROB_SIZE (RS_SIZE)*2+2
+`define ROB_SIZE ((`RS_SIZE)*2+2)
 `define ROB_IDX_SIZE $clog2(`ROB_SIZE)
 `define REG_SIZE 64
 `define GPR_COUNT 32

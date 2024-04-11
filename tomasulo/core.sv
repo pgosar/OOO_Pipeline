@@ -72,7 +72,8 @@ typedef enum logic[`OPCODE_SIZE-1:0] {
     OP_CBZ,
     OP_RET,
     OP_NOP,
-    OP_HLT
+    OP_HLT,
+    OP_ERR
 } opcode_t;
 
 typedef enum logic [4:0] {
@@ -96,7 +97,7 @@ typedef enum logic [4:0] {
     ERROR_OP
 } alu_op;
 
-typedef enum logic [4:0] {
+typedef enum logic [3:0] {
     C_EQ,
     C_NE,
     C_CS,
@@ -112,19 +113,15 @@ typedef enum logic [4:0] {
     C_GT,
     C_LE,
     C_AL,
-    C_NV,
-    C_ERROR
+    C_NV
 } cond_t;
 
 module instruction_parser(
-    input logic [31:0] insnbits,
+    input logic [10:0] opcode_bits,
     output opcode_t opcode
 );
-
-    // logic [10:0] top11;
-    // top11 = insnbits[31:21];
     always_comb begin 
-        casez(insnbits[31:21]) 
+        casez(opcode_bits) 
             11'b11111000010: opcode = OP_LDUR;
             11'b1010100011x: opcode = OP_LDP;
             11'b11111000000: opcode = OP_STUR;
@@ -156,7 +153,7 @@ module instruction_parser(
             11'b11010110010: opcode = OP_RET;
             11'b11010101000: opcode = OP_NOP;
             11'b11010100010: opcode = OP_HLT;
-            default: opcode = OP_NOP; //cant set it 0 causing errors
+            default: opcode = OP_ERR; //cant set it 0 causing errors
         endcase
     end
 
@@ -175,29 +172,33 @@ endmodule
 // endmodule
 
 module cond_holds (
-    input logic [4:0] cond,
+    input cond_t cond,
     input logic [3:0] nzcv,
     output logic cond_holds
 );
+    logic N = nzcv[3];
+    logic Z = nzcv[2];
+    logic C = nzcv[1];
+    logic V = nzcv[0];
 
 always_comb begin
     casez(cond)
-        C_EQ: cond_holds = (nzcv[1] == 1);
-        C_NE: cond_holds = !(nzcv[1] == 1);
-        C_CS: cond_holds = (nzcv[2] == 1);
-        C_CC: cond_holds = !(nzcv[2] == 1);
-        C_MI: cond_holds = (nzcv[0] == 1);
-        C_PL: cond_holds = !(nzcv[0] == 1);
-        C_VS: cond_holds = (nzcv[3] == 1);
-        C_VC: cond_holds = !(nzcv[3] == 1);
-        C_HI: cond_holds = (nzcv[2] == 1 && nzcv[1] == 0);
-        C_LS: cond_holds = !(nzcv[2] == 1 && nzcv[1] == 0);
-        C_GE: cond_holds = (nzcv[0] == nzcv[3]);
-        C_LT: cond_holds = !(nzcv[0] == nzcv[3]);
-        C_GT: cond_holds = (nzcv[0] == nzcv[3] && nzcv[1] == 0);
-        C_LE: cond_holds = !(nzcv[0] == nzcv[3] && nzcv[1] == 0);
-        C_AL,C_NV: cond_holds = 1;
-        default: cond_holds = 0;
+        C_EQ: cond_holds = Z;
+        C_NE: cond_holds = ~Z;
+        C_CS: cond_holds = C;
+        C_CC: cond_holds = ~C;
+        C_MI: cond_holds = N;
+        C_PL: cond_holds = ~N;
+        C_VS: cond_holds = V;
+        C_VC: cond_holds = ~V;
+        C_HI: cond_holds = C & Z;
+        C_LS: cond_holds = ~(C & Z);
+        C_GE: cond_holds = N == V;
+        C_LT: cond_holds = !(N == V);
+        C_GT: cond_holds = (N == V) & (Z == 0);
+        C_LE: cond_holds = !((N == V) & (Z == 0));
+        C_AL: cond_holds = 1;
+        C_NV: cond_holds = 1;
     endcase
 end
 

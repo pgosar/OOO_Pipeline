@@ -1,13 +1,6 @@
-// `include "data_structures.sv"
+`include "data_structures.sv"
+`include "core.sv"
 
-`define RS_SIZE 8
-`define ROB_SIZE (RS_SIZE)*2+2
-`define ROB_IDX_SIZE $clog2(`ROB_SIZE)
-`define REG_SIZE 64
-`define GPR_COUNT 32
-`define GPR_IDX_SIZE $clog2(`GPR_COUNT)
-`define GPR_SIZE 5 //IDK WHAT ITS SUPPOSED TO DO
-`define OPCODE_SIZE 5
 
 //TODO: these definetely needs to be defined somewhere else but keeping it here for now
 typedef struct packed{
@@ -29,52 +22,6 @@ typedef struct packed{
     logic wval_sel;
     logic w_enable;
 } w_ctl_sigs_t;
-
-typedef enum logic[6:0] {
-    OP_LDUR,
-    OP_LDP,
-    OP_STUR,
-    OP_STP,
-    OP_MOVK,
-    OP_MOVZ,
-    OP_ADR,
-    OP_ADRP,
-    OP_CINC,
-    OP_CINV,
-    OP_CNEG,
-    OP_CSEL,
-    OP_CSET,
-    OP_CSETM,
-    OP_CSINC,
-    OP_CSINV,
-    OP_CSNEG,
-    OP_ADD,
-    OP_ADDS,
-    OP_SUB,
-    OP_SUBS,
-    OP_CMP,
-    OP_MVN,
-    OP_ORR,
-    OP_EOR,
-    OP_AND,
-    OP_ANDS,
-    OP_TST,
-    OP_LSL,
-    OP_LSR,
-    OP_SBFM,
-    OP_UBFM,
-    OP_ASR,
-    OP_B,
-    OP_BR,
-    OP_B_COND,
-    OP_BL,
-    OP_BLR,
-    OP_CBNZ,
-    OP_CBZ,
-    OP_RET,
-    OP_NOP,
-    OP_HLT
-} opcode_t;
 
 module extract_immval(
     input [31:0] insnbits,
