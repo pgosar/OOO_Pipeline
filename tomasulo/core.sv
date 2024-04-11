@@ -1,3 +1,5 @@
+`define OPCODE_SIZE 6
+
 typedef enum logic[2:0] {
     S0 = 3'b000,
     S1 = 3'b001,
@@ -5,187 +7,180 @@ typedef enum logic[2:0] {
     S3 = 3'b011,
     S4 = 3'b100,
     S5 = 3'b101
-} states_t;
+} states;
 
-typedef enum logic[5:0] {
-    ldur   = 6'b000000, 
-    ldp    = 6'b000001, 
-    stur   = 6'b000010, 
-    stp    = 6'b000011, 
-    movk   = 6'b000100,
-    movz   = 6'b000101,
-    adr    = 6'b000110,
-    adrp   = 6'b000111,
-    cinc   = 6'b001000,
-    cinv   = 6'b001001,
-    csneg  = 6'b001010,
-    csel   = 6'b001011,
-    cset   = 6'b001100,
-    csetiv = 6'b001101,
-    csinc  = 6'b001110,
-    csinv  = 6'b001111,
-    cneg   = 6'b010000,
-    add    = 6'b010001,
-    adds   = 6'b010010,
-    sub    = 6'b010011,
-    subs   = 6'b010100,
-    cmp    = 6'b010101,
-    mvn    = 6'b010110,
-    orr    = 6'b010111,
-    eor    = 6'b011000,
-    andOp  = 6'b011001, //have to do it this way because and is built in
-    ands   = 6'b011010,
-    tst    = 6'b011011,
-    lsl    = 6'b011100,
-    lsr    = 6'b011101,
-    sbfm   = 6'b011110,
-    ubfm   = 6'b011111,
-    asr    = 6'b100000,
-    b      = 6'b100001,
-    br     = 6'b100010,
-    b_cond = 6'b100011, //verilog doesnt like b.cond
-    bl     = 6'b100100,
-    blr    = 6'b100101,
-    cbnz   = 6'b100110,
-    cbz    = 6'b100111,
-    ret    = 6'b101000,
-    nop    = 6'b101001,
-    hlt    = 6'b101010   
-} opcodes;    
+typedef enum logic[`OPCODE_SIZE-1:0] {
+    OP_LDUR,
+    OP_LDP,
+    OP_STUR,
+    OP_STP,
+    OP_MOVK,
+    OP_MOVZ,
+    OP_ADR,
+    OP_ADRP,
+    OP_CINC,
+    OP_CINV,
+    OP_CNEG,
+    OP_CSEL,
+    OP_CSET,
+    OP_CSETIV,
+    OP_CSINC,
+    OP_CSINV,
+    OP_CSNEG,
+    OP_ADD,
+    OP_ADDS,
+    OP_SUB,
+    OP_SUBS,
+    OP_CMP,
+    OP_MVN,
+    OP_ORR,
+    OP_EOR,
+    OP_AND,
+    OP_ANDS,
+    OP_TST,
+    OP_LSL,
+    OP_LSR,
+    OP_SBFM,
+    OP_UBFM,
+    OP_ASR,
+    OP_B,
+    OP_BR,
+    OP_B_COND,
+    OP_BL,
+    OP_BLR,
+    OP_CBNZ,
+    OP_CBZ,
+    OP_RET,
+    OP_NOP,
+    OP_HLT
+} opcode_t;
 
 typedef enum logic [4:0] {
-    PLUS_OP,    // vala + valb
-    MINUS_OP,   // vala - valb
-    INV_OP,     // vala | (~valb)
-    OR_OP,      // vala | valb
-    EOR_OP,     // vala ^ valb
-    AND_OP,     // vala & valb
-    MOV_OP,     // vala | (valb << valhw)
-    LSL_OP,     // vala << (valb & 0x3FUL)
-    LSR_OP,     // vala >>L (valb & 0x3FUL)
-    ASR_OP,     // vala >>A (valb & 0x3FUL)
-    PASS_A_OP,  // vala
-    CSEL_OP,    
-    CSINV_OP,   
-    CSINC_OP,   
-    CSNEG_OP,   
-    CBZ_OP,     
-    CBNZ_OP,   
+    ALU_OP_PLUS,    // vala + valb
+    ALU_OP_MINUS,   // vala - valb
+    ALU_OP_INVALID,     // vala | (~valb)
+    ALU_OP_OR,      // vala | valb
+    ALU_OP_EOR,     // vala ^ valb
+    ALU_OP_AND,     // vala & valb
+    ALU_OP_MOV,     // vala | (valb << valhw)
+    ALU_OP_LSL,     // vala << (valb & 0x3FUL)
+    ALU_OP_LSR,     // vala >>L (valb & 0x3FUL)
+    ALU_OP_ASR,     // vala >>A (valb & 0x3FUL)
+    ALU_OP_PASS_A,  // vala
+    ALU_OP_CSEL,
+    ALU_OP_CSINV,
+    ALU_OP_CSINC,
+    ALU_OP_CSNEG,
+    ALU_OP_CBZ,
+    ALU_O,
     ERROR_OP
-} alu_op_t;
+} alu_op;
 
+typedef enum logic [4:0] {
+    C_EQ,
+    C_NE,
+    C_CS,
+    C_CC,
+    C_MI,
+    C_PL,
+    C_VS,
+    C_VC,
+    C_HI,
+    C_LS,
+    C_GE,
+    C_LT,
+    C_GT,
+    C_LE,
+    C_AL,
+    C_NV,
+    C_ERROR
+} cond_t;
 
 module instruction_parser(
     input logic [31:0] insnbits,
-    input logic clk_in,
-    output logic [5:0] opcode
+    output opcode_t opcode
 );
 
+    always_comb begin 
+        logic [10:0] top11;
+        top11 = insnbits[31:21];
+        casez(top11) 
+            11'b11111000010: opcode = OP_LDUR;
+            11'b1010100011x: opcode = OP_LDP;
+            11'b11111000000: opcode = OP_STUR;
+            11'b1010100100x: opcode = OP_STP;
+            11'b111100101xx: opcode = OP_MOVK;
+            11'b0xx10000xxx: opcode = OP_ADR;
+            11'b1xx10000xxx: opcode = OP_ADRP;
+            11'b10011010100: opcode = OP_CINC; //cset and OP_CSEL and OP_CSINC
+            11'b11011010100: opcode = OP_CINV; //also for OP_CSNEG, OP_CSNEG and csetm and OP_CSINV
+            11'b1001000100x: opcode = OP_ADD;
+            11'b10101011000: opcode = OP_ADDS;
+            11'b1101000100x: opcode = OP_SUB;
+            11'b11101011000: opcode = OP_SUBS; //OP_CMP
+            11'b10101010001: opcode = OP_MVN;
+            11'b10101010000: opcode = OP_ORR;
+            11'b11001010000: opcode = OP_EOR;
+            11'b1001001000x: opcode = OP_AND; //cant have and its a built in module
+            11'b11101010000: opcode = OP_ANDS; //also for OP_TST
+            11'b110100110xx: opcode = OP_UBFM; //OP_LSL and OP_LSR has an extra 1 in its opcode  what do we do about that
+            11'b100100111xx: opcode = OP_SBFM;
+            11'b1001001101x: opcode = OP_ASR;
+            11'b000101xxxxx: opcode = OP_B;
+            11'b11010110000: opcode = OP_BR;
+            11'b01010100xxx: opcode = OP_B_COND; //verilog doesnt like b.cond
+            11'b100101xxxxx: opcode = OP_BL;
+            11'b11010110001: opcode = OP_BLR;
+            11'b10110101xxx: opcode = OP_CBNZ;
+            11'b10110100xxx: opcode = OP_CBZ;
+            11'b11010110010: opcode = OP_RET;
+            11'b11010101000: opcode = OP_NOP;
+            11'b11010100010: opcode = OP_HLT;
+            default: opcode = 0;
+        endcase
+    end
 
+endmodule 
 
-assign top11 = insnbits[31:21];
+// module instr_format_decoder (
+//     input opcode op
+//     output instr ;
+// );
+// always_comb begin : decode
+//     // casez(opcode)
+        
+//     // endcase
+// end
 
-always_ff @(posedge clk_in) begin : main_controller
-    case(top11)
-        11'b11111000010: begin
-            opcode = ldur;
-        end
-        11'b1010100011x: begin
-            opcode = ldp;
-        end
-        11'b11111000000: begin
-            opcode = stur;
-        end
-        11'b1010100100x: begin
-            opcode = stp;
-        end
-        11'b111100101xx: begin
-            opcode = movk;
-        end
-        11'b0xx10000xxx: begin
-            opcode = adr;
-        end
-        11'b1xx10000xxx: begin  
-            opcode = adrp;
-        end
-        11'b10011010100: begin
-            opcode = cinc; //cset and csel and csinc
-        end
-        11'b11011010100: begin
-            opcode = cinv; //also for csneg, cneg and csetm and csinv
-        end
-        11'b1001000100x: begin
-            opcode = add;
-        end
-        11'b10101011000: begin
-            opcode = adds;
-        end
-        11'b1101000100x: begin
-            opcode = sub;
-        end
-        11'b11101011000: begin
-            opcode = subs; //cmp
-        end
-        11'b10101010001: begin
-            opcode = mvn;
-        end
-        11'b10101010000: begin
-            opcode = orr;
-        end
-        11'b11001010000: begin
-            opcode = eor;
-        end
-        11'b1001001000x: begin
-            opcode = andOp; //cant have and its a built in module
-        end
-        11'b11101010000: begin
-            opcode = ands; //also for tst
-        end
-        11'b110100110xx: begin
-            opcode = ubfm; //lsl and lsr has an extra 1 in its opcode  what do we do about that
-        end
-        11'b100100111xx: begin
-            opcode = sbfm;
-        end
-        11'b1001001101x: begin
-            opcode = asr;
-        end
-        11'b000101xxxxx: begin
-            opcode = b;
-        end
-        11'b11010110000: begin
-            opcode = br;
-        end
-        11'b01010100xxx: begin
-            opcode = b_cond; //verilog doesnt like b.cond
-        end
-        11'b100101xxxxx: begin
-            opcode = bl;
-        end
-        11'b11010110001: begin
-            opcode = blr;
-        end
-        11'b10110101xxx: begin
-            opcode = cbnz;
-        end
-        11'b10110100xxx: begin
-            opcode = cbz;
-        end
-        11'b11010110010: begin
-            opcode = ret;
-        end
-        11'b11010101000: begin
-            opcode = nop;
-        end
-        11'b11010100010: begin
-            opcode = hlt;
-        end
-        default: begin
-            opcode = 6'b0; 
-        end
+// endmodule
+
+module cond_holds (
+    input logic [4:0] cond,
+    input logic [3:0] nzcv,
+    output logic cond_holds
+);
+
+always_comb begin
+    casez(cond)
+        C_EQ: cond_holds = (nzcv[1] == 1);
+        C_NE: cond_holds = !(nzcv[1] == 1);
+        C_CS: cond_holds = (nzcv[2] == 1);
+        C_CC: cond_holds = !(nzcv[2] == 1);
+        C_MI: cond_holds = (nzcv[0] == 1);
+        C_PL: cond_holds = !(nzcv[0] == 1);
+        C_VS: cond_holds = (nzcv[3] == 1);
+        C_VC: cond_holds = !(nzcv[3] == 1);
+        C_HI: cond_holds = (nzcv[2] == 1 && nzcv[1] == 0);
+        C_LS: cond_holds = !(nzcv[2] == 1 && nzcv[1] == 0);
+        C_GE: cond_holds = (nzcv[0] == nzcv[3]);
+        C_LT: cond_holds = !(nzcv[0] == nzcv[3]);
+        C_GT: cond_holds = (nzcv[0] == nzcv[3] && nzcv[1] == 0);
+        C_LT: cond_holds = !(nzcv[0] == nzcv[3] && nzcv[1] == 0);
+        C_AL: cond_holds = 1;
+        C_NV: cond_holds = 1;
+        default: cond_holds = 0;
     endcase
 end
-
 endmodule
 
 
@@ -202,120 +197,93 @@ module ArithmeticExecuteUnit(
     output logic cond_val,
     output logic [63:0] res,
     output logic [3:0] nzcv,
-
     output logic done    // Done signal indicating operation completion
 );
 
 
-logic [2:0] currentstate, nextstate;
-logic [63:0] result_reg;
+    logic [2:0] curreOP_RET_TSTate, nexOP_TSTate;
+    logic [63:0] result_reg;
+    logic N, Z, C, V;
 
+    always_comb begin : main_switch
+        casez(ALUop)
+            PLUS_OP: result_reg = alu_vala + alu_valb;
+            MINUS_OP: result_reg = alu_vala - alu_valb;
+            INV_OP: result_reg = alu_vala | (~alu_valb);
+            OR_OP: result_reg = alu_vala | alu_valb;
+            OP_EOR_OP: result_reg = alu_vala ^ alu_valb;
+            AND_OP: result_reg = alu_vala & alu_valb;
+            MOV_OP: result_reg = alu_vala | (alu_valb << alu_valhw);
+            OP_CSNEG_OP: result_reg = ~alu_valb + 1;
+            OP_CSINC_OP: result_reg = alu_valb + 1;
+            OP_CSINV_OP: result_reg = ~alu_valb;
+            OP_CSEL_OP: result_reg = alu_valb;
+            PASS_A_OP: result_reg = alu_vala;
+            default: result_reg = 0;
+        endcase
+        res = result_reg;
+        if(set_CC) begin
+            N = ((res & 64'h8000_0000_0000_0000) != 0);
+            Z = (res == 0); 
+            if(ALUop == PLUS_OP) begin
+                C = (res < alu_vala) || (res < alu_valb);
+            end
+            if(ALUop == MINUS_OP) begin
+                C = alu_vala >= alu_valb;
+            end
+            if(ALUop == PLUS_OP) begin
+                V = !(alu_vala & 64'h8000_0000_0000_0000) && !(alu_valb & 64'h8000000000000000) && N;
+                V |= (alu_vala & 64'h8000_0000_0000_0000) && (alu_valb & 64'h8000000000000000) && !N;
+            end
+            if(ALUop == MINUS_OP) begin
+                V = !(alu_vala & 64'h8000_0000_0000_0000) && (alu_valb & 64'h8000000000000000) && N;
+                V |= (alu_vala & 64'h8000_0000_0000_0000) && !(alu_valb & 64'h8000000000000000) && !N;
+            end
 
-always_comb begin : main_switch
-    casez(ALUop)
-        PLUS_OP: result_reg = alu_vala + alu_valb;
-        MINUS_OP: result_reg = alu_vala - alu_valb;
-        INV_OP: result_reg = alu_vala | (~alu_valb);
-        OR_OP: result_reg = alu_vala | alu_valb;
-        EOR_OP: result_reg = alu_vala ^ alu_valb;
-        AND_OP: result_reg = alu_vala & alu_valb;
-        MOV_OP: result_reg = alu_vala | (alu_valb << alu_valhw);
-        CSNEG_OP: result_reg = ~alu_valb + 1;
-        CSINC_OP: result_reg = alu_valb + 1;
-        CSINV_OP: result_reg = ~alu_valb;
-        CSEL_OP: result_reg = alu_valb;
-        PASS_A_OP: result_reg = alu_vala;
-        default: result_reg = 64'b0;
-    endcase
-    res = result_reg;
-
-    if(set_CC) begin
-        N = ((res & 0x8000000000000000) != 0); // Assign value to N
-        Z = (res == 0); // Assign value to Z
+            nzcv = {N, Z, C, V};
+        end
     end
-
-end
-
-
-
-
+    
 endmodule
 
-module ubfm_module(
+module OP_UBFM_module(
     input logic [63:0] i_val_a,
     input logic clk,
     input logic rst,
     input logic [5:0] imms,
     input logic [5:0] immr,
     output logic [63:0] res
-    );
+);
 
-always_ff @(posedge clk) begin : main_switch
-    if (!rst) begin
-        res <= 0;
-    end else if (imms >= immr) begin
-        res = (i_val_a >> immr) & ((1 << (imms - immr + 1)) - 1); 
-    end else begin
-        res = (i_val_a & ((1 << (imms + 1)) - 1)) << immr;
+    always_ff @(posedge clk) begin : main_switch
+        if (!rst) begin
+            res <= 0;
+        end else if (imms >= immr) begin
+            res = (i_val_a >> immr) & ((1 << (imms - immr + 1)) - 1);
+        end else begin
+            res = (i_val_a & ((1 << (imms + 1)) - 1)) << immr;
+        end
     end
-end
 
 endmodule
 
-module sbfm_module(
+module OP_SBFM_module(
     input logic signed [63:0] val_a,
     input logic clk,
     input logic rst,
     input logic signed [5:0] imms,
     input logic signed [5:0] immr,
     output logic signed [63:0] res
-    );
-
-always_ff @(posedge clk) begin : main_switch
-    if (!rst) begin
-        res <= 0;
-    end else if (imms >= immr) begin
-        res = (val_a >> immr) & ((1 << (imms - immr + 1)) - 1); 
-    end else begin
-        res = (val_a & ((1 << (imms + 1)) - 1)) << immr;
-    end
-end
-
-endmodule
-
-
-
-module regfile(
-    input logic [4:0] read_reg1, // Input read register 1 index
-    input logic [4:0] read_reg2, // Input read register 2 index
-    input logic [4:0] write_reg, // Input write register index
-    input logic [63:0] write_data, // Input data to be written
-    input logic write_enable, // Write enable signal
-    input logic reset,
-    input logic clk,
-    output logic [63:0] read_data1, // Output read data 1
-    output logic [63:0] read_data2 // Output read data 2
 );
 
-logic [63:0] registers [63:0]; // Array of 32 64-bit registers
-integer i;
-always @(posedge clk or negedge reset) begin
-    if (!reset) begin
-        // Reset all registers to zero
-        for (i = 0; i < 32; i = i + 1) begin
-            registers[i] <= 64'h0000000000000000;
+    always_ff @(posedge clk) begin : main_switch
+        if (!rst) begin
+            res <= 0;
+        end else if (imms >= immr) begin
+            res = (val_a >> immr) & ((1 << (imms - immr + 1)) - 1);
+        end else begin
+            res = (val_a & ((1 << (imms + 1)) - 1)) << immr;
         end
     end
-    else begin
-        // Read data from registers
-        read_data1 <= registers[read_reg1];
-        read_data2 <= registers[read_reg2];
-        
-        // Write data to register if write_enable is high
-        if (write_enable) begin
-            registers[write_reg] <= write_data;
-        end
-    end
-end
 
 endmodule
