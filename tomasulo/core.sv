@@ -9,6 +9,26 @@ typedef enum logic[2:0] {
     S5 = 3'b101
 } states;
 
+typedef enum logic[5:0] {
+    PLUS_OP,    // vala + (valb << valhw)
+    MINUS_OP,   // vala - (valb << valhw)
+    INV_OP,     // vala | (~valb)
+    OR_OP,      // vala | valb
+    EOR_OP,     // vala ^ valb
+    AND_OP,     // vala & valb
+    MOV_OP,     // vala | (valb << valhw)
+    LSL_OP,     // vala << (valb & 0x3FUL)
+    LSR_OP,     // vala >>L (valb & 0x3FUL)
+    ASR_OP,     // vala >>A (valb & 0x3FUL)
+    PASS_A_OP,  // vala
+    CSEL_OP,     // EC: used for csel
+    CSINV_OP,    // EC: used for csinv
+    CSINC_OP,    // EC: used for csinc
+    CSNEG_OP,    // EC: used for csneg
+    CBZ_OP,      // EC: used for cbz
+    CBNZ_OP     // EC: used for cbnz
+} alu_op_t;
+
 typedef enum logic[`OPCODE_SIZE-1:0] {
     OP_LDUR,
     OP_LDP,
@@ -23,7 +43,7 @@ typedef enum logic[`OPCODE_SIZE-1:0] {
     OP_CNEG,
     OP_CSEL,
     OP_CSET,
-    OP_CSETIV,
+    OP_CSETM,
     OP_CSINC,
     OP_CSINV,
     OP_CSNEG,
@@ -101,10 +121,10 @@ module instruction_parser(
     output opcode_t opcode
 );
 
+    // logic [10:0] top11;
+    // top11 = insnbits[31:21];
     always_comb begin 
-        logic [10:0] top11;
-        top11 = insnbits[31:21];
-        casez(top11) 
+        casez(insnbits[31:21]) 
             11'b11111000010: opcode = OP_LDUR;
             11'b1010100011x: opcode = OP_LDP;
             11'b11111000000: opcode = OP_STUR;
@@ -136,7 +156,7 @@ module instruction_parser(
             11'b11010110010: opcode = OP_RET;
             11'b11010101000: opcode = OP_NOP;
             11'b11010100010: opcode = OP_HLT;
-            default: opcode = 0;
+            default: opcode = OP_NOP; //cant set it 0 causing errors
         endcase
     end
 
@@ -175,12 +195,12 @@ always_comb begin
         C_GE: cond_holds = (nzcv[0] == nzcv[3]);
         C_LT: cond_holds = !(nzcv[0] == nzcv[3]);
         C_GT: cond_holds = (nzcv[0] == nzcv[3] && nzcv[1] == 0);
-        C_LT: cond_holds = !(nzcv[0] == nzcv[3] && nzcv[1] == 0);
-        C_AL: cond_holds = 1;
-        C_NV: cond_holds = 1;
+        C_LE: cond_holds = !(nzcv[0] == nzcv[3] && nzcv[1] == 0);
+        C_AL,C_NV: cond_holds = 1;
         default: cond_holds = 0;
     endcase
 end
+
 endmodule
 
 
@@ -211,13 +231,13 @@ module ArithmeticExecuteUnit(
             MINUS_OP: result_reg = alu_vala - alu_valb;
             INV_OP: result_reg = alu_vala | (~alu_valb);
             OR_OP: result_reg = alu_vala | alu_valb;
-            OP_EOR_OP: result_reg = alu_vala ^ alu_valb;
+            EOR_OP: result_reg = alu_vala ^ alu_valb;
             AND_OP: result_reg = alu_vala & alu_valb;
             MOV_OP: result_reg = alu_vala | (alu_valb << alu_valhw);
-            OP_CSNEG_OP: result_reg = ~alu_valb + 1;
-            OP_CSINC_OP: result_reg = alu_valb + 1;
-            OP_CSINV_OP: result_reg = ~alu_valb;
-            OP_CSEL_OP: result_reg = alu_valb;
+            CSNEG_OP: result_reg = ~alu_valb + 1;
+            CSINC_OP: result_reg = alu_valb + 1;
+            CSINV_OP: result_reg = ~alu_valb;
+            CSEL_OP: result_reg = alu_valb;
             PASS_A_OP: result_reg = alu_vala;
             default: result_reg = 0;
         endcase
