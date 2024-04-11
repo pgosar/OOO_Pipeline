@@ -51,7 +51,7 @@ typedef enum logic[5:0] {
     ret    = 6'b101000,
     nop    = 6'b101001,
     hlt    = 6'b101010   
-} opcodes;
+} opcodes;    
 
 typedef enum logic [4:0] {
     PLUS_OP,    // vala + (valb << valhw)
@@ -96,7 +96,7 @@ always_ff @(posedge clk_in) begin : main_controller
         11'b11111000000: begin
             opcode = stur;
         end
-        11'b1010100010x: begin
+        11'b1010100100x: begin
             opcode = stp;
         end
         11'b111100101xx: begin
