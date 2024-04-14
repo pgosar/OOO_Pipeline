@@ -1,2 +1,5 @@
 proc
 run_arm.c
+*.vcd
+*.out
+*.vvp
