@@ -7,9 +7,6 @@ MODULE = ArithmeticExecuteUnit
 ${OUT}: ${SRCS}
 	iverilog -g2012 -o ${OUT} ${SRCS}
 
-test: ${OUT}
-	vvp ${OUT}
-
 clean:
 	rm -rf ${OUT} *.vcd *.vvp db/ incremental_db/ simulation/ obj_dir/ *.rpt *.done *.smsg *.summary *.jdi *.pin *.qpf *.sld *.sof *.qsf *.txt
 
