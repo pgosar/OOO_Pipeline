@@ -165,7 +165,7 @@ typedef struct packed {
     logic gpr_index;
     logic valid;
     logic [`GPR_IDX_SIZE-1:0] value;
-    logic [3:0] nzcv;
+    nzcv_t nzcv;
     logic set_nzcv;
 } rob_entry;
 

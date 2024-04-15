@@ -1,5 +1,9 @@
-`define OPCODE_SIZE 6
 `include "data_structures.sv"
+
+module core(
+
+);
+endmodule
 
 module instruction_parser(
     input logic [10:0] opcode_bits,
@@ -61,10 +65,11 @@ module cond_holds (
     input nzcv_t nzcv,
     output logic cond_holds
 );
-    logic N = nzcv.N;
-    logic Z = nzcv.Z;
-    logic C = nzcv.C;
-    logic V = nzcv.V;
+    logic N, Z, C, V;
+    assign N = nzcv.N;
+    assign Z = nzcv.Z;
+    assign C = nzcv.C;
+    assign V = nzcv.V;
 
 always_comb begin
     casez(cond)
@@ -91,66 +96,68 @@ endmodule
 
 
 module ArithmeticExecuteUnit(
-    input logic in_clk,       // Clock
-    input alu_op_t alu_op,
-    input logic [`GPR_SIZE-1:0] val_a,
-    input logic [`GPR_SIZE-1:0] val_b,
-    input logic [5:0] alu_valhw,
-    input logic set_CC,
-    input cond_t cond,
-    output logic cond_val,
-    output logic [63:0] res,
+    input alu_op_t in_alu_op,
+    input logic [`GPR_SIZE-1:0] in_val_a,
+    input logic [`GPR_SIZE-1:0] in_val_b,
+    input logic [5:0] in_alu_val_hw,
+    input logic in_set_CC,
+    input cond_t in_cond,
+    input nzcv_t in_prev_nzcv,
+    output logic out_cond_val,
+    output logic [`GPR_SIZE-1:0] out_res,
     output nzcv_t out_nzcv,
-    output logic done    // Done signal indicating operation completion
+    output logic out_done    // Done signal indicating operation completion
 );
 
-    logic [63:0] result_reg;
+    logic [`GPR_SIZE-1:0] result_reg;
     nzcv_t nzcv;
 
+    logic cond_val;
+    cond_holds c_holds(.cond(in_cond), .nzcv(in_prev_nzcv), .cond_holds(cond_val));
+
     always_comb begin : main_switch
-        casez(alu_op)
-            ALU_OP_PLUS: result_reg = val_a + val_b;
-            ALU_OP_MINUS: result_reg = val_a - val_b;
-            ALU_OP_ORN: result_reg = val_a | (~val_b);
-            ALU_OP_OR: result_reg = val_a | val_b;
-            ALU_OP_EOR: result_reg = val_a ^ val_b;
-            ALU_OP_AND: result_reg = val_a & val_b;
-            ALU_OP_MOV: result_reg = val_a | (val_b << alu_valhw);
-            ALU_OP_CSNEG: result_reg = ~val_b + 1;
-            ALU_OP_CSINC: result_reg = val_b + 1;
-            ALU_OP_CSINV: result_reg = ~val_b;
-            ALU_OP_CSEL: result_reg = val_b;
-            ALU_OP_PASS_A: result_reg = val_a;
+        casez(in_alu_op)
+            ALU_OP_PLUS: result_reg = in_val_a + in_val_b;
+            ALU_OP_MINUS: result_reg = in_val_a - in_val_b;
+            ALU_OP_ORN: result_reg = in_val_a | (~in_val_b);
+            ALU_OP_OR: result_reg = in_val_a | in_val_b;
+            ALU_OP_EOR: result_reg = in_val_a ^ in_val_b;
+            ALU_OP_AND: result_reg = in_val_a & in_val_b;
+            ALU_OP_MOV: result_reg = in_val_a | (in_val_b << in_alu_val_hw);
+            ALU_OP_CSNEG: result_reg = in_val_b + 1;
+            ALU_OP_CSINC: result_reg = in_val_b + 1;
+            ALU_OP_CSINV: result_reg = in_val_b;
+            ALU_OP_CSEL: result_reg = in_val_b;
+            ALU_OP_PASS_A: result_reg = in_val_a;
             default: result_reg = 0;
         endcase
-        if(set_CC) begin
+        if(in_set_CC) begin
             nzcv.N = result_reg[`GPR_SIZE-1];
             nzcv.Z = result_reg == 0;
-            casez (alu_op) /* Setting carry flag */
-                ALU_OP_PLUS: nzcv.C = (result_reg < val_a) | (result_reg < val_b);
-                ALU_OP_MINUS: nzcv.C = val_a >= val_b;
+            casez (in_alu_op) /* Setting carry flag */
+                ALU_OP_PLUS: nzcv.C = (result_reg < in_val_a) | (result_reg < in_val_b);
+                ALU_OP_MINUS: nzcv.C = in_val_a >= in_val_b;
                 default: out_nzcv.C = 0;
             endcase
-            casez (alu_op) /* Setting overflow flag */
-                ALU_OP_PLUS: nzcv.V = (~val_a[`GPR_SIZE-1] & ~val_b[`GPR_SIZE-1] & nzcv.N) | (val_a[`GPR_SIZE-1] & val_b[`GPR_SIZE-1] & ~nzcv.N);
-                ALU_OP_MINUS: nzcv.V = (~val_a[`GPR_SIZE-1] & val_b[`GPR_SIZE-1] & nzcv.N) | (val_a[`GPR_SIZE-1] & ~val_b[`GPR_SIZE-1] & ~nzcv.N);
+            casez (in_alu_op) /* Setting overflow flag */
+                ALU_OP_PLUS: nzcv.V = (~in_val_a[`GPR_SIZE-1] & ~in_val_b[`GPR_SIZE-1] & nzcv.N) | (in_val_a[`GPR_SIZE-1] & in_val_b[`GPR_SIZE-1] & ~nzcv.N);
+                ALU_OP_MINUS: nzcv.V = (~in_val_a[`GPR_SIZE-1] & in_val_b[`GPR_SIZE-1] & nzcv.N) | (in_val_a[`GPR_SIZE-1] & ~in_val_b[`GPR_SIZE-1] & ~nzcv.N);
                 default: nzcv.V = 0;
             endcase
         end
         out_nzcv = nzcv;
-        if(alu_op == ALU_OP_CSEL || alu_op == ALU_OP_CSNEG || alu_op == ALU_OP_CSINC || alu_op == ALU_OP_CSINV) begin
+        if(in_alu_op == ALU_OP_CSEL || in_alu_op == ALU_OP_CSNEG || in_alu_op == ALU_OP_CSINC || in_alu_op == ALU_OP_CSINV) begin
             if(cond_val == 0) begin
-                res = result_reg;
+                out_res = result_reg;
             end
             else begin
-                res = val_a;
+                out_res = in_val_a;
             end
         end
         else begin
-            res = result_reg;
+            out_res = result_reg;
         end
     end
-    cond_holds c_holds(.cond(cond), .nzcv(nzcv), .cond_holds(cond_val));
 endmodule
 
 module OP_UBFM_module(

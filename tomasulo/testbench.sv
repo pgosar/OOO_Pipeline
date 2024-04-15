@@ -1,4 +1,4 @@
-
+`include "core.sv"
 
 
 // module ubfm_testbench;
@@ -25,12 +25,12 @@
 
 //     initial begin
 //         clk = 0;
-//         forever #5 clk = ~clk; 
+//         forever #5 clk = ~clk;
 //     end
 
 //     initial begin
-//         $dumpfile("ubfm.vcd"); 
-//         $dumpvars(0, ubfm_testbench); 
+//         $dumpfile("ubfm.vcd");
+//         $dumpvars(0, ubfm_testbench);
 
 //         // Reset
 //         @(posedge clk);
@@ -39,8 +39,8 @@
 //         immr = 0;
 
 //         // Test case 1
-//         i_val_a = 64'hFF; 
-//         imms = 3; 
+//         i_val_a = 64'hFF;
+//         imms = 3;
 //         immr = 1;
 //         @(posedge clk);
 //         if (res !== 64'h7) begin
@@ -58,33 +58,40 @@
 
 
 module ArithmeticExecuteUnit_tb;
-
     logic clk;
     logic rst;
     logic start;
-    logic [4:0] ALUop;
+    alu_op_t ALUop;
     logic [63:0] alu_vala;
     logic [63:0] alu_valb;
-    logic [5:0] alu_valhw;
+    logic [5:0] alu_val_hw;
 
     logic [63:0] res;
     logic done;
+    logic set_CC;
+    cond_t cond;
+    logic cond_val;
+    nzcv_t nzcv;
+    nzcv_t in_nzcv;
 
     ArithmeticExecuteUnit dut (
-        .clk(clk),
-        .rst(rst),
-        .start(start),
-        .ALUop(ALUop),
-        .alu_vala(alu_vala),
-        .alu_valb(alu_valb),
-        .alu_valhw(alu_valhw),
-        .res(res),
-        .done(done)
+        .in_alu_op(ALUop),
+        .in_val_a(alu_vala),
+        .in_val_b(alu_valb),
+        .in_alu_val_hw(alu_val_hw),
+        .in_set_CC(set_CC),
+        .in_cond(cond),
+        .in_prev_nzcv(in_nzcv),
+        .out_cond_val(cond_val),
+        .out_res(res),
+        .out_nzcv(nzcv),
+        .out_done(done)
     );
 
     initial begin
-        clk <= 0;
-        forever #5 clk = ~clk; // 100 MHz clock
+        clk = 0;
+        for (int i = 0; i < 250; i+=1)
+            #5 clk = ~clk; // 100 MHz clock
     end
 
     initial begin
@@ -100,39 +107,29 @@ module ArithmeticExecuteUnit_tb;
         // Test case 1 - posedge clock
         @(negedge clk);
         start = 1;
-        ALUop = 3'b000; 
-        alu_vala = 64'h0000000000000001; 
-        alu_valb = 64'h0000000000000001; 
-        alu_valhw = 6'h00;
+        ALUop = ALU_OP_PLUS;
+        alu_vala = 64'h0000000000000001;
+        alu_valb = 64'h0000000000000001;
+        alu_val_hw = 6'h0;
+        set_CC = 1;
+        cond_val = 0;
+        cond = C_EQ;
         #10
         start = 0;
         #10
-        if (res !== 64'h0000000000000002) begin
+        if (res != 64'h0000000000000002) begin
             $display("Test case 1 failed. Expected: 64'h0000000000000002, Got: %h", res);
             $finish;
         end else begin
             $display("Test case 1 passed.");
         end
 
-        // Test case 2 - negedge clock
-        // @(posedge clk);
-        // start = 1;
-        // ALUop = 3'b001; // MINUS_OP
-        // alu_vala = 64'hFFFFFFFFFFFFFFFF; // input value
-        // alu_valb = 64'h0000000000000001; // input value
-        // alu_valhw = 6'h00;
-        // @(posedge clk);
-        // start = 0;
-        // @(posedge clk);
-        // if (res !== 64'hFFFFFFFFFFFFFFFF) begin
-        //     $display("Test case 2 failed. Expected: 64'hFFFFFFFFFFFFFFFF, Got: %h", res);
-        //     $finish;
-        // end else begin
-        //     $display("Test case 2 passed.");
-        // end
-
-        // Add more test cases here...
-
+        if(nzcv != 0) begin
+            $display("Test nzcv failed. Expected: 0, Got: %h", nzcv);
+            $finish;
+        end else begin
+            $display("Test nzcv passed.");
+        end
         $finish;
     end
 
