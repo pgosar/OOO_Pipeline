@@ -1,5 +1,5 @@
 OUT = testbench.vvp
-SRCS = testbench.sv core.sv
+SRCS = core.sv decode.sv reservation_stations.sv
 .PHONY: clean test
 
 ${OUT}: ${SRCS}

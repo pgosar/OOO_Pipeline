@@ -1,127 +1,12 @@
 `define OPCODE_SIZE 6
-
-typedef enum logic[2:0] {
-    S0 = 3'b000,
-    S1 = 3'b001,
-    S2 = 3'b010,
-    S3 = 3'b011,
-    S4 = 3'b100,
-    S5 = 3'b101
-} states;
-
-typedef enum logic[5:0] {
-    PLUS_OP,    // vala + (valb << valhw)
-    MINUS_OP,   // vala - (valb << valhw)
-    INV_OP,     // vala | (~valb)
-    OR_OP,      // vala | valb
-    EOR_OP,     // vala ^ valb
-    AND_OP,     // vala & valb
-    MOV_OP,     // vala | (valb << valhw)
-    LSL_OP,     // vala << (valb & 0x3FUL)
-    LSR_OP,     // vala >>L (valb & 0x3FUL)
-    ASR_OP,     // vala >>A (valb & 0x3FUL)
-    PASS_A_OP,  // vala
-    CSEL_OP,     // EC: used for csel
-    CSINV_OP,    // EC: used for csinv
-    CSINC_OP,    // EC: used for csinc
-    CSNEG_OP,    // EC: used for csneg
-    CBZ_OP,      // EC: used for cbz
-    CBNZ_OP     // EC: used for cbnz
-} alu_op_t;
-
-typedef enum logic[`OPCODE_SIZE-1:0] {
-    OP_LDUR,
-    OP_LDP,
-    OP_STUR,
-    OP_STP,
-    OP_MOVK,
-    OP_MOVZ,
-    OP_ADR,
-    OP_ADRP,
-    OP_CINC,
-    OP_CINV,
-    OP_CNEG,
-    OP_CSEL,
-    OP_CSET,
-    OP_CSETM,
-    OP_CSINC,
-    OP_CSINV,
-    OP_CSNEG,
-    OP_ADD,
-    OP_ADDS,
-    OP_SUB,
-    OP_SUBS,
-    OP_CMP,
-    OP_MVN,
-    OP_ORR,
-    OP_EOR,
-    OP_AND,
-    OP_ANDS,
-    OP_TST,
-    OP_LSL,
-    OP_LSR,
-    OP_SBFM,
-    OP_UBFM,
-    OP_ASR,
-    OP_B,
-    OP_BR,
-    OP_B_COND,
-    OP_BL,
-    OP_BLR,
-    OP_CBNZ,
-    OP_CBZ,
-    OP_RET,
-    OP_NOP,
-    OP_HLT,
-    OP_ERR
-} opcode_t;
-
-typedef enum logic [4:0] {
-    ALU_OP_PLUS,    // vala + valb
-    ALU_OP_MINUS,   // vala - valb
-    ALU_OP_INVALID,     // vala | (~valb)
-    ALU_OP_OR,      // vala | valb
-    ALU_OP_EOR,     // vala ^ valb
-    ALU_OP_AND,     // vala & valb
-    ALU_OP_MOV,     // vala | (valb << valhw)
-    ALU_OP_LSL,     // vala << (valb & 0x3FUL)
-    ALU_OP_LSR,     // vala >>L (valb & 0x3FUL)
-    ALU_OP_ASR,     // vala >>A (valb & 0x3FUL)
-    ALU_OP_PASS_A,  // vala
-    ALU_OP_CSEL,
-    ALU_OP_CSINV,
-    ALU_OP_CSINC,
-    ALU_OP_CSNEG,
-    ALU_OP_CBZ,
-    ALU_O,
-    ERROR_OP
-} alu_op;
-
-typedef enum logic [3:0] {
-    C_EQ,
-    C_NE,
-    C_CS,
-    C_CC,
-    C_MI,
-    C_PL,
-    C_VS,
-    C_VC,
-    C_HI,
-    C_LS,
-    C_GE,
-    C_LT,
-    C_GT,
-    C_LE,
-    C_AL,
-    C_NV
-} cond_t;
+`include "data_structures.sv"
 
 module instruction_parser(
     input logic [10:0] opcode_bits,
     output opcode_t opcode
 );
-    always_comb begin 
-        casez(opcode_bits) 
+    always_comb begin
+        casez(opcode_bits)
             11'b11111000010: opcode = OP_LDUR;
             11'b1010100011x: opcode = OP_LDP;
             11'b11111000000: opcode = OP_STUR;
@@ -157,7 +42,7 @@ module instruction_parser(
         endcase
     end
 
-endmodule 
+endmodule
 
 // module instr_format_decoder (
 //     input opcode op
@@ -165,7 +50,7 @@ endmodule
 // );
 // always_comb begin : decode
 //     // casez(opcode)
-        
+
 //     // endcase
 // end
 
@@ -173,13 +58,13 @@ endmodule
 
 module cond_holds (
     input cond_t cond,
-    input logic [3:0] nzcv,
+    input nzcv_t nzcv,
     output logic cond_holds
 );
-    logic N = nzcv[3];
-    logic Z = nzcv[2];
-    logic C = nzcv[1];
-    logic V = nzcv[0];
+    logic N = nzcv.N;
+    logic Z = nzcv.Z;
+    logic C = nzcv.C;
+    logic V = nzcv.V;
 
 always_comb begin
     casez(cond)
@@ -206,104 +91,97 @@ endmodule
 
 
 module ArithmeticExecuteUnit(
-    input logic clk,       // Clock
-    input logic rst,       // Reset
-    input logic start,     // Start signal to initiate the operation
-    input logic [4:0] ALUop,
-    input logic [63:0] alu_vala,
-    input logic [63:0] alu_valb,
+    input logic in_clk,       // Clock
+    input alu_op_t alu_op,
+    input logic [`GPR_SIZE-1:0] val_a,
+    input logic [`GPR_SIZE-1:0] val_b,
     input logic [5:0] alu_valhw,
     input logic set_CC,
-    input logic [4:0] cond,
+    input cond_t cond,
     output logic cond_val,
     output logic [63:0] res,
-    output logic [3:0] nzcv,
+    output nzcv_t out_nzcv,
     output logic done    // Done signal indicating operation completion
 );
 
-
-    logic [2:0] curreOP_RET_TSTate, nexOP_TSTate;
     logic [63:0] result_reg;
-    logic N, Z, C, V;
+    nzcv_t nzcv;
 
     always_comb begin : main_switch
-        casez(ALUop)
-            PLUS_OP: result_reg = alu_vala + alu_valb;
-            MINUS_OP: result_reg = alu_vala - alu_valb;
-            INV_OP: result_reg = alu_vala | (~alu_valb);
-            OR_OP: result_reg = alu_vala | alu_valb;
-            EOR_OP: result_reg = alu_vala ^ alu_valb;
-            AND_OP: result_reg = alu_vala & alu_valb;
-            MOV_OP: result_reg = alu_vala | (alu_valb << alu_valhw);
-            CSNEG_OP: result_reg = ~alu_valb + 1;
-            CSINC_OP: result_reg = alu_valb + 1;
-            CSINV_OP: result_reg = ~alu_valb;
-            CSEL_OP: result_reg = alu_valb;
-            PASS_A_OP: result_reg = alu_vala;
+        casez(alu_op)
+            ALU_OP_PLUS: result_reg = val_a + val_b;
+            ALU_OP_MINUS: result_reg = val_a - val_b;
+            ALU_OP_ORN: result_reg = val_a | (~val_b);
+            ALU_OP_OR: result_reg = val_a | val_b;
+            ALU_OP_EOR: result_reg = val_a ^ val_b;
+            ALU_OP_AND: result_reg = val_a & val_b;
+            ALU_OP_MOV: result_reg = val_a | (val_b << alu_valhw);
+            ALU_OP_CSNEG: result_reg = ~val_b + 1;
+            ALU_OP_CSINC: result_reg = val_b + 1;
+            ALU_OP_CSINV: result_reg = ~val_b;
+            ALU_OP_CSEL: result_reg = val_b;
+            ALU_OP_PASS_A: result_reg = val_a;
             default: result_reg = 0;
         endcase
-        res = result_reg;
         if(set_CC) begin
-            N = ((res & 64'h8000_0000_0000_0000) != 0);
-            Z = (res == 0); 
-            if(ALUop == PLUS_OP) begin
-                C = (res < alu_vala) || (res < alu_valb);
+            nzcv.N = result_reg[`GPR_SIZE-1];
+            nzcv.Z = result_reg == 0;
+            casez (alu_op) /* Setting carry flag */
+                ALU_OP_PLUS: nzcv.C = (result_reg < val_a) | (result_reg < val_b);
+                ALU_OP_MINUS: nzcv.C = val_a >= val_b;
+                default: out_nzcv.C = 0;
+            endcase
+            casez (alu_op) /* Setting overflow flag */
+                ALU_OP_PLUS: nzcv.V = (~val_a[`GPR_SIZE-1] & ~val_b[`GPR_SIZE-1] & nzcv.N) | (val_a[`GPR_SIZE-1] & val_b[`GPR_SIZE-1] & ~nzcv.N);
+                ALU_OP_MINUS: nzcv.V = (~val_a[`GPR_SIZE-1] & val_b[`GPR_SIZE-1] & nzcv.N) | (val_a[`GPR_SIZE-1] & ~val_b[`GPR_SIZE-1] & ~nzcv.N);
+                default: nzcv.V = 0;
+            endcase
+        end
+        out_nzcv = nzcv;
+        if(alu_op == ALU_OP_CSEL || alu_op == ALU_OP_CSNEG || alu_op == ALU_OP_CSINC || alu_op == ALU_OP_CSINV) begin
+            if(cond_val == 0) begin
+                res = result_reg;
             end
-            if(ALUop == MINUS_OP) begin
-                C = alu_vala >= alu_valb;
+            else begin
+                res = val_a;
             end
-            if(ALUop == PLUS_OP) begin
-                V = !(alu_vala & 64'h8000_0000_0000_0000) && !(alu_valb & 64'h8000000000000000) && N;
-                V |= (alu_vala & 64'h8000_0000_0000_0000) && (alu_valb & 64'h8000000000000000) && !N;
-            end
-            if(ALUop == MINUS_OP) begin
-                V = !(alu_vala & 64'h8000_0000_0000_0000) && (alu_valb & 64'h8000000000000000) && N;
-                V |= (alu_vala & 64'h8000_0000_0000_0000) && !(alu_valb & 64'h8000000000000000) && !N;
-            end
-
-            nzcv = {N, Z, C, V};
+        end
+        else begin
+            res = result_reg;
         end
     end
-    
+    cond_holds c_holds(.cond(cond), .nzcv(nzcv), .cond_holds(cond_val));
 endmodule
 
 module OP_UBFM_module(
-    input logic [63:0] i_val_a,
-    input logic clk,
-    input logic rst,
-    input logic [5:0] imms,
-    input logic [5:0] immr,
-    output logic [63:0] res
+    input logic [63:0] in_val_a,
+    input logic [5:0] in_imms,
+    input logic [5:0] in_immr,
+    output logic [63:0] out_res
 );
 
-    always_ff @(posedge clk) begin : main_switch
-        if (!rst) begin
-            res <= 0;
-        end else if (imms >= immr) begin
-            res = (i_val_a >> immr) & ((1 << (imms - immr + 1)) - 1);
+    always_comb begin
+        if (in_imms >= in_immr) begin
+            out_res = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
         end else begin
-            res = (i_val_a & ((1 << (imms + 1)) - 1)) << immr;
+            out_res = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
         end
     end
 
 endmodule
 
 module OP_SBFM_module(
-    input logic signed [63:0] val_a,
-    input logic clk,
-    input logic rst,
-    input logic signed [5:0] imms,
-    input logic signed [5:0] immr,
-    output logic signed [63:0] res
+    input logic signed [63:0] in_val_a,
+    input logic signed [5:0] in_imms,
+    input logic signed [5:0] in_immr,
+    output logic signed [63:0] out_res
 );
 
-    always_ff @(posedge clk) begin : main_switch
-        if (!rst) begin
-            res <= 0;
-        end else if (imms >= immr) begin
-            res = (val_a >> immr) & ((1 << (imms - immr + 1)) - 1);
+    always_comb begin
+        if (in_imms >= in_immr) begin
+            out_res = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
         end else begin
-            res = (val_a & ((1 << (imms + 1)) - 1)) << immr;
+            out_res = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
         end
     end
 
