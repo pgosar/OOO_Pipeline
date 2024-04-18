@@ -101,3 +101,4 @@ We have some questions:
  - imem simply contains the instruction memory (1 page, pagesize = 4096B) while dmem contains 4 pages (1 page imem, 1 page rodata, 2 pages ram)
     * [FIXED] note: upon writing this readme, I realized it might be written to support only 3 pages. This is an easy fix, just fixing the address widths and RAM size
     * the dmem includes the instruction memory simply for convenient addressing (no need to offset mem accesses)
+ - another note: currently the Makefile only contains clang compilation. This shouldn't be an issue if you are using a mac (or have clang at all). Otherwise, we need to make an nasm version with the right flags to compile and not link, then use ld to link (linker script should still work).
