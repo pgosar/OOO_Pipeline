@@ -89,3 +89,15 @@ We have some questions:
 - **HPS**: Hard Processor System. A traditional computer system (using a processor, RAM, cache, etc.) which exists on the same board as the FPGA and is highly integrated with it. They share an interconnect and many signals. However, many components on the board belong exclusively to either the FPGA or HPS. [Cornell's guide on the Cyclone-V HPS](https://people.ece.cornell.edu/land/courses/ece5760/DE1_SOC/HPS_INTRO_54001.pdf)
 - **JTAG**: Doesn't stand for anything. A standard for testing circuit designs. It allows you to connect debug pins to your circuit and view output information. It can also be used to directly program the FPGA chip. However, the data is volatile. Upload an image to the EPCS flash device for longer lasting storage.
 - **Switch Debouncing**: There is quite a bit of noise in analog circuitry. To smooth the data signal and prevent 'bouncing' of a signal between 1 and 0, an algorithm like the [Schmitt Trigger](https://en.wikipedia.org/wiki/Schmitt_trigger) is applied.
+
+### ELF loader
+ - A Makefile is provided for convenience. To create and load an assembly file call:
+   * ```make <asm_file_path>.mem```
+     * this creates an executable, maps memory into two files ```imem.txt``` and ```dmem.txt```, and places them in the root dir.
+     * then, call ```make mem``` to make the memory testbench. ```./mem.out``` will then output the test output.
+     * TODO: this needs to be changed to verilator at some point 
+   * there is a ```make clean``` target provided to clean up the files.
+ - All the secrets are in ```ooo.ld```. This linker script maps the elf to our address space.
+ - imem simply contains the instruction memory (1 page, pagesize = 4096B) while dmem contains 4 pages (1 page imem, 1 page rodata, 2 pages ram)
+    * note: upon writing this readme, I realized it might be written to support only 3 pages. This is an easy fix, just fixing the address widths and RAM size
+    * the dmem includes the instruction memory simply for convenient addressing (no need to offset mem accesses)
