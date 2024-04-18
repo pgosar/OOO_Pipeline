@@ -14,8 +14,8 @@ mem: mem.sv
 	@$(CC) $(CFLAGS) -o $(FNAME).o $<
 	@$(LD) $(LSCRIPT) $(FNAME).o -o $(FNAME)_linked.o
 	@./load_elf $(FNAME)_linked.o
-	@xxd -b -c4 IMEM_t.txt | awk '{ print $$2$$3$$4$$5 }' > imem.txt
-	@xxd -b -c8 DMEM_t.txt | awk '{ print $$2$$3$$4$$5$$6$$7$$8$$9 }' > dmem.txt
+	@xxd -b -c1 IMEM_t.txt | awk '{ print $$2 }' > imem.txt
+	@xxd -b -c1 DMEM_t.txt | awk '{ print $$2 }' > dmem.txt
 	@rm $(FNAME)_linked.o $(FNAME).o IMEM_t.txt DMEM_t.txt
 	@echo Output is in imem.txt and dmem.txt.
 	

@@ -8,16 +8,16 @@ module imem # (parameter int PAGESIZE)
   output logic [31:0] data
   );
   // read-only instruction memory module.
-  localparam pages_amt = PAGESIZE >> 2;
+  localparam bits_amt = PAGESIZE;
   localparam fname = "imem.txt";
-  logic [31:0] mem [pages_amt];
+  logic [7:0] mem [bits_amt];
 
   initial begin: mem_init
     $readmemb(fname, mem);
   end: mem_init
 
   always_ff @(posedge clk) begin: mem_access
-    data <= mem[addr >> 2];
+    data <= {mem[addr], mem[addr + 1], mem[addr + 2], mem[addr + 3]};
   end: mem_access
   
 endmodule: imem
@@ -31,9 +31,9 @@ module dmem # (parameter int PAGESIZE)
   output logic [63:0] data
   );
   // read-only instruction memory module.
-  localparam pages_amt = (PAGESIZE * 4) >> 3; // 64 bit access
+  localparam bits_amt = PAGESIZE * 4; // 64 bit access
   localparam fname = "dmem.txt";
-  logic [63:0] mem [pages_amt];
+  logic [7:0] mem [bits_amt];
 
   initial begin: mem_init
     $readmemb(fname, mem);
@@ -41,10 +41,17 @@ module dmem # (parameter int PAGESIZE)
 
   always_ff @(posedge clk) begin: mem_access
     if (w_enable) begin
-      mem[addr >> 3] <= wval;
+      mem[addr] <= wval[63:56];
+      mem[addr + 1] <= wval[55:48];
+      mem[addr + 2] <= wval[47:40];
+      mem[addr + 3] <= wval[39:32];
+      mem[addr + 4] <= wval[31:24];
+      mem[addr + 5] <= wval[23:16];
+      mem[addr + 6] <= wval[15:8];
+      mem[addr + 7] <= wval[7:0];
       data <= wval;
     end else begin
-      data <= mem[addr >> 3];
+      data <= {mem[addr], mem[addr + 1], mem[addr + 2], mem[addr + 3], mem[addr + 4], mem[addr + 5], mem[addr + 6], mem[addr + 7]};
     end
   end: mem_access
   
@@ -70,7 +77,7 @@ module mem_tb ();
   dmem #(PAGESIZE) odut (daddr, clk, w_enable, wval, ddata);
   initial begin: mem_init
     #10;
-    for (int i = 0; i < PAGESIZE / 4; i++) begin
+    for (int i = 0; i < 10; i++) begin
       addr = i;
       #10;
       $display("%b", data);
@@ -89,12 +96,14 @@ module mem_tb ();
   $display("DMEM test 2: %b", ddata);
   w_enable = 0;
   wval = 'h000000000;
+  #10;
   $display("DMEM test 3: %b", ddata);
+  daddr = 16375;
   w_enable = 1;
   wval = 'hfaceface;
-  daddr = 2047;
   #10;
   $display("DMEM test 4: %x", ddata);
+  $finish;
   
   $finish;
   end: mem_init
