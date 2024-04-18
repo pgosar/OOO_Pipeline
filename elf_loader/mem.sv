@@ -24,14 +24,14 @@ endmodule: imem
 
 module dmem # (parameter int PAGESIZE)
   (
-  input wire [$clog2(PAGESIZE * 3) - 1:0] addr,
+  input wire [$clog2(PAGESIZE * 4) - 1:0] addr,
   input wire clk,
   input wire w_enable,
   input wire [63:0] wval,
   output logic [63:0] data
   );
   // read-only instruction memory module.
-  localparam pages_amt = (PAGESIZE * 3) >> 3; // 64 bit access
+  localparam pages_amt = (PAGESIZE * 4) >> 3; // 64 bit access
   localparam fname = "dmem.txt";
   logic [63:0] mem [pages_amt];
 
@@ -90,6 +90,12 @@ module mem_tb ();
   w_enable = 0;
   wval = 'h000000000;
   $display("DMEM test 3: %b", ddata);
+  w_enable = 1;
+  wval = 'hfaceface;
+  daddr = 2047;
+  #10;
+  $display("DMEM test 4: %x", ddata);
+  
   $finish;
   end: mem_init
 endmodule: mem_tb

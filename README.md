@@ -99,5 +99,5 @@ We have some questions:
    * there is a ```make clean``` target provided to clean up the files.
  - All the secrets are in ```ooo.ld```. This linker script maps the elf to our address space.
  - imem simply contains the instruction memory (1 page, pagesize = 4096B) while dmem contains 4 pages (1 page imem, 1 page rodata, 2 pages ram)
-    * note: upon writing this readme, I realized it might be written to support only 3 pages. This is an easy fix, just fixing the address widths and RAM size
+    * [FIXED] note: upon writing this readme, I realized it might be written to support only 3 pages. This is an easy fix, just fixing the address widths and RAM size
     * the dmem includes the instruction memory simply for convenient addressing (no need to offset mem accesses)
