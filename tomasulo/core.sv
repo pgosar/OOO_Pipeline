@@ -1,195 +1,141 @@
 `include "data_structures.sv"
 
 module core(
-
+    input logic in_reset,
+    input logic in_start,
+    input logic in_clk
 );
-endmodule
+    // ROB
+    // from FU
+    logic in_fu_done;
+    logic [`GPR_SIZE-1:0] in_fu_value;
+    logic [`ROB_IDX_SIZE-1:0] in_fu_rob_idx;
+    logic in_fu_set_nzcv;
+    nzcv_t in_fu_nzcv;
+    logic in_is_mispred;
+    // from dispatch
+    logic [`GPR_IDX_SIZE-1:0] in_gpr_idx;
+    logic in_is_nop;
+    // for regfile
+    logic out_regfile_should_commit;
+    // for dispatch
+    logic [`ROB_IDX_SIZE-1:0] out_next_rob_idx;
+    logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_idx [`MISSPRED_SIZE-1:0];
 
-module instruction_parser(
-    input logic [10:0] opcode_bits,
-    output opcode_t opcode
-);
-    always_comb begin
-        casez(opcode_bits)
-            11'b11111000010: opcode = OP_LDUR;
-            11'b1010100011x: opcode = OP_LDP;
-            11'b11111000000: opcode = OP_STUR;
-            11'b1010100100x: opcode = OP_STP;
-            11'b111100101xx: opcode = OP_MOVK;
-            11'b0xx10000xxx: opcode = OP_ADR;
-            11'b1xx10000xxx: opcode = OP_ADRP;
-            11'b10011010100: opcode = OP_CINC; //cset and OP_CSEL and OP_CSINC
-            11'b11011010100: opcode = OP_CINV; //also for OP_CSNEG, OP_CSNEG and csetm and OP_CSINV
-            11'b1001000100x: opcode = OP_ADD;
-            11'b10101011000: opcode = OP_ADDS;
-            11'b1101000100x: opcode = OP_SUB;
-            11'b11101011000: opcode = OP_SUBS; //OP_CMP
-            11'b10101010001: opcode = OP_MVN;
-            11'b10101010000: opcode = OP_ORR;
-            11'b11001010000: opcode = OP_EOR;
-            11'b1001001000x: opcode = OP_AND; //cant have and its a built in module
-            11'b11101010000: opcode = OP_ANDS; //also for OP_TST
-            11'b110100110xx: opcode = OP_UBFM; //OP_LSL and OP_LSR has an extra 1 in its opcode  what do we do about that
-            11'b100100111xx: opcode = OP_SBFM;
-            11'b1001001101x: opcode = OP_ASR;
-            11'b000101xxxxx: opcode = OP_B;
-            11'b11010110000: opcode = OP_BR;
-            11'b01010100xxx: opcode = OP_B_COND; //verilog doesnt like b.cond
-            11'b100101xxxxx: opcode = OP_BL;
-            11'b11010110001: opcode = OP_BLR;
-            11'b10110101xxx: opcode = OP_CBNZ;
-            11'b10110100xxx: opcode = OP_CBZ;
-            11'b11010110010: opcode = OP_RET;
-            11'b11010101000: opcode = OP_NOP;
-            11'b11010100010: opcode = OP_HLT;
-            default: opcode = OP_ERR; //cant set it 0 causing errors
-        endcase
-    end
+    // Regfile
+    // from ROB
+    logic in_rob_should_commit;
+    logic [`GPR_SIZE-1:0] in_rob_commit_value;
+    logic [`GPR_IDX_SIZE-1:0] in_rob_regfile_index;
+    // logic in_is_mispred;
+    // logic [ROB_IDX_SIZE-1:0] out_delete_mispred_idx [2:0];
+    // from dispatch
+    logic in_dispatch_should_read;
+    logic [`GPR_IDX_SIZE-1:0] in_d_op1;
+    logic [`GPR_IDX_SIZE-1:0] in_d_op2;
+    // Regfile outputs
+    // for dispatch
+    logic [`GPR_SIZE-1:0] out_d_op1;
+    logic [`GPR_SIZE-1:0] out_d_op2;
 
-endmodule
+    // Reservation station
+    // from dispatch
+    logic in_op1_valid;
+    logic in_op2_valid;
+    logic [`ROB_IDX_SIZE-1:0] in_op1_rob_index;
+    logic [`ROB_IDX_SIZE-1:0] in_op2_rob_index;
+    logic [`GPR_SIZE-1:0] in_op1_value;
+    logic [`GPR_SIZE-1:0] in_op2_value;
+    logic [`GPR_IDX_SIZE-1:0] in_dst;
+    logic in_set_nzcv;
+    // from ROB
+    logic in_rob_broadcast_done;
+    logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index;
+    logic [`GPR_SIZE-1:0] in_rob_broadcast_val;
+    logic in_rob_is_mispred; // different than above?
+    // from FU
+    logic in_fu_ready;
+    // logic in_fu_done;
+    // Reservation station outputs
+    // to FU
+    logic [`RS_IDX_SIZE:0] out_ready_index;
 
-// module instr_format_decoder (
-//     input opcode op
-//     output instr ;
-// );
-// always_comb begin : decode
-//     // casez(opcode)
-
-//     // endcase
-// end
-
-// endmodule
-
-module cond_holds (
-    input cond_t cond,
-    input nzcv_t nzcv,
-    output logic cond_holds
-);
-    logic N, Z, C, V;
-    assign N = nzcv.N;
-    assign Z = nzcv.Z;
-    assign C = nzcv.C;
-    assign V = nzcv.V;
-
-always_comb begin
-    casez(cond)
-        C_EQ: cond_holds = Z;
-        C_NE: cond_holds = ~Z;
-        C_CS: cond_holds = C;
-        C_CC: cond_holds = ~C;
-        C_MI: cond_holds = N;
-        C_PL: cond_holds = ~N;
-        C_VS: cond_holds = V;
-        C_VC: cond_holds = ~V;
-        C_HI: cond_holds = C & Z;
-        C_LS: cond_holds = ~(C & Z);
-        C_GE: cond_holds = N == V;
-        C_LT: cond_holds = !(N == V);
-        C_GT: cond_holds = (N == V) & (Z == 0);
-        C_LE: cond_holds = !((N == V) & (Z == 0));
-        C_AL: cond_holds = 1;
-        C_NV: cond_holds = 1;
-    endcase
-end
-
-endmodule
+    // dispatch
+    // from core
+    logic in_stall;
+    // from fetch
+    logic [31:0] in_insnbits;
+    logic in_fetch_done;
+    logic [`GPR_IDX_SIZE-1:0] out_src1;
+    logic [`GPR_IDX_SIZE-1:0] out_src2;
+    func_unit out_fu;
+    logic [`GPR_IDX_SIZE-1:0] out_dst;
+    logic out_stalled;
 
 
-module ArithmeticExecuteUnit(
-    input alu_op_t in_alu_op,
-    input logic [`GPR_SIZE-1:0] in_val_a,
-    input logic [`GPR_SIZE-1:0] in_val_b,
-    input logic [5:0] in_alu_val_hw,
-    input logic in_set_CC,
-    input cond_t in_cond,
-    input nzcv_t in_prev_nzcv,
-    output logic out_cond_val,
-    output logic [`GPR_SIZE-1:0] out_res,
-    output nzcv_t out_nzcv,
-    output logic out_done    // Done signal indicating operation completion
-);
+    // modules
+    regfile_module regfile (
+        .in_clk(in_clk),
+        .in_rst(in_reset),
+        .in_rob_should_commit(in_rob_should_commit),
+        .in_rob_commit_value(in_rob_commit_value),
+        .in_rob_regfile_index(in_rob_regfile_index),
+        .in_dispatch_should_read(in_dispatch_should_read),
+        .in_d_op1(in_d_op1),
+        .in_d_op2(in_d_op2),
+        .out_d_op1(out_d_op1),
+        .out_d_op2(out_d_op2)
+    );
 
-    logic [`GPR_SIZE-1:0] result_reg;
-    nzcv_t nzcv;
+    rob_module rob (
+        .in_clk(in_clk),
+        .in_rst(in_reset),
+        .in_fu_done(in_fu_done),
+        .in_fu_value(in_fu_value),
+        .in_fu_rob_idx(in_fu_rob_idx),
+        .in_fu_set_nzcv(in_fu_set_nzcv),
+        .in_fu_nzcv(in_fu_nzcv),
+        .in_is_mispred(in_is_mispred), // we aren't set on this right now
+        .in_gpr_idx(in_gpr_idx),
+        .in_is_nop(in_is_nop),
+        .out_regfile_should_commit(out_regfile_should_commit),
+        .out_next_rob_idx(out_next_rob_idx),
+        .out_delete_mispred_idx(out_delete_mispred_idx)
+    );
 
-    logic cond_val;
-    cond_holds c_holds(.cond(in_cond), .nzcv(in_prev_nzcv), .cond_holds(cond_val));
+    reservation_station_module reservation_stations (
+        .in_clk(in_clk),
+        .in_reset(in_reset),
+        .in_op1_valid(in_op1_valid),
+        .in_op2_valid(in_op2_valid),
+        .in_op1_rob_index(in_op1_rob_index),
+        .in_op2_rob_index(in_op2_rob_index),
+        .in_op1_value(in_op1_value),
+        .in_op2_value(in_op2_value),
+        .in_dst(in_dst),
+        .in_set_nzcv(in_set_nzcv),
+        .in_rob_broadcast_done(in_rob_broadcast_done),
+        .in_rob_broadcast_index(in_rob_broadcast_index),
+        .in_rob_broadcast_val(in_rob_broadcast_val),
+        .in_rob_is_mispred(in_rob_is_mispred),
+        .in_fu_ready(in_fu_ready),
+        .in_fu_done(in_fu_done),
+        .out_ready_index(out_ready_index)
+    );
 
-    always_comb begin : main_switch
-        casez(in_alu_op)
-            ALU_OP_PLUS: result_reg = in_val_a + in_val_b;
-            ALU_OP_MINUS: result_reg = in_val_a - in_val_b;
-            ALU_OP_ORN: result_reg = in_val_a | (~in_val_b);
-            ALU_OP_OR: result_reg = in_val_a | in_val_b;
-            ALU_OP_EOR: result_reg = in_val_a ^ in_val_b;
-            ALU_OP_AND: result_reg = in_val_a & in_val_b;
-            ALU_OP_MOV: result_reg = in_val_a | (in_val_b << in_alu_val_hw);
-            ALU_OP_CSNEG: result_reg = in_val_b + 1;
-            ALU_OP_CSINC: result_reg = in_val_b + 1;
-            ALU_OP_CSINV: result_reg = in_val_b;
-            ALU_OP_CSEL: result_reg = in_val_b;
-            ALU_OP_PASS_A: result_reg = in_val_a;
-            default: result_reg = 0;
-        endcase
-        if(in_set_CC) begin
-            nzcv.N = result_reg[`GPR_SIZE-1];
-            nzcv.Z = result_reg == 0;
-            casez (in_alu_op) /* Setting carry flag */
-                ALU_OP_PLUS: nzcv.C = (result_reg < in_val_a) | (result_reg < in_val_b);
-                ALU_OP_MINUS: nzcv.C = in_val_a >= in_val_b;
-                default: out_nzcv.C = 0;
-            endcase
-            casez (in_alu_op) /* Setting overflow flag */
-                ALU_OP_PLUS: nzcv.V = (~in_val_a[`GPR_SIZE-1] & ~in_val_b[`GPR_SIZE-1] & nzcv.N) | (in_val_a[`GPR_SIZE-1] & in_val_b[`GPR_SIZE-1] & ~nzcv.N);
-                ALU_OP_MINUS: nzcv.V = (~in_val_a[`GPR_SIZE-1] & in_val_b[`GPR_SIZE-1] & nzcv.N) | (in_val_a[`GPR_SIZE-1] & ~in_val_b[`GPR_SIZE-1] & ~nzcv.N);
-                default: nzcv.V = 0;
-            endcase
-        end
-        out_nzcv = nzcv;
-        if(in_alu_op == ALU_OP_CSEL || in_alu_op == ALU_OP_CSNEG || in_alu_op == ALU_OP_CSINC || in_alu_op == ALU_OP_CSINV) begin
-            if(cond_val == 0) begin
-                out_res = result_reg;
-            end
-            else begin
-                out_res = in_val_a;
-            end
-        end
-        else begin
-            out_res = result_reg;
-        end
-    end
-endmodule
+    //TODO()
 
-module OP_UBFM_module(
-    input logic [63:0] in_val_a,
-    input logic [5:0] in_imms,
-    input logic [5:0] in_immr,
-    output logic [63:0] out_res
-);
-
-    always_comb begin
-        if (in_imms >= in_immr) begin
-            out_res = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
-        end else begin
-            out_res = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
-        end
-    end
-
-endmodule
-
-module OP_SBFM_module(
-    input logic signed [63:0] in_val_a,
-    input logic signed [5:0] in_imms,
-    input logic signed [5:0] in_immr,
-    output logic signed [63:0] out_res
-);
-
-    always_comb begin
-        if (in_imms >= in_immr) begin
-            out_res = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
-        end else begin
-            out_res = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
-        end
-    end
+    // todo dispatch
+    dispatch dp (
+        .in_clk(in_clk),
+        .in_stall(in_stall),
+        .in_insnbits(in_insnbits),
+        .in_fetch_done(in_fetch_done),
+        .out_src1(out_src1),
+        .out_src2(out_src2),
+        .out_fu(out_fu),
+        .out_dst(out_dst),
+        .out_stalled(out_stalled)
+    );
 
 endmodule

@@ -1,123 +1,184 @@
 `include "data_structures.sv"
 
-module reservation_station # (
+module reservation_station_module # (
     parameter RS_SIZE = 8
 ) (
-    input logic op1_valid,
-    input logic op2_valid,
-    input logic [`ROB_IDX_SIZE-1:0] op1_rob_index,
-    input logic [`ROB_IDX_SIZE-1:0] op2_rob_index,
-    input logic [`GPR_SIZE-1:0] op1_value,
-    input logic [`GPR_SIZE-1:0] op2_value
-);
+    // Reset
+    input logic in_reset,
+    input logic in_clk,
+    // From Dispatch (sourced from either regfile or ROB)
+    input logic in_op1_valid,
+    input logic in_op2_valid,
+    input logic [`ROB_IDX_SIZE-1:0] in_op1_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_op2_rob_index,
+    input logic [`GPR_SIZE-1:0] in_op1_value,
+    input logic [`GPR_SIZE-1:0] in_op2_value,
+    input logic [`GPR_IDX_SIZE-1:0] in_dst,
+    input logic in_set_nzcv,
+    // From ROB
+    input logic in_rob_broadcast_done, // is the rob broadcasting?
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
+    input logic [`GPR_SIZE-1:0] in_rob_broadcast_val,
+    input logic in_rob_is_mispred,
 
+    // From FU
+    input logic in_fu_ready, // ready to receive inputs
+    input logic in_fu_done, // has outputs that must be forwarded
+    // For FU
+    output logic [`RS_IDX_SIZE:0] out_ready_index // The index of the next RS entry to be consumed
+);
+    // TODO(Nate): Receive forwarded values from the ALU on negedge of clk.
+    // could also be forwarding to FUs, not super sure tho.
+
+    // TODO(Nate): This module is hardcoded for now. LUT should be generated
+    // based on parameters
     rs_entry [`RS_SIZE-1:0] rs;
 
-endmodule
+    // We include an extra bit to mark whether a reservation station index is
+    // invalid or not
+    localparam logic [`RS_IDX_SIZE:0] INVALID_INDEX = 4'b1000; // TODO(Nate): Unhardcode (softcode) this `RS_IDX_SIZE;
 
-module rob #(
-    parameter GPR_SIZE = 64,
-    parameter ROB_SIZE = 16,
-    parameter ROB_IDX_SIZE = 4,
-    parameter GPR_IDX_SIZE = 5
-) (
-    // Clocks
-    input logic in_clk,
-    input logic in_rst,
-    // Inputs from FU
-    input logic in_fu_done,
-    input logic [GPR_SIZE-1:0] in_fu_value,
-    input logic [ROB_IDX_SIZE-1:0] in_fu_rob_idx,
-    input logic in_fu_set_nzcv,
-    input nzcv_t in_fu_nzcv,
-    // Inputs from dispatch
-    input logic [GPR_IDX_SIZE-1:0] in_gpr_idx,
-    input logic in_is_nop,
-    // Outputs for regfile
-    output logic out_regfile_should_commit,
-    // Outputs for dispatch
-    output logic [ROB_IDX_SIZE-1:0] out_next_rob_idx
-);
-    // Internal state
-    rob_entry [ROB_SIZE-1:0] rob;
-    logic [ROB_IDX_SIZE-1:0] commit_ptr;
-    logic will_commit;
+    // Map occupied reservation stations entries to wires. These will be used in
+    // a LUT in order to determine the index of the next free entry.
+    // If all entries are occupied, the INVALID_INDEX will be set.
+    logic [`RS_SIZE-1:0] occupied_entries;
+    logic [`RS_IDX_SIZE:0] free_station_index;
+    for (genvar i = 0; i < `RS_SIZE; i+=1) begin
+        assign occupied_entries[i] = rs[i].entry_valid;
+    end
+    always_comb begin : free_stations
+        casez (occupied_entries)
+            // Imaginary LUT for 8 values
+            // 0 = free, 1 = occupied
+            8'b????_???0: free_station_index = 0;
+            8'b????_??01: free_station_index = 1;
+            8'b????_?011: free_station_index = 2;
+            8'b????_0111: free_station_index = 3;
+            8'b???0_1111: free_station_index = 4;
+            8'b??01_1111: free_station_index = 5;
+            8'b?011_1111: free_station_index = 6;
+            8'b0111_1111: free_station_index = 7;
+            default:      free_station_index = INVALID_INDEX;
+        endcase
+    end : free_stations
 
-    function integer get_rob_idx(integer fu_rob_idx);
-        get_rob_idx = fu_rob_idx;
-    endfunction
+    // Map ready reservation stations entries to wires. These will be used in
+    // a LUT in order to determine the index of the next entry to be executed.
+    // If none are ready to be executed, the INVALID_INDEX will be set.
+    logic [`RS_SIZE-1:0] ready_entries;
+    logic [`RS_IDX_SIZE:0] ready_station_index;
+    for (genvar i = 0; i < `RS_SIZE; i+=1) begin
+        assign ready_entries[i] = rs[i].entry_valid & rs[i].ready;
+    end
+    always_comb begin : ready_stations
+        casez (ready_entries)
+            // Imaginary LUT for 8 values
+            // 0 = free, 1 = occupied
+            8'b1000_0000: ready_station_index = 0;
+            8'b?100_0000: ready_station_index = 1;
+            8'b??10_0000: ready_station_index = 2;
+            8'b???1_0000: ready_station_index = 3;
+            8'b????_1000: ready_station_index = 4;
+            8'b????_?100: ready_station_index = 5;
+            8'b????_??10: ready_station_index = 6;
+            8'b????_???1: ready_station_index = 7;
+            default:      ready_station_index = INVALID_INDEX;
+        endcase
+        out_ready_index = ready_station_index;
+    end : ready_stations
 
-    // Initial inputs
-    always_ff @(posedge in_clk) begin
-        commit_ptr = 0;
-        if (in_rst) begin
-            // integer i;
-            // for (i = 0; i < GPR_SIZE; i += 1) begin
-            //     rob[i] = 0;
-            // end
-        end else if (!in_is_nop) begin
-            // Write to ROB upon FU completing
-            if (in_fu_done) begin
-                rob[0 +: in_fu_rob_idx].value <= in_fu_value;
-                rob[in_fu_rob_idx].valid <= 1;
-                if (in_fu_set_nzcv) begin
-                    rob[in_fu_rob_idx].set_nzcv <= 1;
-                    rob[in_fu_rob_idx].nzcv <= in_fu_nzcv;
-                end
-            end
-            // Write to ROB from Dispatch
-            // if (accepting_input) begin
-            //     rob[next_rob_idx].gpr_idx <= in_gpr_idx;
-            //     commit_ptr <= in_next_rob_idx;
-            // end
+    for (genvar i = 0; i < `RS_SIZE; i+=1) begin
+        assign rs[free_station_index].ready = in_op1_valid & in_op2_valid;
+    end
+
+    always_ff @(negedge in_clk) begin
+        if (in_rob_is_mispred) begin
+            `ifdef DEBUG_PRINT
+                $display("(regfile) Deleting mispredicted instructions");
+            `endif
+            // todo handle mispred
         end
     end
 
-endmodule
 
-module regfile(
-    // Clock
-    input logic in_clk,
-    input logic in_rst,
-    // Inputs from ROB
-    input logic in_rob_should_commit,
-    input logic [`GPR_SIZE-1:0] in_rob_commit_value,
-    input logic [`GPR_IDX_SIZE-1:0] in_rob_regfile_index,
-    // Inputs from Dispatch
-    input logic in_dispatch_should_read, // UNUSED: But this would be good for energy
-    input logic [`GPR_IDX_SIZE-1:0] in_d_op1,
-    input logic [`GPR_IDX_SIZE-1:0] in_d_op2,
-    // Outputs for Dispatch
-    output logic [`GPR_SIZE-1:0] out_d_op1,
-    output logic [`GPR_SIZE-1:0] out_d_op2
-);
-
-    gpr_entry [`GPR_SIZE-1:0] gprs;
-    integer i;
     always_ff @(posedge in_clk) begin
-        if (in_rst) begin
-            for (i = 0; i < `GPR_SIZE; i += 1) begin
-                gprs[i] <= 0;
-            end
-        end else begin
-            if (in_dispatch_should_read) begin
-                gpr_entry gpr1;
-                gpr_entry gpr2;
-                gpr1 <= gprs[in_d_op1];
-                gpr2 <= gprs[in_d_op2];
-                if (gpr1.valid) begin
-                    out_d_op1 <= gpr1.value;
+        if (in_reset) begin
+            rs = 0;
+        end
+        // Add new reservation station entry from dispatch
+        if (free_station_index != INVALID_INDEX) begin : update_from_dispatch
+            `ifdef DEBUG_PRINT
+                $display("(reservation_stations) instantiating RS[%0d]", free_station_index);
+            `endif
+            rs[free_station_index].op1.value <= in_op1_value;
+            rs[free_station_index].op1.rob_index <= in_op1_rob_index;
+            rs[free_station_index].op1.valid <= in_op1_valid;
+            rs[free_station_index].op2.value <= in_op2_value;
+            rs[free_station_index].op2.rob_index <= in_op2_rob_index;
+            rs[free_station_index].op2.valid <= in_op2_valid;
+            rs[free_station_index].entry_valid <= 1;
+            rs[free_station_index].dst_rob_index <= in_dst;
+            rs[free_station_index].set_nzcv <= in_set_nzcv;
+        end : update_from_dispatch
+        // Update entry because FU has consumed the value. This will execute
+        // in lockstep with the FU actually consuming the value.
+        if (ready_station_index != INVALID_INDEX) begin : fu_consume_entry
+            // Delay updating to account for hold time
+            `ifdef DEBUG_PRINT
+                $display("(reservation_stations) FU consumed RS[%0d]", ready_station_index);
+            `endif
+            #1 rs[ready_station_index].ready <= ~in_fu_ready;
+        end : fu_consume_entry
+        // TODO(Nate): Add case for updating from rob broadcast
+        if (in_rob_broadcast_done) begin : rob_broadcast_update
+            `ifdef DEBUG_PRINT
+                $display("(reservation_stations) Updating from ROB broadcast");
+            `endif
+            if (!in_rob_is_mispred) begin
+                `ifdef DEBUG_PRINT
+                    $display("(reservation_stations) not mispredicted");
+                `endif
+                for (int i = 0; i < `RS_SIZE; i+=1) begin
+                    if (rs[i].entry_valid) begin // Unnecessary check, but will help energy
+                        if (rs[i].op1.rob_index == in_rob_broadcast_index) begin
+                            `ifdef DEBUG_PRINT
+                                $display("(reservation_stations) not mispred Updating RS[%0d] op1", i);
+                            `endif
+                            rs[i].op1.value <= in_rob_broadcast_val;
+                            rs[i].op1.valid <= 1;
+                        end
+                        if (rs[i].op2.rob_index == in_rob_broadcast_index) begin
+                            `ifdef DEBUG_PRINT
+                                $display("(reservation_stations) not mispred Updating RS[%0d] op2", i);
+                            `endif
+                            rs[i].op2.value <= in_rob_broadcast_val;
+                            rs[i].op1.valid <= 1;
+                        end
+                    end
                 end
-                if (gpr2.valid) begin
-                    out_d_op2 <= gpr2.value;
-                end
-            end
-            if (in_rob_should_commit) begin
-                gpr_entry gpr;
-                gpr <= gprs[in_rob_regfile_index];
-                gpr.value <= in_rob_commit_value;
+            end else begin // Mispred broadcast
+                // for (int i = 0; i < `RS_SIZE; i+=1) begin
+                //     `ifdef DEBUG_PRINT
+                //         $display("(reservation_stations) Mispred");
+                //     `endif
+                //     if (rs[i].entry_valid) begin // Unnecessary check, but will help energy
+                //         if (rs[i].op1.rob_index == in_rob_broadcast_index) begin
+                //             `ifdef DEBUG_PRINT
+                //                 $display("(reservation_stations) mispred Updating RS[%0d] op1", i);
+                //             `endif
+                //             rs[i].op1.value <= in_rob_broadcast_val;
+                //             rs[i].op1.valid <= 1;
+                //         end
+                //         if (rs[i].op2.rob_index == in_rob_broadcast_index) begin
+                //             `ifdef DEBUG_PRINT
+                //                 $display("(reservation_stations) mispred Updating RS[%0d] op2", i);
+                //             `endif
+                //             rs[i].op2.value <= in_rob_broadcast_val;
+                //             rs[i].op1.valid <= 1;
+                //         end
+                //     end
+                // end
             end
         end
     end
-
 endmodule

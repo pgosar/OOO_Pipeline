@@ -2,6 +2,7 @@
 `define data_structures
 
 `define RS_SIZE 8
+`define RS_IDX_SIZE $clog2(`RS_SIZE)
 `define ROB_SIZE ((`RS_SIZE)*2+2)
 `define ROB_IDX_SIZE $clog2(`ROB_SIZE)
 `define GPR_COUNT 32
@@ -11,6 +12,7 @@
 `define COND_SIZE 4
 `define NUM_OPCODES 43
 `define OPCODE_SIZE $clog2(`NUM_OPCODES)
+`define MISSPRED_SIZE 3
 
 typedef struct packed{
     logic src2_sel;
@@ -69,12 +71,12 @@ typedef enum logic[`OPCODE_SIZE-1:0] {
     OP_MOVZ,
     OP_ADR,
     OP_ADRP,
-    OP_CINC,
-    OP_CINV,
-    OP_CNEG,
+    // OP_CINC,  // alias of CSINC
+    // OP_CINV,  // alias of CSINV
+    // OP_CNEG,  // alias of SCNEG
     OP_CSEL,
-    OP_CSET,
-    OP_CSETM,
+    // OP_CSET,  // alias of ??
+    // OP_CSETM, // alias of ??
     OP_CSINC,
     OP_CSINV,
     OP_CSNEG,
@@ -82,18 +84,18 @@ typedef enum logic[`OPCODE_SIZE-1:0] {
     OP_ADDS,
     OP_SUB,
     OP_SUBS,
-    OP_CMP,
-    OP_MVN,
+    // OP_CMP, // alias of SUBS
+    OP_ORN, // aliased by MVN
     OP_ORR,
     OP_EOR,
     OP_AND,
     OP_ANDS,
-    OP_TST,
-    OP_LSL,
-    OP_LSR,
+    // OP_TST, // alias of ANDS
+    // OP_LSL, // alias of UBFM
+    // OP_LSR, // alias of UBFM
     OP_SBFM,
     OP_UBFM,
-    OP_ASR,
+    // OP_ASR, // alias of SBFM
     OP_B,
     OP_BR,
     OP_B_COND,
@@ -145,6 +147,7 @@ typedef struct packed {
     logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
     logic ready;
     logic entry_valid;
+    logic set_nzcv;
 } rs_entry;
 
 typedef struct packed {
@@ -164,7 +167,7 @@ typedef struct packed {
 typedef struct packed {
     logic gpr_index;
     logic valid;
-    logic [`GPR_IDX_SIZE-1:0] value;
+    logic [`GPR_SIZE-1:0] value;
     nzcv_t nzcv;
     logic set_nzcv;
 } rob_entry;
@@ -173,20 +176,5 @@ typedef struct packed {
     rs_entry [`RS_SIZE-1:0] rs;
     logic [`ROB_SIZE-1:0] rob;
 } debug_info;
-
-module dispatch (
-    input logic insnbits,
-    input logic stall,
-    output logic d_stalled,
-    output func_unit func_unit_id // ID of functional unit
-);
-    /* TODO:
-     *  - Decode instr bits
-     *  - Read srcs from regfile
-     *  - Insert into ROB and RS
-     */
-    logic state;
-
-endmodule
 
 `endif // data_structures

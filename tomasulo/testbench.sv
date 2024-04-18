@@ -1,6 +1,3 @@
-`include "core.sv"
-
-
 // module ubfm_testbench;
 
 //     // Inputs

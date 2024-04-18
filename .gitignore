@@ -4,3 +4,5 @@ run_arm.c
 *.out
 *.vvp
 .nvim/
+obj_dir/
+.vscode/

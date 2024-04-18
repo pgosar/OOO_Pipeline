@@ -1,17 +1,14 @@
-OUT = testbench.vvp
-SRCS = core.sv decode.sv reservation_stations.sv
 .PHONY: clean test
 
-MODULE = ArithmeticExecuteUnit
+SV_FILES = $(wildcard *.sv)
 
-${OUT}: ${SRCS}
-	iverilog -g2012 -o ${OUT} ${SRCS}
+MODULE = core
 
 clean:
-	rm -rf ${OUT} *.vcd *.vvp db/ incremental_db/ simulation/ obj_dir/ *.rpt *.done *.smsg *.summary *.jdi *.pin *.qpf *.sld *.sof *.qsf *.txt
+	rm -rf testbench.vvp *.vcd *.vvp db/ incremental_db/ simulation/ obj_dir/ *.rpt *.done *.smsg *.summary *.jdi *.pin *.qpf *.sld *.sof *.qsf *.txt
 
 verilator:
-	verilator --binary --build --timing -j 0 --top-module ${MODULE}_tb -o ${MODULE}_tb testbench.sv && ./obj_dir/${MODULE}_tb
+	verilator --binary --build --timing -j 0 -DDEBUG_PRINT ${SV_FILES} --top-module ${MODULE} -o ${MODULE}_tb
 
 quartus:
 	quartus_sh --flow compile ${MODULE}
