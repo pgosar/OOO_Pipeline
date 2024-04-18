@@ -9,11 +9,11 @@ module extract_immval(
 
 always_ff @(posedge in_clk) begin
     case (in_op)
-        OP_LDUR, OP_STUR: imm = insnbits[20:12];
-        OP_ADD, OP_SUB, OP_UBFM, OP_ASR: imm = insnbits[21:10];
-        OP_MOVK, OP_MOVZ: imm = insnbits[20:5];
-        OP_ADRP: imm = (insnbits[23:5] << 14) | (insnbits[31:29] << 12);
-        default: imm = 0;
+        OP_LDUR, OP_STUR: imm <= insnbits[20:12];
+        OP_ADD, OP_SUB, OP_UBFM, OP_ASR: imm <= insnbits[21:10];
+        OP_MOVK, OP_MOVZ: imm <= insnbits[20:5];
+        OP_ADRP: imm <= (insnbits[23:5] << 14) | (insnbits[31:29] << 12);
+        default: imm <= 0;
     endcase
 end
 
@@ -35,9 +35,9 @@ module extract_reg(
             op != OP_BL && op != OP_BLR && op != OP_RET && //branch dont need dst
             op != OP_NOP && op != OP_HLT &&  //S format
             op != OP_CBZ && op != OP_CBNZ ) begin //i something format
-                dst = insnbits[4:0];
+                dst <= insnbits[4:0];
         end else if (op == OP_BL) begin
-            dst = 30;
+            dst <= 30;
         end
 
         //src1
@@ -45,20 +45,20 @@ module extract_reg(
             op != OP_B && op != OP_BR && op != OP_B_COND && op != OP_BL && op != OP_BLR &&
             op != OP_NOP && op != OP_HLT
             && op != OP_CBZ && op != OP_CBNZ) begin
-            src1 = insnbits[9:5];
+            src1 <= insnbits[9:5];
         end else if(op == OP_CBZ || op == OP_CBNZ) begin
-            src1 = insnbits[5:0];
+            src1 <= insnbits[5:0];
         end
 
         //src2
         if (op == OP_STUR) begin
-            src2 = insnbits[4:0];
+            src2 <= insnbits[4:0];
         end else if (op == OP_ADDS || op == OP_SUBS || op == OP_CMP || op == OP_MVN ||
                      op == OP_ORR || op == OP_EOR || op == OP_ANDS ||
                      op == OP_TST || op == OP_CINC || op == OP_CINV || op == OP_CNEG || op == OP_CSET ||
                      op == OP_CSETM || op == OP_CSINC || op == OP_CSINV ||
                      op == OP_CSEL || op == OP_CSINV || op == OP_CSINC || op == OP_CSNEG) begin // extra credit checks
-            src2 = insnbits[21:16];
+            src2 <= insnbits[21:16];
         end
 
     end

@@ -97,25 +97,25 @@ module regfile(
     always_ff @(posedge in_clk) begin
         if (in_rst) begin
             for (i = 0; i < `GPR_SIZE; i += 1) begin
-                gprs[i] = 0;
+                gprs[i] <= 0;
             end
         end else begin
             if (in_dispatch_should_read) begin
                 gpr_entry gpr1;
                 gpr_entry gpr2;
-                gpr1 = gprs[in_d_op1];
-                gpr2 = gprs[in_d_op2];
+                gpr1 <= gprs[in_d_op1];
+                gpr2 <= gprs[in_d_op2];
                 if (gpr1.valid) begin
-                    out_d_op1 = gpr1.value;
+                    out_d_op1 <= gpr1.value;
                 end
                 if (gpr2.valid) begin
-                    out_d_op2 = gpr2.value;
+                    out_d_op2 <= gpr2.value;
                 end
             end
             if (in_rob_should_commit) begin
                 gpr_entry gpr;
-                gpr = gprs[in_rob_regfile_index];
-                gpr.value = in_rob_commit_value;
+                gpr <= gprs[in_rob_regfile_index];
+                gpr.value <= in_rob_commit_value;
             end
         end
     end
