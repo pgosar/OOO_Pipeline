@@ -4,7 +4,7 @@ module reservation_station_module # (
     parameter RS_SIZE = 8
 ) (
     // Reset
-    input logic in_reset,
+    input logic in_rst,
     input logic in_clk,
     // From Dispatch (sourced from either regfile or ROB)
     input logic in_op1_valid,
@@ -102,7 +102,7 @@ module reservation_station_module # (
 
 
     always_ff @(posedge in_clk) begin
-        if (in_reset) begin
+        if (in_rst) begin
             rs = 0;
         end
         // Add new reservation station entry from dispatch

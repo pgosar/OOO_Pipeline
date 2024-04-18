@@ -20,7 +20,7 @@ module core(
     logic out_regfile_should_commit;
     // for dispatch
     logic [`ROB_IDX_SIZE-1:0] out_next_rob_idx;
-    logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_idx [`MISSPRED_SIZE-1:0];
+    logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_idx [`MISSPRED_SIZE];
 
     // Regfile
     // from ROB
@@ -105,7 +105,7 @@ module core(
 
     reservation_station_module reservation_stations (
         .in_clk(in_clk),
-        .in_reset(in_reset),
+        .in_rst(in_reset),
         .in_op1_valid(in_op1_valid),
         .in_op2_valid(in_op2_valid),
         .in_op1_rob_index(in_op1_rob_index),
