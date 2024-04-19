@@ -20,8 +20,9 @@ module rob_module (
     output logic [`ROB_IDX_SIZE-1:0] out_next_rob_idx,
     output logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_idx [`MISSPRED_SIZE]
 );
+    // TODO in_gpr_idx, out_regfile_should_commit, out_next_rob_idx, out_delete_mispred_idx unused
     // Internal state
-    rob_entry [`ROB_SIZE-1:0] rob;
+    rob_entry_t [`ROB_SIZE-1:0] rob;
     logic [`ROB_IDX_SIZE-1:0] commit_ptr;
     logic [`NZCV_SIZE-1:0] prev_nzcv;
     logic will_commit;

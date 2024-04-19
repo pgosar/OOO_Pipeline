@@ -128,34 +128,32 @@ typedef enum logic [3:0] {
     C_NV
 } cond_t;
 
-
-typedef enum logic [1:0] {
+typedef enum logic {
     FU_ALU, // Arithmetic & Logic Unit
     FU_LS   // Load / Store Unit
-} func_unit;
-
+} func_unit_t;
 
 typedef struct packed {
     logic valid;
     logic [`ROB_IDX_SIZE-1:0] rob_index;
     logic [`GPR_SIZE-1:0] value;
-} rs_op;
+} rs_op_t;
 
 typedef struct packed {
-    rs_op op1;
-    rs_op op2;
+    rs_op_t op1;
+    rs_op_t op2;
     logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
     logic ready;
     logic entry_valid;
     logic set_nzcv;
-} rs_entry;
+} rs_entry_t;
 
 typedef struct packed {
     logic valid;
     logic [`ROB_IDX_SIZE-1:0] rob_index;
     logic [`GPR_SIZE-1:0] value;
     logic [`GPR_IDX_SIZE-1:0] gpr_idx;
-} gpr_entry;
+} gpr_entry_t;
 
 typedef struct packed {
     logic N;
@@ -170,11 +168,13 @@ typedef struct packed {
     logic [`GPR_SIZE-1:0] value;
     nzcv_t nzcv;
     logic set_nzcv;
-} rob_entry;
+} rob_entry_t;
 
 typedef struct packed {
-    rs_entry [`RS_SIZE-1:0] rs;
+    rs_entry_t [`RS_SIZE-1:0] rs;
     logic [`ROB_SIZE-1:0] rob;
-} debug_info;
+} debug_info_t;
 
 `endif // data_structures
+
+

@@ -17,7 +17,7 @@ module regfile_module(
     output logic [`GPR_SIZE-1:0] out_d_op2
 );
 
-    gpr_entry [`GPR_SIZE-1:0] gprs;
+    gpr_entry_t [`GPR_SIZE-1:0] gprs;
 
     integer i;
     always_comb begin
@@ -30,30 +30,33 @@ module regfile_module(
             end
         end else begin
             if (in_dispatch_should_read) begin
-                gpr_entry gpr1;
-                gpr_entry gpr2;
+                gpr_entry_t gpr1;
+                gpr_entry_t gpr2;
                 gpr1 = gprs[in_d_op1];
                 gpr2 = gprs[in_d_op2];
                 if (gpr1.valid) begin
                     out_d_op1 = gpr1.value;
                     `ifdef DEBUG_PRINT
-                        $display("(regfile) Dispatch read GPR[%0d] (valid) = %0d", in_d_op1, gpr1.value);
+                        $display("(regfile) Dispatch read GPR[%0d] (valid) = %0d",
+                                  in_d_op1, gpr1.value);
                     `endif
                 end
                 if (gpr2.valid) begin
                     out_d_op2 = gpr2.value;
                     `ifdef DEBUG_PRINT
-                        $display("(regfile) Dispatch read GPR[%0d] (valid) = %0d", in_d_op2, gpr2.value);
+                        $display("(regfile) Dispatch read GPR[%0d] (valid) = %0d",
+                                  in_d_op2, gpr2.value);
                     `endif
 
                 end
             end
             if (in_rob_should_commit) begin
-                gpr_entry gpr;
+                gpr_entry_t gpr;
                 gpr = gprs[in_rob_regfile_index];
                 gpr.value = in_rob_commit_value;
                 `ifdef DEBUG_PRINT
-                    $display("(regfile) Committing to GPR[%0d] = %0d", in_rob_regfile_index, in_rob_commit_value);
+                    $display("(regfile) Committing to GPR[%0d] = %0d",
+                              in_rob_regfile_index, in_rob_commit_value);
                 `endif
             end
         end

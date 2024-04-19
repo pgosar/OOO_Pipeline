@@ -68,7 +68,7 @@ module core(
     logic in_fetch_done;
     logic [`GPR_IDX_SIZE-1:0] out_src1;
     logic [`GPR_IDX_SIZE-1:0] out_src2;
-    func_unit out_fu;
+    func_unit_t out_fu;
     logic [`GPR_IDX_SIZE-1:0] out_dst;
     logic out_stalled;
 

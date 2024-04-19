@@ -92,13 +92,16 @@ module ArithmeticExecuteUnit(
                 default: out_nzcv.C = 0;
             endcase
             casez (in_alu_op) /* Setting overflow flag */
-                ALU_OP_PLUS: nzcv.V = (~in_val_a[`GPR_SIZE-1] & ~in_val_b[`GPR_SIZE-1] & nzcv.N) | (in_val_a[`GPR_SIZE-1] & in_val_b[`GPR_SIZE-1] & ~nzcv.N);
-                ALU_OP_MINUS: nzcv.V = (~in_val_a[`GPR_SIZE-1] & in_val_b[`GPR_SIZE-1] & nzcv.N) | (in_val_a[`GPR_SIZE-1] & ~in_val_b[`GPR_SIZE-1] & ~nzcv.N);
+                ALU_OP_PLUS: nzcv.V = (~in_val_a[`GPR_SIZE-1] & ~in_val_b[`GPR_SIZE-1] & nzcv.N) |
+                                      (in_val_a[`GPR_SIZE-1] & in_val_b[`GPR_SIZE-1] & ~nzcv.N);
+                ALU_OP_MINUS: nzcv.V = (~in_val_a[`GPR_SIZE-1] & in_val_b[`GPR_SIZE-1] & nzcv.N) |
+                                       (in_val_a[`GPR_SIZE-1] & ~in_val_b[`GPR_SIZE-1] & ~nzcv.N);
                 default: nzcv.V = 0;
             endcase
         end
         out_nzcv = nzcv;
-        if(in_alu_op == ALU_OP_CSEL || in_alu_op == ALU_OP_CSNEG || in_alu_op == ALU_OP_CSINC || in_alu_op == ALU_OP_CSINV) begin
+        if(in_alu_op == ALU_OP_CSEL || in_alu_op == ALU_OP_CSNEG || in_alu_op == ALU_OP_CSINC ||
+                                       in_alu_op == ALU_OP_CSINV) begin
             if(cond_val == 0) begin
                 out_res = result_reg;
             end
@@ -145,3 +148,4 @@ module OP_SBFM_module(
     end
 
 endmodule
+

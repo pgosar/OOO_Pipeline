@@ -32,11 +32,12 @@ module reservation_station_module # (
 
     // TODO(Nate): This module is hardcoded for now. LUT should be generated
     // based on parameters
-    rs_entry [`RS_SIZE-1:0] rs;
+    rs_entry_t [`RS_SIZE-1:0] rs;
 
     // We include an extra bit to mark whether a reservation station index is
     // invalid or not
-    localparam logic [`RS_IDX_SIZE:0] INVALID_INDEX = 4'b1000; // TODO(Nate): Unhardcode (softcode) this `RS_IDX_SIZE;
+    // TODO(Nate): Unhardcode (softcode) this `RS_IDX_SIZE;
+    localparam logic [`RS_IDX_SIZE:0] INVALID_INDEX = 4'b1000;
 
     // Map occupied reservation stations entries to wires. These will be used in
     // a LUT in order to determine the index of the next free entry.
@@ -100,10 +101,9 @@ module reservation_station_module # (
         end
     end
 
-
     always_ff @(posedge in_clk) begin
         if (in_rst) begin
-            rs = 0;
+            rs <= 0;
         end
         // Add new reservation station entry from dispatch
         if (free_station_index != INVALID_INDEX) begin : update_from_dispatch
@@ -142,14 +142,16 @@ module reservation_station_module # (
                     if (rs[i].entry_valid) begin // Unnecessary check, but will help energy
                         if (rs[i].op1.rob_index == in_rob_broadcast_index) begin
                             `ifdef DEBUG_PRINT
-                                $display("(reservation_stations) not mispred Updating RS[%0d] op1", i);
+                                $display("(reservation_stations) not mispred Updating RS[%0d] op1",
+                                          i);
                             `endif
                             rs[i].op1.value <= in_rob_broadcast_val;
                             rs[i].op1.valid <= 1;
                         end
                         if (rs[i].op2.rob_index == in_rob_broadcast_index) begin
                             `ifdef DEBUG_PRINT
-                                $display("(reservation_stations) not mispred Updating RS[%0d] op2", i);
+                                $display("(reservation_stations) not mispred Updating RS[%0d] op2",
+                                          i);
                             `endif
                             rs[i].op2.value <= in_rob_broadcast_val;
                             rs[i].op1.valid <= 1;
