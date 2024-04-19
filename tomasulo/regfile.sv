@@ -20,7 +20,7 @@ module regfile_module(
     gpr_entry_t [`GPR_SIZE-1:0] gprs;
 
     integer i;
-    always_comb begin
+    always_latch begin
         if (in_rst) begin
             `ifdef DEBUG_PRINT
                 $display("(regfile) Resetting");

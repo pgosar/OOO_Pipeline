@@ -106,7 +106,7 @@ module extract_reg(
     output logic [`GPR_IDX_SIZE-1:0] out_src2,
     output logic [`GPR_IDX_SIZE-1:0] out_dst
 );
-    always_comb begin
+    always_latch begin
         //out_dst
         if (in_op != OP_B && in_op != OP_BR && in_op != OP_B_COND && //branch dont need out_dst
             in_op != OP_BL && in_op != OP_BLR && in_op != OP_RET && //branch dont need out_dst

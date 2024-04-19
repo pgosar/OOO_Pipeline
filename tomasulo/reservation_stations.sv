@@ -43,6 +43,9 @@ module reservation_station_module # (
     // a LUT in order to determine the index of the next free entry.
     // If all entries are occupied, the INVALID_INDEX will be set.
     logic [`RS_SIZE-1:0] occupied_entries;
+    //TODO: not sure why we have a unoptimizable error here, but looks safe to ignore for now
+    // https://github.com/verilator/verilator/issues/63, fix later
+    /* verilator lint_off UNOPTFLAT */
     logic [`RS_IDX_SIZE:0] free_station_index;
     for (genvar i = 0; i < `RS_SIZE; i+=1) begin
         assign occupied_entries[i] = rs[i].entry_valid;

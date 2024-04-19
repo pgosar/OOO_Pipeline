@@ -47,7 +47,7 @@ module rob_module (
     end
 
     // Initial inputs
-    always_comb begin
+    always_latch begin
         commit_ptr = 0;
         if (in_rst) begin
             integer i;
