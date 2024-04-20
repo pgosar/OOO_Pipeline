@@ -14,167 +14,163 @@
 `define OPCODE_SIZE $clog2(`NUM_OPCODES)
 `define MISSPRED_SIZE 3
 
-typedef struct packed{
-    logic src2_sel;
-} d_ctl_sigs_t;
+typedef struct packed {logic src2_sel;} d_ctl_sigs_t;
 
-typedef struct packed{
-    logic valb_sel;
-    logic set_CC;
+typedef struct packed {
+  logic valb_sel;
+  logic set_CC;
 } x_ctl_sigs_t;
 
-typedef struct packed{
-    logic dmem_read;
-    logic dmem_write;
+typedef struct packed {
+  logic dmem_read;
+  logic dmem_write;
 } m_ctl_sigs_t;
 
-typedef struct packed{
-    logic dst_sel;
-    logic wval_sel;
-    logic w_enable;
+typedef struct packed {
+  logic dst_sel;
+  logic wval_sel;
+  logic w_enable;
 } w_ctl_sigs_t;
 
-typedef enum logic[2:0] {
-    S0,
-    S1,
-    S2,
-    S3,
-    S4,
-    S5
+typedef enum logic [2:0] {
+  S0,
+  S1,
+  S2,
+  S3,
+  S4,
+  S5
 } states_t;
 
-typedef enum logic[5:0] {
-    ALU_OP_PLUS,    // val_a + (val_b << valhw)
-    ALU_OP_MINUS,   // val_a - (val_b << valhw)
-    ALU_OP_ORN,     // val_a | (~val_b)
-    ALU_OP_OR,      // val_a | val_b
-    ALU_OP_EOR,     // val_a ^ val_b
-    ALU_OP_AND,     // val_a & val_b
-    ALU_OP_MOV,     // val_a | (val_b << valhw)
-    ALU_OP_UBFM,
-    ALU_OP_SBFM,
-    ALU_OP_PASS_A,  // val_a
-    ALU_OP_CSEL,     // EC: used for csel
-    ALU_OP_CSINV,    // EC: used for csinv
-    ALU_OP_CSINC,    // EC: used for csinc
-    ALU_OP_CSNEG,    // EC: used for csneg
-    ALU_OP_CBZ,      // EC: used for cbz
-    ALU_OP_CBNZ     // EC: used for cbnz
+typedef enum logic [5:0] {
+  ALU_OP_PLUS,    // val_a + (val_b << valhw)
+  ALU_OP_MINUS,   // val_a - (val_b << valhw)
+  ALU_OP_ORN,     // val_a | (~val_b)
+  ALU_OP_OR,      // val_a | val_b
+  ALU_OP_EOR,     // val_a ^ val_b
+  ALU_OP_AND,     // val_a & val_b
+  ALU_OP_MOV,     // val_a | (val_b << valhw)
+  ALU_OP_UBFM,
+  ALU_OP_SBFM,
+  ALU_OP_PASS_A,  // val_a
+  ALU_OP_CSEL,    // EC: used for csel
+  ALU_OP_CSINV,   // EC: used for csinv
+  ALU_OP_CSINC,   // EC: used for csinc
+  ALU_OP_CSNEG,   // EC: used for csneg
+  ALU_OP_CBZ,     // EC: used for cbz
+  ALU_OP_CBNZ     // EC: used for cbnz
 } alu_op_t;
 
-typedef enum logic[`OPCODE_SIZE-1:0] {
-    OP_LDUR,
-    OP_LDP,
-    OP_STUR,
-    OP_STP,
-    OP_MOVK,
-    OP_MOVZ,
-    OP_ADR,
-    OP_ADRP,
-    // OP_CINC,  // alias of CSINC
-    // OP_CINV,  // alias of CSINV
-    // OP_CNEG,  // alias of SCNEG
-    OP_CSEL,
-    // OP_CSET,  // alias of ??
-    // OP_CSETM, // alias of ??
-    OP_CSINC,
-    OP_CSINV,
-    OP_CSNEG,
-    OP_ADD,
-    OP_ADDS,
-    OP_SUB,
-    OP_SUBS,
-    // OP_CMP, // alias of SUBS
-    OP_ORN, // aliased by MVN
-    OP_ORR,
-    OP_EOR,
-    OP_AND,
-    OP_ANDS,
-    // OP_TST, // alias of ANDS
-    // OP_LSL, // alias of UBFM
-    // OP_LSR, // alias of UBFM
-    OP_SBFM,
-    OP_UBFM,
-    // OP_ASR, // alias of SBFM
-    OP_B,
-    OP_BR,
-    OP_B_COND,
-    OP_BL,
-    OP_BLR,
-    OP_CBNZ,
-    OP_CBZ,
-    OP_RET,
-    OP_NOP,
-    OP_HLT,
-    OP_ERR
+typedef enum logic [`OPCODE_SIZE-1:0] {
+  OP_LDUR,
+  OP_LDP,
+  OP_STUR,
+  OP_STP,
+  OP_MOVK,
+  OP_MOVZ,
+  OP_ADR,
+  OP_ADRP,
+  // OP_CINC,  // alias of CSINC
+  // OP_CINV,  // alias of CSINV
+  // OP_CNEG,  // alias of SCNEG
+  OP_CSEL,
+  // OP_CSET,  // alias of ??
+  // OP_CSETM, // alias of ??
+  OP_CSINC,
+  OP_CSINV,
+  OP_CSNEG,
+  OP_ADD,
+  OP_ADDS,
+  OP_SUB,
+  OP_SUBS,
+  // OP_CMP, // alias of SUBS
+  OP_ORN,  // aliased by MVN
+  OP_ORR,
+  OP_EOR,
+  OP_AND,
+  OP_ANDS,
+  // OP_TST, // alias of ANDS
+  // OP_LSL, // alias of UBFM
+  // OP_LSR, // alias of UBFM
+  OP_SBFM,
+  OP_UBFM,
+  // OP_ASR, // alias of SBFM
+  OP_B,
+  OP_BR,
+  OP_B_COND,
+  OP_BL,
+  OP_BLR,
+  OP_CBNZ,
+  OP_CBZ,
+  OP_RET,
+  OP_NOP,
+  OP_HLT,
+  OP_ERR
 } opcode_t;
 
 typedef enum logic [3:0] {
-    C_EQ,
-    C_NE,
-    C_CS,
-    C_CC,
-    C_MI,
-    C_PL,
-    C_VS,
-    C_VC,
-    C_HI,
-    C_LS,
-    C_GE,
-    C_LT,
-    C_GT,
-    C_LE,
-    C_AL,
-    C_NV
+  C_EQ,
+  C_NE,
+  C_CS,
+  C_CC,
+  C_MI,
+  C_PL,
+  C_VS,
+  C_VC,
+  C_HI,
+  C_LS,
+  C_GE,
+  C_LT,
+  C_GT,
+  C_LE,
+  C_AL,
+  C_NV
 } cond_t;
 
 typedef enum logic {
-    FU_ALU, // Arithmetic & Logic Unit
-    FU_LS   // Load / Store Unit
+  FU_ALU,  // Arithmetic & Logic Unit
+  FU_LS    // Load / Store Unit
 } func_unit_t;
 
 typedef struct packed {
-    logic valid;
-    logic [`ROB_IDX_SIZE-1:0] rob_index;
-    logic [`GPR_SIZE-1:0] value;
+  logic valid;
+  logic [`ROB_IDX_SIZE-1:0] rob_index;
+  logic [`GPR_SIZE-1:0] value;
 } rs_op_t;
 
 typedef struct packed {
-    rs_op_t op1;
-    rs_op_t op2;
-    logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
-    logic ready;
-    logic entry_valid;
-    logic set_nzcv;
+  rs_op_t op1;
+  rs_op_t op2;
+  logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
+  logic ready;
+  logic entry_valid;
+  logic set_nzcv;
 } rs_entry_t;
 
 typedef struct packed {
-    logic valid;
-    logic [`ROB_IDX_SIZE-1:0] rob_index;
-    logic [`GPR_SIZE-1:0] value;
-    logic [`GPR_IDX_SIZE-1:0] gpr_idx;
+  logic valid;
+  logic [`ROB_IDX_SIZE-1:0] rob_index;
+  logic [`GPR_SIZE-1:0] value;
+  logic [`GPR_IDX_SIZE-1:0] gpr_idx;
 } gpr_entry_t;
 
 typedef struct packed {
-    logic N;
-    logic Z;
-    logic C;
-    logic V;
+  logic N;
+  logic Z;
+  logic C;
+  logic V;
 } nzcv_t;
 
 typedef struct packed {
-    logic gpr_index;
-    logic valid;
-    logic [`GPR_SIZE-1:0] value;
-    nzcv_t nzcv;
-    logic set_nzcv;
+  logic gpr_index;
+  logic valid;
+  logic [`GPR_SIZE-1:0] value;
+  nzcv_t nzcv;
+  logic set_nzcv;
 } rob_entry_t;
 
 typedef struct packed {
-    rs_entry_t [`RS_SIZE-1:0] rs;
-    logic [`ROB_SIZE-1:0] rob;
+  rs_entry_t [`RS_SIZE-1:0] rs;
+  logic [`ROB_SIZE-1:0] rob;
 } debug_info_t;
 
-`endif // data_structures
-
-
+`endif  // data_structures
