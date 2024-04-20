@@ -58,7 +58,7 @@ module ArithmeticExecuteUnit (
     output logic out_cond_val,
     output logic [`GPR_SIZE-1:0] out_res,
     output nzcv_t out_nzcv,
-    output logic out_done  // Done signal indicating operation completion
+    output logic out_fu_done  // Done signal indicating operation completion
 );
 
   logic [`GPR_SIZE-1:0] result_reg;

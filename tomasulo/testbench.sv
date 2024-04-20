@@ -148,7 +148,7 @@ module ArithmeticExecuteUnit_tb;
       .out_cond_val(cond_val),
       .out_res(res),
       .out_nzcv(nzcv),
-      .out_done(done)
+      .out_fu_done(done)
   );
 
   initial begin

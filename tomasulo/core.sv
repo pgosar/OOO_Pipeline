@@ -2,8 +2,8 @@
 
 module core (
     input logic in_reset,
-    input logic in_start,
-    input logic in_clk
+    input logic in_start
+    //input logic in_clk
 );
   initial begin
 `ifdef DEBUG_PRINT
@@ -36,7 +36,7 @@ module core (
   // logic in_is_mispred;
   // logic [ROB_IDX_SIZE-1:0] out_delete_mispred_idx [2:0];
   // from dispatch
-  logic in_dispatch_should_read;
+  logic in_dispatch_should_read = 1;  // TODO: just set to true for now
   logic [`GPR_IDX_SIZE-1:0] in_d_op1;
   logic [`GPR_IDX_SIZE-1:0] in_d_op2;
   // Regfile outputs
@@ -79,6 +79,26 @@ module core (
   logic [`GPR_IDX_SIZE-1:0] out_dst;
   logic out_stalled;
 
+  // ALU
+  alu_op_t in_alu_op;
+  logic [`GPR_SIZE-1:0] in_val_a;
+  logic [`GPR_SIZE-1:0] in_val_b;
+  logic [5:0] in_alu_val_hw;
+  logic in_set_CC;
+  cond_t in_cond;
+  nzcv_t in_prev_nzcv;
+  logic out_cond_val;
+  logic [`GPR_SIZE-1:0] out_res;
+  nzcv_t out_nzcv;
+  logic out_fu_done;
+
+
+  logic in_clk;
+  initial begin
+    in_clk = 0;
+    for (int i = 0; i < 3; i += 1) #5 in_clk = ~in_clk;  // 100 MHz clock
+  end
+
   // modules
   dispatch dp (
       .in_clk(in_clk),
@@ -92,12 +112,24 @@ module core (
       .out_stalled(out_stalled)
   );
   initial begin
-    in_d_op1 = out_src1;
-    in_d_op2 = out_src2;
 `ifdef DEBUG_PRINT
     $display("core: out_src1 = %d, out_src2 = %d", out_src1, out_src2);
 `endif
   end
+
+  ArithmeticExecuteUnit alu (
+      .in_alu_op(in_alu_op),
+      .in_val_a(in_val_a),
+      .in_val_b(in_val_b),
+      .in_alu_val_hw(in_alu_val_hw),
+      .in_set_CC(in_set_CC),
+      .in_cond(in_cond),
+      .in_prev_nzcv(in_prev_nzcv),
+      .out_cond_val(out_cond_val),
+      .out_res(out_res),
+      .out_nzcv(out_nzcv),
+      .out_fu_done(out_fu_done)
+  );
 
   regfile_module regfile (
       .in_clk(in_clk),
