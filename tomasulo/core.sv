@@ -120,6 +120,8 @@ module core (
 `ifdef DEBUG_PRINT
     $display("core: out_src1 = %d, out_src2 = %d", out_src1, out_src2);
 `endif
+    in_fu_done = out_fu_done;
+
   end
 
   ArithmeticExecuteUnit alu (

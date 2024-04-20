@@ -70,6 +70,7 @@ module ArithmeticExecuteUnit (
       .nzcv(in_prev_nzcv),
       .cond_holds(cond_val)
   );
+  assign out_cond_val = cond_val;
 
   always_comb begin : main_switch
     casez (in_alu_op)
@@ -116,6 +117,7 @@ module ArithmeticExecuteUnit (
     end else begin
       out_res = result_reg;
     end
+    out_fu_done = 1;
   end
 endmodule
 
