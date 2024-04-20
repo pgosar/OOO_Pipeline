@@ -60,6 +60,8 @@ module rob_module (
     end else if (!in_is_nop) begin
 `ifdef DEBUG_PRINT
       $display("(rob) not nop Adding new entry");
+      $display("in_gpr_idx: %d", in_gpr_idx);
+      $display("commit_ptr: %d", commit_ptr);
 `endif
       // Write to ROB upon FU completing
       if (in_fu_done) begin

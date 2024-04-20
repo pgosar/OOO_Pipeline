@@ -243,7 +243,11 @@ module dispatch (
 
   opcode_t opcode;
   logic [63:0] immediate;
-
+  always_comb begin
+`ifdef DEBUG_PRINT
+    $display("decode: %b", in_insnbits);
+`endif
+  end
   decode_instruction op_decoder (
       .in_insn(in_insnbits),
       .out_opcode(opcode)
@@ -264,5 +268,15 @@ module dispatch (
       .in_op (opcode),
       .out_fu(out_fu)
   );
+  always_comb begin
+`ifdef DEBUG_PRINT
+    $display("opcode: %d", opcode_t'(opcode));
+    $display("immediate: %d", immediate);
+    $display("fu: %d", func_unit_t'(out_fu));
+    $display("src1: %d", out_src1);
+    $display("src2: %d", out_src2);
+    $display("dst: %d", out_dst);
+`endif
+  end
 
 endmodule : dispatch

@@ -122,6 +122,10 @@ module reservation_station_module #(
       rs[free_station_index].entry_valid <= 1;
       rs[free_station_index].dst_rob_index <= in_dst;
       rs[free_station_index].set_nzcv <= in_set_nzcv;
+`ifdef DEBUG_PRINT
+      $display("RS[%0d] op1: %0d, op2: %0d, dst: %0d", free_station_index, in_op1_value,
+               in_op2_value, in_dst);
+`endif
     end : update_from_dispatch
     // Update entry because FU has consumed the value. This will execute
     // in lockstep with the FU actually consuming the value.

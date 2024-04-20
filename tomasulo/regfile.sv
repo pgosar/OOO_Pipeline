@@ -34,6 +34,7 @@ module regfile_module (
         gpr_entry_t gpr2;
 `ifdef DEBUG_PRINT
         $display("(regfile) Dispatch read GPR[%0d] = %0d", in_d_op1, gprs[in_d_op1]);
+        $display("(regfile) Dispatch read GPR[%0d] = %0d", in_d_op2, gprs[in_d_op2]);
 `endif
         gpr1 = gprs[in_d_op1];
         gpr2 = gprs[in_d_op2];

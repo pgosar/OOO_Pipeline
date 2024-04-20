@@ -70,7 +70,8 @@ module core (
   // from core
   logic in_stall;
   // from fetch
-  logic [31:0] in_insnbits;
+  logic [31:0] in_insnbits = 32'b10010001001111111111110000100001;  // add x1, x1, #0xfff
+
   logic in_fetch_done;
   // for regfile
   logic [`GPR_IDX_SIZE-1:0] out_src1;
@@ -94,9 +95,10 @@ module core (
 
 
   logic in_clk;
+  // for now just run a single cycle
   initial begin
     in_clk = 0;
-    for (int i = 0; i < 3; i += 1) #5 in_clk = ~in_clk;  // 100 MHz clock
+    for (int i = 0; i < 1; i += 1) #5 in_clk = ~in_clk;  // 100 MHz clock
   end
 
   // modules
@@ -111,7 +113,10 @@ module core (
       .out_dst(out_dst),
       .out_stalled(out_stalled)
   );
-  initial begin
+
+  always_comb begin
+    in_d_op1 = out_src1;
+    in_d_op2 = out_src2;
 `ifdef DEBUG_PRINT
     $display("core: out_src1 = %d, out_src2 = %d", out_src1, out_src2);
 `endif
