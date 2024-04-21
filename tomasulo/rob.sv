@@ -24,6 +24,7 @@ module rob_module (
   // Internal state
   rob_entry_t [`ROB_SIZE-1:0] rob;
   logic [`ROB_IDX_SIZE-1:0] commit_ptr;
+  assign commit_ptr = 0;
   logic [`NZCV_SIZE-1:0] prev_nzcv;
   logic will_commit;
 
@@ -48,7 +49,8 @@ module rob_module (
 
   // Initial inputs
   always_latch begin
-    commit_ptr = 0;
+    out_regfile_should_commit = 0;
+    will_commit = 0;
     if (in_rst) begin
       integer i;
       for (i = 0; i < `GPR_SIZE; i += 1) begin
@@ -84,6 +86,14 @@ module rob_module (
           rob[in_fu_rob_idx].set_nzcv = 0;
           rob[in_fu_rob_idx].nzcv = prev_nzcv;
         end
+        // fu done
+        will_commit = 1;
+        commit_ptr = in_fu_rob_idx;
+        out_next_rob_idx = in_fu_rob_idx + 1 % `ROB_SIZE;
+        out_regfile_should_commit = 1;
+`ifdef DEBUG_PRINT
+        $display("(rob) commit_ptr: %d, out_next_rob_idx: %d", commit_ptr, out_next_rob_idx);
+`endif
       end
       // Write to ROB from Dispatch
       // if (accepting_input) begin

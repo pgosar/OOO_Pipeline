@@ -53,7 +53,6 @@ module core (
   logic [`GPR_SIZE-1:0] in_op1_value;
   logic [`GPR_SIZE-1:0] in_op2_value;
   logic [`GPR_IDX_SIZE-1:0] in_dst;
-  logic in_set_nzcv;
   // from ROB
   logic in_rob_broadcast_done;
   logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index;
@@ -98,19 +97,21 @@ module core (
   // for now just run a single cycle
   initial begin
     in_clk = 0;
-    for (int i = 0; i < 1; i += 1) #5 in_clk = ~in_clk;  // 100 MHz clock
+    for (int i = 0; i < 2; i += 1) #5 in_clk = ~in_clk;  // 100 MHz clock
   end
 
   // pipe state over
+  // TODO: We could probably just really simplify our signals?
   always_comb begin
     in_d_op1 = out_src1;
     in_d_op2 = out_src2;
 `ifdef DEBUG_PRINT
     $display("core: out_src1 = %d, out_src2 = %d", out_src1, out_src2);
 `endif
-    in_fu_done  = out_fu_done;
+    in_fu_done = out_fu_done;
     in_fu_value = out_res;
-    in_fu_nzcv  = out_nzcv;
+    in_fu_nzcv = out_nzcv;
+    in_rob_should_commit = out_regfile_should_commit;
   end
 
   // modules
@@ -179,7 +180,7 @@ module core (
       .in_op1_value(in_op1_value),
       .in_op2_value(in_op2_value),
       .in_dst(in_dst),
-      .in_set_nzcv(in_set_nzcv),
+      .in_set_nzcv(in_fu_set_nzcv),
       .in_rob_broadcast_done(in_rob_broadcast_done),
       .in_rob_broadcast_index(in_rob_broadcast_index),
       .in_rob_broadcast_val(in_rob_broadcast_val),
