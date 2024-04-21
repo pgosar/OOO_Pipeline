@@ -65,11 +65,11 @@ module rob_module (
 `endif
       // Write to ROB upon FU completing
       if (in_fu_done) begin
-`ifdef DEBUG_PRINT
-        $display("(rob) FU done");
-`endif
         rob[in_fu_rob_idx].value = in_fu_value;
         rob[in_fu_rob_idx].valid = 1;
+`ifdef DEBUG_PRINT
+        $display("(rob) FU done, setting value to %d", in_fu_value);
+`endif
         if (in_fu_set_nzcv) begin
 `ifdef DEBUG_PRINT
           $display("(rob) Setting nzcv");

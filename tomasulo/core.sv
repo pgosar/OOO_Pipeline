@@ -101,6 +101,18 @@ module core (
     for (int i = 0; i < 1; i += 1) #5 in_clk = ~in_clk;  // 100 MHz clock
   end
 
+  // pipe state over
+  always_comb begin
+    in_d_op1 = out_src1;
+    in_d_op2 = out_src2;
+`ifdef DEBUG_PRINT
+    $display("core: out_src1 = %d, out_src2 = %d", out_src1, out_src2);
+`endif
+    in_fu_done  = out_fu_done;
+    in_fu_value = out_res;
+    in_fu_nzcv  = out_nzcv;
+  end
+
   // modules
   dispatch dp (
       .in_clk(in_clk),
@@ -113,16 +125,6 @@ module core (
       .out_dst(out_dst),
       .out_stalled(out_stalled)
   );
-
-  always_comb begin
-    in_d_op1 = out_src1;
-    in_d_op2 = out_src2;
-`ifdef DEBUG_PRINT
-    $display("core: out_src1 = %d, out_src2 = %d", out_src1, out_src2);
-`endif
-    in_fu_done = out_fu_done;
-
-  end
 
   ArithmeticExecuteUnit alu (
       .in_alu_op(in_alu_op),

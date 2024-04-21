@@ -117,6 +117,10 @@ module ArithmeticExecuteUnit (
     end else begin
       out_res = result_reg;
     end
+`ifdef DEBUG_PRINT
+    $display("ALU: out_res = %d, out_nzcv = %d, out_cond_val = %d", out_res, out_nzcv,
+             out_cond_val);
+`endif
     out_fu_done = 1;
   end
 endmodule
