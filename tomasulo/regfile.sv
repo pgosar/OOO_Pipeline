@@ -1,26 +1,35 @@
 `include "data_structures.sv"
 
 module regfile_module (
-    // Clock
+    // Timing
     input logic in_clk,
     input logic in_rst,
+    // Inputs from dispatch (only piped through lol)
+
     // Inputs from ROB
     input logic in_rob_should_commit,
     input logic [`GPR_SIZE-1:0] in_rob_commit_value,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_regfile_index,
-    // Inputs from Dispatch
-    input logic in_dispatch_should_read,  // UNUSED: But this would be good for energy
-    input logic [`GPR_IDX_SIZE-1:0] in_d_op1,
-    input logic [`GPR_IDX_SIZE-1:0] in_d_op2,
-    // Outputs for Dispatch
-    output logic [`GPR_SIZE-1:0] out_d_op1,
-    output logic [`GPR_SIZE-1:0] out_d_op2
+    // Outputs for ROB
+    // NOTE(Nate): Is this stall?
+    output logic out_rob_ready,
+    output logic [`GPR_IDX_SIZE-1:0] out_rob_dst,
+    output logic [`GPR_IDX_SIZE-1:0] out_rob_src1,
+    output logic [`GPR_IDX_SIZE-1:0] out_rob_src2,
+    output logic [`GPR_SIZE-1:0] out_rob_src1_value,
+    output logic [`GPR_SIZE-1:0] out_rob_src2_value,
+    output logic out_rob_src1_valid,
+    output logic out_rob_src2_valid,
+    output logic out_rob_set_nzcv,
+    output logic [`ROB_IDX_SIZE-1:0] in_last_nzcv_rob_idx,
+    // input logic in_is_nop,
+    // NOTE(Nate): I don't remember what this is for
 );
 
   gpr_entry_t [`GPR_SIZE-1:0] gprs;
 
   integer i;
-  always_latch begin
+  always_ff @(posedge in_clk) begin
     if (in_rst) begin
 `ifdef DEBUG_PRINT
       $display("(regfile) Resetting");

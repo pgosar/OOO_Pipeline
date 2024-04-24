@@ -138,12 +138,20 @@ typedef struct packed {
 } rs_op_t;
 
 typedef struct packed {
+  logic N;
+  logic Z;
+  logic C;
+  logic V;
+} nzcv_t;
+
+typedef struct packed {
   rs_op_t op1;
   rs_op_t op2;
   logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
   logic ready;
   logic entry_valid;
   logic set_nzcv;
+  nzcv_t nzcv;
 } rs_entry_t;
 
 typedef struct packed {
@@ -154,15 +162,8 @@ typedef struct packed {
 } gpr_entry_t;
 
 typedef struct packed {
-  logic N;
-  logic Z;
-  logic C;
-  logic V;
-} nzcv_t;
-
-typedef struct packed {
-  logic gpr_index;
-  logic valid;
+  logic [`GPR_IDX_SIZE-1:0] gpr_index;
+  logic valid;  // True iff this contains a value.
   logic [`GPR_SIZE-1:0] value;
   nzcv_t nzcv;
   logic set_nzcv;
