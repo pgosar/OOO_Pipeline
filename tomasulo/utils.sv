@@ -116,8 +116,8 @@ module ArithmeticExecuteUnit (
       out_fu_value = result_reg;
     end
 `ifdef DEBUG_PRINT
-    $display("ALU: out_fu_value = %d, out_fu_nzcv = %d, out_cond_val = %d", out_fu_value, out_fu_nzcv,
-             out_cond_val);
+    $display("ALU: out_fu_value = %d, out_fu_nzcv = %d, out_cond_val = %d", out_fu_value,
+             out_fu_nzcv, out_cond_val);
 `endif
     out_fu_done = 1;
   end

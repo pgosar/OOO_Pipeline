@@ -1,5 +1,5 @@
-`ifndef data_structures
-`define data_structures
+`ifndef DATA_STRUCTURES
+`define DATA_STRUCTURES
 
 `define RS_SIZE 8
 `define RS_IDX_SIZE $clog2(`RS_SIZE)

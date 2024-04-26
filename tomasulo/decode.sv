@@ -222,11 +222,13 @@ module sets_nzcv (
     input opcode_t opcode,
     output logic out_reg_set_nzcv
 );
-  // TODO
-  if(opcode == OP_ADDS || opcode == OP_SUBS || opcode == OP_ANDS) begin
-    assign out_reg_set_nzcv = 1;
-  end else begin
-    assign out_reg_set_nzcv = 0;
+
+  always_comb begin
+    if (opcode == OP_ADDS || opcode == OP_SUBS || opcode == OP_ANDS) begin : g_set_nzcv
+      out_reg_set_nzcv = 1;
+    end else begin : g_no_set_nzcv
+      out_reg_set_nzcv = 0;
+    end : g_no_set_nzcv
   end
 
 endmodule
@@ -235,8 +237,16 @@ module use_out_reg_imm (
     input opcode_t opcode,
     output logic out_reg_use_imm
 );
-  // TODO
 
+  always_comb begin
+    if(opcode == OP_LDUR || opcode == OP_STUR || opcode == OP_LDP || opcode == OP_STP || opcode == OP_MOVK || opcode == OP_MOVZ ||
+   opcode == OP_ADR || opcode == OP_ADRP || opcode == OP_SUB || opcode == OP_ADD || opcode == OP_AND || opcode == OP_UBFM ||
+   opcode == OP_SBFM || opcode == OP_B || opcode == OP_BR || opcode == OP_B_COND || opcode == OP_BL || opcode == OP_BLR) begin
+      out_reg_use_imm = 1;
+    end else begin
+      out_reg_use_imm = 0;
+    end
+  end
 
 endmodule
 
