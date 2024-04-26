@@ -1,5 +1,50 @@
 `include "data_structures.sv"
 
+
+module reservation_stations (
+    input logic in_rst,
+    input logic in_clk,
+    // Inputs From ROB (sourced from either regfile or ROB)
+    input alu_op_t in_rob_fu_op,
+    input fu_t in_rob_fu_id,
+    input logic in_rob_val_a_valid,
+    input logic in_rob_val_b_valid,
+    input logic in_rob_nzcv_valid,
+    input logic [`GPR_SIZE-1:0] in_rob_val_a_value,
+    input logic [`GPR_SIZE-1:0] in_rob_val_b_value,
+    input nzcv_t in_rob_nzcv,
+    input logic in_rob_set_nzcv,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index,
+    input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_idx,
+    input logic in_rob_should_broadcast,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
+    input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
+    // input logic in_rob_is_mispred,
+    // Inputs from FU
+    input logic in_fu_ready,  // ready to receive inputs
+    // Outputs for FU
+    output logic [`GPR_SIZE-1:0] out_fu_val_a,
+    output logic [`GPR_SIZE-1:0] out_fu_val_b,
+    output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,
+    output logic out_fu_set_nzcv,
+    output nzcv_t out_fu_nzcv
+);
+
+  logic ls_ready, alu_ready;
+  assign alu_ready = in_rob_fu_id == FU_ALU;
+  assign ls_ready  = in_rob_fu_id == FU_LS;
+  reservation_station_module ls (
+      .*,
+      .in_ready(alu_ready)
+  );
+  reservation_station_module alu (
+      .*,
+      .in_ready(ls_ready)
+  );
+
+endmodule
+
 module reservation_station_module #(
     parameter RS_SIZE = 8,
     parameter RS_IDX_SIZE = 3
@@ -7,36 +52,57 @@ module reservation_station_module #(
     // Timing & Reset
     input logic in_rst,
     input logic in_clk,
-    // Inputs From ROB (sourced from either regfile or ROB)
-    input logic in_rob_set_nzcv,
-    input nzcv_t in_rob_nzcv,
+    input logic in_ready,
+    // Inputs From ROB
+    input alu_op_t in_rob_fu_op,
     input logic in_rob_val_a_valid,
     input logic in_rob_val_b_valid,
+    input logic in_rob_nzcv_valid,
     input logic [`GPR_SIZE-1:0] in_rob_val_a_value,
     input logic [`GPR_SIZE-1:0] in_rob_val_b_value,
+    input nzcv_t in_rob_nzcv,
+    input logic in_rob_set_nzcv,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_idx,
+    // Inputs from ROB (for broadcast)
     input logic in_rob_should_broadcast,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
     input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
-    input logic in_rob_is_mispred,
+    input logic in_rob_broadcast_set_nzcv,
+    input nzcv_t in_rob_broadcast_nzcv,
+    // input logic in_rob_is_mispred,
     // Inputs from FU
     input logic in_fu_ready,  // ready to receive inputs
     // Outputs for FU
     output logic [`GPR_SIZE-1:0] out_fu_val_a,
     output logic [`GPR_SIZE-1:0] out_fu_val_b,
-    output logic [`ROB_IDX_SIZE-1:0] out_fu_dst,
+    output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,
     output logic out_fu_set_nzcv,
     output nzcv_t out_fu_nzcv
-    // Outputs for system
-    // TODO(Nate): We should probably have a stall signal
 );
 
-  // TODO(Nate): This module is hardcoded for now. LUT should be generated
-  // based on parameters
+  // Internal state`
   rs_entry_t [RS_SIZE-1:0] rs;
   logic [RS_SIZE-1:0] rs_valid;
+  logic delayed_clk;
+  // Buffered state
+  logic rob_val_a_valid;
+  logic rob_val_b_valid;
+  logic rob_nzcv_valid;
+  logic [`GPR_SIZE-1:0] rob_val_a_value;
+  logic [`GPR_SIZE-1:0] rob_val_b_value;
+  logic rob_set_nzcv;
+  nzcv_t rob_nzcv;
+  logic [`ROB_IDX_SIZE-1:0] rob_val_a_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] rob_val_b_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] rob_dst_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] rob_nzcv_rob_index;
+  alu_op_t rob_fu_op;
+
+  always_ff @(posedge in_clk) begin
+    delayed_clk <= #1 in_clk;
+  end
 
   // Wires up the ready entry of each rs
   for (genvar i = 0; i < RS_SIZE; i += 1) begin
@@ -71,7 +137,7 @@ module reservation_station_module #(
   logic [RS_SIZE:0] ready_entries;
   logic [RS_IDX_SIZE:0] ready_station_index;
   for (genvar i = 0; i < RS_SIZE; i += 1) begin
-    assign ready_entries[i] = rs[i].entry_valid & rs_valid[i];
+    assign ready_entries[i] = rs[i].entry_valid & rs_valid[i] & (~set_nzcv | (set_nzcv & nzcv_valid));
   end
   assign ready_entries[INVALID_INDEX] = 1;
 
@@ -91,75 +157,101 @@ module reservation_station_module #(
 
   always_ff @(posedge in_clk) begin
     if (in_rst) begin
-      rs = 0;
-    end else if (!in_rob_is_mispred) begin
+      rs <= 0;
+    end else begin
+      if (!in_rob_is_mispred) begin
 `ifdef DEBUG_PRINT
-      $display("(reservation_stations) not mispredicted");
+        $display("(reservation_stations) not mispredicted");
 `endif
-      if (in_rob_should_broadcast) begin
-        // Update reservation stations with values from the ROB
-        for (int i = 0; i < RS_SIZE; i += 1) begin
-          if (rs[i].entry_valid) begin
-            if (rs[i].op1.rob_index == in_rob_broadcast_index) begin
+        if (in_rob_should_broadcast) begin
+          // Update reservation stations with values from the ROB
+          for (int i = 0; i < RS_SIZE; i += 1) begin : rs_broadcast_loop
+            if (rs[i].entry_valid) begin
+              if (rs[i].op1.rob_index == in_rob_broadcast_index) begin
 `ifdef DEBUG_PRINT
-              $display("(reservation_stations) not mispred Updating RS[%0d] op1", i);
+                $display("(reservation_stations) not mispred Updating RS[%0d] op1", i);
 `endif
-              rs[i].op1.value = in_rob_broadcast_value;
-              rs[i].op1.valid = 1;
-            end
-            if (rs[i].op2.rob_index == in_rob_broadcast_index) begin
+                rs[i].op1.value <= in_rob_broadcast_value;
+                rs[i].op1.valid <= 1;
+              end
+              if (rs[i].op2.rob_index == in_rob_broadcast_index) begin
 `ifdef DEBUG_PRINT
-              $display("(reservation_stations) not mispred Updating RS[%0d] op2", i);
+                $display("(reservation_stations) not mispred Updating RS[%0d] op2", i);
 `endif
 
-              rs[i].op2.value = in_rob_broadcast_value;
-              rs[i].op2.valid = 1;
+                rs[i].op2.value <= in_rob_broadcast_value;
+                rs[i].op2.valid <= 1;
+              end
+              if (in_rob_broadcast_set_nzcv && rs[i].set_nzcv && rs[i].nzcv_rob_index == in_rob_broadcast_index) begin
+                rs[i].nzcv <= rs[i]
+                rs[i].nzcv_valid <= 1;
+              end
             end
-          end
+          end : rs_broadcast_loop
         end
-      end
-      if (in_fu_ready && ready_station_index != INVALID_INDEX) begin
+        // TODO(Nate): The below feels like a race condition. Starts here
+        if (ready_station_index != INVALID_INDEX) begin
+          // Allow the FU to read the value
+          out_fu_val_a <= rs[ready_station_index].op1.value;
+          out_fu_val_b <= rs[ready_station_index].op2.value;
+          out_fu_dst_rob_index <= rs[ready_station_index].dst_rob_index;
+          out_fu_nzcv <= rs[ready_station_index].nzcv;
+          out_fu_set_nzcv <= rs[ready_station_index].set_nzcv;
+        end
+        if (in_fu_ready && ready_station_index != INVALID_INDEX) begin
+          rs[ready_station_index].valid <= 0;
+        end
+        // TODO(Nate): Race condition ends here
 `ifdef DEBUG_PRINT
-        $display("(reservation_stations) FU ready");
+          $display("(reservation_stations) FU ready");
 `endif
-        // Allow the FU to read the value
-        out_fu_val_a <= rs[ready_station_index].op1.value;
-        out_fu_val_b <= rs[ready_station_index].op2.value;
-        out_fu_dst <= rs[ready_station_index].dst_rob_index;
-        out_fu_nzcv <= rs[ready_station_index].nzcv;
-        out_fu_set_nzcv <= rs[ready_station_index].set_nzcv;
-      end
-    end else if (in_rob_is_mispred) begin
+      end else begin  /* in_rob_is_mispred */
 `ifdef DEBUG_PRINT
-      $display("(regfile) Deleting mispredicted instructions");
+        $display("(regfile) Deleting mispredicted instructions");
 `endif
-      // todo handle mispred
+        // todo handle mispred
+      end
+      // Buffer state
+      rob_val_a_valid <= in_rob_val_a_valid;
+      rob_val_b_valid <= in_rob_val_b_valid;
+      rob_nzcv_valid <= in_rob_nzcv_valid;
+      rob_val_a_value <= in_rob_val_a_value;
+      rob_val_b_value <= in_rob_val_b_value;
+      rob_set_nzcv <= in_rob_set_nzcv;
+      rob_nzcv <= in_rob_nzcv;
+      rob_val_a_rob_index <= in_rob_val_a_rob_index;
+      rob_val_b_rob_index <= in_rob_val_b_rob_index;
+      rob_dst_rob_index <= in_rob_dst_rob_index;
+      rob_nzcv_rob_index <= in_rob_nzcv_rob_index;
+      rob_fu_op <= in_rob_fu_op;
     end
   end
 
-  always_ff @(negedge in_clk) begin
-    #1;
-    // Add new reservation station entry from dispatch
-    if (free_station_index != INVALID_INDEX) begin : update_from_dispatch
+  always_ff @(posedge delayed_clk) begin
+    // Add new reservation station entry from decode
+    if (free_station_index != INVALID_INDEX) begin : rs_add_entry
 `ifdef DEBUG_PRINT
       $display("(reservation_stations) instantiating RS[%0d]", free_station_index);
 `endif
-      rs[free_station_index].op1.value <= in_rob_val_a_value;
-      rs[free_station_index].op1.rob_index <= in_rob_val_a_rob_index;
-      rs[free_station_index].op1.valid <= in_rob_val_a_valid;
-      rs[free_station_index].op2.value <= in_rob_val_b_value;
-      rs[free_station_index].op2.rob_index <= in_rob_val_b_rob_index;
-      rs[free_station_index].op2.valid <= in_rob_val_b_valid;
+      rs[free_station_index].op1.valid <= rob_val_a_valid;
+      rs[free_station_index].op2.valid <= rob_val_b_valid;
+      rs[free_station_index].nzcv_valid <= rob_nzcv_valid;
+      rs[free_station_index].op1.value <= rob_val_a_value;
+      rs[free_station_index].op2.value <= rob_val_b_value;
+      rs[free_station_index].set_nzcv <= rob_set_nzcv;
+      rs[free_station_index].nzcv <= rob_nzcv;
+      rs[free_station_index].op1.rob_index <= rob_val_a_rob_index;
+      rs[free_station_index].op2.rob_index <= rob_val_b_rob_index;
+      rs[free_station_index].dst_rob_index <= rob_dst_rob_index;
+      rs[free_station_index].nzcv_rob_index <= rob_nzcv_rob_index;
+      rs[free_station_index].op <= rob_fu_op;
       rs[free_station_index].entry_valid <= 1;
-      rs[free_station_index].dst_rob_index <= in_rob_dst_rob_idx;
-      rs[free_station_index].set_nzcv <= in_rob_set_nzcv;
-      rs[free_station_index].nzcv <= in_rob_nzcv;
 `ifdef DEBUG_PRINT
       $display("RS[%0d] op1: %0d, op2: %0d, dst: %0d, valid1: %0d, valid2: %0d, set_nzcv: %0d",
                free_station_index, in_rob_val_a_value, in_rob_val_b_value, in_rob_dst_rob_idx,
                in_rob_val_a_valid, in_rob_val_b_valid, in_rob_set_nzcv);
 `endif
-    end : update_from_dispatch
+    end : rs_add_entry
     // Update entry because FU has consumed the value. This will execute
     // in lockstep with the FU actually consuming the value.
     if (ready_station_index != INVALID_INDEX) begin : fu_consume_entry

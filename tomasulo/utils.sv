@@ -46,7 +46,7 @@ module cond_holds (
 
 endmodule
 
-
+// TODO output to RS if ready or not
 module ArithmeticExecuteUnit (
     input alu_op_t in_alu_op,
     input logic [`GPR_SIZE-1:0] in_val_a,
@@ -55,10 +55,10 @@ module ArithmeticExecuteUnit (
     input logic in_set_CC,
     input cond_t in_cond,
     input nzcv_t in_prev_nzcv,
+    output logic out_fu_done  // Done signal indicating operation completion
     output logic out_cond_val,
     output logic [`GPR_SIZE-1:0] out_res,
     output nzcv_t out_nzcv,
-    output logic out_fu_done  // Done signal indicating operation completion
 );
 
   logic [`GPR_SIZE-1:0] result_reg;

@@ -8,6 +8,7 @@
 `define GPR_COUNT 32
 `define GPR_IDX_SIZE $clog2(`GPR_COUNT)
 `define GPR_SIZE 64 //IDK WHAT ITS SUPPOSED TO DO
+`define IMMEDIATE_SIZE 64
 `define NZCV_SIZE 4
 `define COND_SIZE 4
 `define NUM_OPCODES 43
@@ -129,7 +130,7 @@ typedef enum logic [3:0] {
 typedef enum logic {
   FU_ALU,  // Arithmetic & Logic Unit
   FU_LS    // Load / Store Unit
-} func_unit_t;
+} fu_t;
 
 typedef struct packed {
   logic valid;
@@ -145,13 +146,15 @@ typedef struct packed {
 } nzcv_t;
 
 typedef struct packed {
-  rs_op_t op1;
+  rs_op_t op1;  // TODO(Nate): lmao this CANNOT be called op1 & op2 anymore
   rs_op_t op2;
   logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
-  logic ready;
   logic entry_valid;
+  logic [`ROB_IDX_SIZE-1:0] nzcv_rob_index;
   logic set_nzcv;
+  logic nzcv_valid;
   nzcv_t nzcv;
+  alu_op_t op;
 } rs_entry_t;
 
 typedef struct packed {
@@ -165,8 +168,8 @@ typedef struct packed {
   logic [`GPR_IDX_SIZE-1:0] gpr_index;
   logic valid;  // True iff this contains a value.
   logic [`GPR_SIZE-1:0] value;
-  nzcv_t nzcv;
   logic set_nzcv;
+  nzcv_t nzcv;
 } rob_entry_t;
 
 typedef struct packed {

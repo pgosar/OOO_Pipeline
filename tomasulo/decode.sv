@@ -1,11 +1,11 @@
 `include "data_structures.sv"
 
 module decode_instruction (
-    input logic [31:0] in_insnbits,
+    input logic [31:0] in_fetch_insnbits,
     output opcode_t opcode
 );
   always_comb begin
-    casez (in_insnbits)
+    casez (in_fetch_insnbits)
       // All references in this decode are made to the Arm Architecture
       // Reference Manual version K.a released 2024-03-20
       // // C6.2.221 - 64-bit unscaled load.
@@ -29,7 +29,7 @@ module decode_instruction (
       32'b1101_1010_100?_????_????_01??_????_????: opcode = OP_CSNEG;
       // C6.2.108 - 64-bit conditional select.
       32'b1001_1010_100?_????_????_00??_????_????: opcode = OP_CSEL;
-      // C6.2.5   - 64-bit add with immediate. Beware of sh.
+      // C6.2.5   - 64-bit add with out_reg_imm. Beware of sh.
       32'b1001_0001_0???_????_????_????_????_????: opcode = OP_ADD;
       // C6.2.10  - 64-bit add with !(shifted) reg. Sets NZCV.
       32'b1010_1011_000?_????_????_????_????_????: opcode = OP_ADDS;
@@ -43,7 +43,7 @@ module decode_instruction (
       32'b1010_1010_000?_????_????_????_????_????: opcode = OP_ORR;
       // C6.2.126 - 64-bit xor with !(shifted) register.
       32'b1100_1010_000?_????_????_????_????_????: opcode = OP_EOR;
-      // C6.2.13  - 64-bit and with immediate.
+      // C6.2.13  - 64-bit and with out_reg_imm.
       32'b1001_0010_00??_????_????_????_????_????: opcode = OP_AND;
       // C6.2.16  - 64-bit and with !(shifted) register. Sets NZCV. Used by alias TST (shifted regsiter).
       32'b1110_1010_000?_????_????_????_????_????: opcode = OP_ANDS;
@@ -79,9 +79,9 @@ module decode_instruction (
 endmodule : decode_instruction
 
 module extract_immval (
-    input logic [31:0] in_insnbits,
+    input logic [31:0] in_fetch_insnbits,
     input opcode_t opcode,
-    output logic [63:0] immediate
+    output logic [63:0] out_reg_imm
 );
 
   // TODO(Nate): Add AND, STP, LDP. Probably remove shifts to aid in synthesis.
@@ -89,76 +89,77 @@ module extract_immval (
   //             haven't assigned every bit? idk
   always_comb begin
     case (opcode)
-      OP_LDUR, OP_STUR: immediate = {55'd0, in_insnbits[20:12]};
-      OP_ADD, OP_SUB, OP_UBFM, OP_SBFM: immediate = {52'd0, in_insnbits[21:10]};
-      OP_MOVK, OP_MOVZ: immediate = {48'd0, in_insnbits[20:5]};
-      OP_ADRP: immediate = {31'd0, in_insnbits[23:5], in_insnbits[30:29], 12'h000};
-      default: immediate = 0;
+      OP_LDUR, OP_STUR: out_reg_imm = {55'd0, in_fetch_insnbits[20:12]};
+      OP_ADD, OP_SUB, OP_UBFM, OP_SBFM: out_reg_imm = {52'd0, in_fetch_insnbits[21:10]};
+      OP_MOVK, OP_MOVZ: out_reg_imm = {48'd0, in_fetch_insnbits[20:5]};
+      OP_ADRP: out_reg_imm = {31'd0, in_fetch_insnbits[23:5], in_fetch_insnbits[30:29], 12'h000};
+      default: out_reg_imm = 0;
     endcase
   end
 
 endmodule : extract_immval
 
 module extract_reg (
-    input logic [31:0] in_insnbits,
+    input logic [31:0] in_fetch_insnbits,
     input opcode_t opcode,
-    output logic [`GPR_IDX_SIZE-1:0] out_src1,
-    output logic [`GPR_IDX_SIZE-1:0] out_src2,
-    output logic [`GPR_IDX_SIZE-1:0] out_dst
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_src1,
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_dst
 );
   always_latch begin
-    //out_dst
-    if (opcode != OP_B && opcode != OP_BR && opcode != OP_B_COND &&  //branch dont need out_dst
-        opcode != OP_BL && opcode != OP_BLR && opcode != OP_RET &&  //branch dont need out_dst
+    //out_reg_dst
+    if (opcode != OP_B && opcode != OP_BR && opcode != OP_B_COND &&  //branch dont need out_reg_dst
+        opcode != OP_BL && opcode != OP_BLR && opcode != OP_RET &&  //branch dont need out_reg_dst
         opcode != OP_NOP && opcode != OP_HLT &&  //S format
         opcode != OP_CBZ && opcode != OP_CBNZ) begin  //i something format
-      out_dst = in_insnbits[4:0];
+      out_reg_dst = in_fetch_insnbits[4:0];
     end else if (opcode == OP_BL) begin
-      out_dst = 5'd30;
+      out_reg_dst = 5'd30;
     end
 
-    //out_src1
+    //out_reg_src1
     if (opcode != OP_MOVK && opcode != OP_MOVZ && opcode != OP_ADR || opcode != OP_ADRP ||
             opcode != OP_B && opcode != OP_BR && opcode != OP_B_COND && opcode != OP_BL && opcode
             != OP_BLR && opcode != OP_NOP && opcode != OP_HLT
             && opcode != OP_CBZ && opcode != OP_CBNZ) begin
-      out_src1 = in_insnbits[9:5];
+      out_reg_src1 = in_fetch_insnbits[9:5];
     end else if (opcode == OP_CBZ || opcode == OP_CBNZ) begin
-      out_src1 = in_insnbits[4:0];
+      out_reg_src1 = in_fetch_insnbits[4:0];
     end
 
-    //out_src2
+    //out_reg_src2
     if (opcode == OP_STUR) begin
-      out_src2 = in_insnbits[4:0];
+      out_reg_src2 = in_fetch_insnbits[4:0];
     end else if (opcode == OP_ADDS || opcode == OP_SUBS || opcode == OP_ORN ||
                         opcode == OP_ORR || opcode == OP_EOR || opcode == OP_ANDS ||
                         opcode == OP_CSEL || opcode == OP_CSINV || opcode == OP_CSINC
                         || opcode == OP_CSNEG) begin // extra credit checks
-      out_src2 = in_insnbits[20:16];
+      out_reg_src2 = in_fetch_insnbits[20:16];
     end
   end
 endmodule
 
 module decide_alu (
-    input  opcode_t opcodecode,
-    output alu_op_t out_alu_op
+    input  opcode_t opcode,
+    output alu_op_t out_reg_fu_op
 );
   // TODO op_cmp, op_tst def commented out in opcode_t
   always_comb begin
-    casez (opcodecode)
-      OP_LDUR, OP_LDP, OP_STUR, OP_STP, OP_ADD, OP_ADDS, OP_ADR, OP_ADRP: out_alu_op = ALU_OP_PLUS;
-      OP_SUB, OP_SUBS, OP_CMP: out_alu_op = ALU_OP_MINUS;
-      OP_ORN: out_alu_op = ALU_OP_ORN;
-      OP_ORR: out_alu_op = ALU_OP_OR;
-      OP_EOR: out_alu_op = ALU_OP_EOR;
-      OP_ANDS, OP_TST: out_alu_op = ALU_OP_AND;
-      OP_UBFM: out_alu_op = ALU_OP_UBFM;
-      OP_SBFM: out_alu_op = ALU_OP_SBFM;
-      OP_MOVK, OP_MOVZ: out_alu_op = ALU_OP_MOV;
-      OP_CSEL: out_alu_op = ALU_OP_CSEL;
-      OP_CSINC: out_alu_op = ALU_OP_CSINC;
-      OP_CSINV: out_alu_op = ALU_OP_CSINV;
-      default: out_alu_op = ALU_OP_PLUS;  //plus for now i will add an error op later
+    casez (opcode)
+      OP_LDUR, OP_LDP, OP_STUR, OP_STP, OP_ADD, OP_ADDS, OP_ADR, OP_ADRP:
+      out_reg_fu_op = ALU_OP_PLUS;
+      OP_SUB, OP_SUBS: out_reg_fu_op = ALU_OP_MINUS;
+      OP_ORN: out_reg_fu_op = ALU_OP_ORN;
+      OP_ORR: out_reg_fu_op = ALU_OP_OR;
+      OP_EOR: out_reg_fu_op = ALU_OP_EOR;
+      OP_ANDS: out_reg_fu_op = ALU_OP_AND;
+      OP_UBFM: out_reg_fu_op = ALU_OP_UBFM;
+      OP_SBFM: out_reg_fu_op = ALU_OP_SBFM;
+      OP_MOVK, OP_MOVZ: out_reg_fu_op = ALU_OP_MOV;
+      OP_CSEL: out_reg_fu_op = ALU_OP_CSEL;
+      OP_CSINC: out_reg_fu_op = ALU_OP_CSINC;
+      OP_CSINV: out_reg_fu_op = ALU_OP_CSINV;
+      default: out_reg_fu_op = ALU_OP_PLUS;  //plus for now i will add an error op later
     endcase
   end
 
@@ -205,15 +206,32 @@ endmodule
 
 module fu_decider (
     input opcode_t opcode,
-    output func_unit_t out_fu
+    output fu_t out_reg_fu_id
 );
   always_comb begin
     if (opcode == OP_STUR || opcode == OP_LDUR || opcode == OP_LDP || opcode == OP_STP) begin
-      out_fu = FU_LS;
+      out_reg_fu_id = FU_LS;
     end else begin
-      out_fu = FU_ALU;
+      out_reg_fu_id = FU_ALU;
     end
   end
+
+endmodule
+
+module sets_nzcv (
+    input opcode_t opcode,
+    output logic out_reg_set_nzcv
+);
+  // TODO
+
+endmodule
+
+module use_out_reg_imm (
+    input opcode_t opcode,
+    output logic out_reg_use_imm
+);
+  // TODO
+);
 
 endmodule
 
@@ -222,17 +240,22 @@ module dispatch (
     input logic in_clk,
     input logic in_stall,
     // Inputs from fetch
-    input logic [31:0] in_insnbits,
+    input logic [31:0] in_fetch_insnbits,
     input logic in_fetch_done,
     // Outputs to regfile. This will (asynchronously) cause the regfile to send
     // signals to the ROB. We assume that this will occur within the same
     // cycle.
-    output logic [`GPR_IDX_SIZE-1:0] out_src1,
-    output logic [`GPR_IDX_SIZE-1:0] out_src2,
-    output func_unit_t out_fu,
-    output logic [`GPR_IDX_SIZE-1:0] out_dst,
+    output logic out_reg_ready,
+    output logic out_reg_set_nzcv,
+    output logic out_reg_use_imm,
+    output logic [IMMEDIATE_SIZE-1:0] out_reg_imm,
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_src1,
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
+    output fu_t out_reg_fu_id,
+    output alu_op_t out_reg_fu_op,
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_dst
     // Outputs to be broadcasted.
-    output logic out_stalled
+    // output logic out_stalled
 );
 
   always_ff @(posedge in_clk) begin
@@ -240,27 +263,31 @@ module dispatch (
 
     end
   end
-
+  assign out_reg_ready = in_fetch_done;
   opcode_t opcode;
-  logic [63:0] immediate;
   always_comb begin
 `ifdef DEBUG_PRINT
-    $display("decode: %b", in_insnbits);
+    $display("decode: %b", in_fetch_insnbits);
 `endif
   end
+
+  decide_alu alu_decider (.*);  // decides alu op
   decode_instruction op_decoder (.*);
   extract_immval imm_extractor (.*);
+  use_out_reg_imm imm_selector (.*);
   extract_reg reg_extractor (.*);
   fu_decider fu (.*);
+  sets_nzcv nzcv_setter (.*);
 
   always_comb begin
 `ifdef DEBUG_PRINT
     $display("opcode: %d", opcode_t'(opcode));
-    $display("immediate: %d", immediate);
-    $display("fu: %d", func_unit_t'(out_fu));
-    $display("src1: %d", out_src1);
-    $display("src2: %d", out_src2);
-    $display("dst: %d", out_dst);
+    $display("out_reg_imm: %d", out_reg_imm);
+    $display("fu: %d", fu_t'(out_reg_fu_id));
+    $display("src1: %d", out_reg_src1);
+    $display("src2: %d", out_reg_src2);
+    $display("dst: %d", out_reg_dst);
+    $display("sets_nzcv: %d", out_reg_set_nzcv);
 `endif
   end
 
