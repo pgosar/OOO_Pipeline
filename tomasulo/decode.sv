@@ -223,7 +223,7 @@ module sets_nzcv (
     output logic out_reg_set_nzcv
 );
   // TODO
-  if(opcode == OP_ADDS || opcode == OP_SUBS || op == OP_ANDS) begin
+  if(opcode == OP_ADDS || opcode == OP_SUBS || opcode == OP_ANDS) begin
     assign out_reg_set_nzcv = 1;
   end else begin
     assign out_reg_set_nzcv = 0;

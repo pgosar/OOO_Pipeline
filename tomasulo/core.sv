@@ -136,13 +136,13 @@ module core (
   logic in_rob_set_nzcv;
   logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index;
   logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index;
-  logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_idx;
+  logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index;
   logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index;
   logic in_rob_should_broadcast;
   logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index;
   logic [`GPR_SIZE-1:0] in_rob_broadcast_value;
   logic in_rob_broadcast_set_nzcv;
-  // input logic in_rob_is_mispred,
+  logic in_rob_is_mispred;
   // Inputs from FU
   logic in_fu_ready;  // ready to receive inputs
   // Outputs for FU
@@ -227,7 +227,7 @@ module core (
   assign in_rob_set_nzcv = out_rs_set_nzcv;
   assign in_rob_val_a_rob_index = out_rs_val_a_rob_index;
   assign in_rob_val_b_rob_index = out_rs_val_b_rob_index;
-  assign in_rob_dst_rob_idx = out_rs_dst_rob_idx;
+  assign in_rob_dst_rob_index = out_rs_dst_rob_idx;
   assign in_rob_nzcv_rob_index = out_rs_nzcv_rob_idx;
   assign in_rob_should_broadcast = out_rs_should_broadcast;
   assign in_rob_broadcast_index = out_rs_broadcast_index;

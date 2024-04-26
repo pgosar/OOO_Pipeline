@@ -17,14 +17,14 @@ module reservation_stations (
     input logic in_rob_set_nzcv,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index,
-    input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_idx,
+    input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
     input logic in_rob_should_broadcast,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
     input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
     input logic in_rob_broadcast_set_nzcv,
     input nzcv_t in_rob_broadcast_nzcv,  // NEW
-    // input logic in_rob_is_mispred,
+    input logic in_rob_is_mispred,
     // Inputs from FU
     input logic in_fu_ready,  // ready to receive inputs
     // Outputs for FU
@@ -68,7 +68,7 @@ module reservation_station_module #(
     input logic in_rob_set_nzcv,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index,
-    input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_idx,
+    input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
     // Inputs from ROB (for broadcast)
     input logic in_rob_should_broadcast,
@@ -76,7 +76,7 @@ module reservation_station_module #(
     input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
     input logic in_rob_broadcast_set_nzcv,
     input nzcv_t in_rob_broadcast_nzcv,  // NEW
-    // input logic in_rob_is_mispred,
+    input logic in_rob_is_mispred,
     // Inputs from FU
     input logic in_fu_ready,  // ready to receive inputs
     // Outputs for FU
@@ -253,7 +253,7 @@ module reservation_station_module #(
       rs[free_station_index].entry_valid <= 1;
 `ifdef DEBUG_PRINT
       $display("RS[%0d] op1: %0d, op2: %0d, dst: %0d, valid1: %0d, valid2: %0d, set_nzcv: %0d",
-               free_station_index, in_rob_val_a_value, in_rob_val_b_value, in_rob_dst_rob_idx,
+               free_station_index, in_rob_val_a_value, in_rob_val_b_value, in_rob_dst_rob_index,
                in_rob_val_a_valid, in_rob_val_b_valid, in_rob_set_nzcv);
 `endif
     end : rs_add_entry
