@@ -81,8 +81,8 @@ module ArithmeticExecuteUnit_tb;
       .in_cond(cond),
       .in_prev_nzcv(in_nzcv),
       .out_cond_val(cond_val),
-      .out_res(res),
-      .out_nzcv(nzcv),
+      .out_fu_value(res),
+      .out_fu_nzcv(nzcv),
       .out_fu_done(done)
   );
 

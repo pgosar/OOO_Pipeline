@@ -5,8 +5,9 @@ module reservation_stations (
     input logic in_rst,
     input logic in_clk,
     // Inputs From ROB (sourced from either regfile or ROB)
-    input alu_op_t in_rob_fu_op,
+    input logic in_rob_ready,
     input fu_t in_rob_fu_id,
+    input alu_op_t in_rob_fu_op,
     input logic in_rob_val_a_valid,
     input logic in_rob_val_b_valid,
     input logic in_rob_nzcv_valid,
@@ -17,9 +18,12 @@ module reservation_stations (
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_idx,
+    input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
     input logic in_rob_should_broadcast,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
     input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
+    input logic in_rob_broadcast_set_nzcv,
+    input nzcv_t in_rob_broadcast_nzcv,  // NEW
     // input logic in_rob_is_mispred,
     // Inputs from FU
     input logic in_fu_ready,  // ready to receive inputs
@@ -32,8 +36,8 @@ module reservation_stations (
 );
 
   logic ls_ready, alu_ready;
-  assign alu_ready = in_rob_fu_id == FU_ALU;
-  assign ls_ready  = in_rob_fu_id == FU_LS;
+  assign alu_ready = in_rob_fu_id == FU_ALU && in_rob_ready;
+  assign ls_ready  = in_rob_fu_id == FU_LS && in_rob_ready;
   reservation_station_module ls (
       .*,
       .in_ready(alu_ready)
@@ -65,12 +69,13 @@ module reservation_station_module #(
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_idx,
+    input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
     // Inputs from ROB (for broadcast)
     input logic in_rob_should_broadcast,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
     input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
     input logic in_rob_broadcast_set_nzcv,
-    input nzcv_t in_rob_broadcast_nzcv,
+    input nzcv_t in_rob_broadcast_nzcv,  // NEW
     // input logic in_rob_is_mispred,
     // Inputs from FU
     input logic in_fu_ready,  // ready to receive inputs
@@ -183,7 +188,7 @@ module reservation_station_module #(
                 rs[i].op2.valid <= 1;
               end
               if (in_rob_broadcast_set_nzcv && rs[i].set_nzcv && rs[i].nzcv_rob_index == in_rob_broadcast_index) begin
-                rs[i].nzcv <= rs[i]
+                rs[i].nzcv <= rs[i];
                 rs[i].nzcv_valid <= 1;
               end
             end
@@ -203,7 +208,7 @@ module reservation_station_module #(
         end
         // TODO(Nate): Race condition ends here
 `ifdef DEBUG_PRINT
-          $display("(reservation_stations) FU ready");
+        $display("(reservation_stations) FU ready");
 `endif
       end else begin  /* in_rob_is_mispred */
 `ifdef DEBUG_PRINT

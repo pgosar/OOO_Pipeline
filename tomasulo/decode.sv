@@ -223,6 +223,11 @@ module sets_nzcv (
     output logic out_reg_set_nzcv
 );
   // TODO
+  if(opcode == OP_ADDS || opcode == OP_SUBS || op == OP_ANDS) begin
+    assign out_reg_set_nzcv = 1;
+  end else begin
+    assign out_reg_set_nzcv = 0;
+  end
 
 endmodule
 
@@ -231,7 +236,7 @@ module use_out_reg_imm (
     output logic out_reg_use_imm
 );
   // TODO
-);
+
 
 endmodule
 
@@ -248,7 +253,7 @@ module dispatch (
     output logic out_reg_ready,
     output logic out_reg_set_nzcv,
     output logic out_reg_use_imm,
-    output logic [IMMEDIATE_SIZE-1:0] out_reg_imm,
+    output logic [`IMMEDIATE_SIZE-1:0] out_reg_imm,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src1,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
     output fu_t out_reg_fu_id,

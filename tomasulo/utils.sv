@@ -55,22 +55,20 @@ module ArithmeticExecuteUnit (
     input logic in_set_CC,
     input cond_t in_cond,
     input nzcv_t in_prev_nzcv,
-    output logic out_fu_done  // Done signal indicating operation completion
+    output logic out_fu_done,  // Done signal indicating operation completion
     output logic out_cond_val,
-    output logic [`GPR_SIZE-1:0] out_res,
-    output nzcv_t out_nzcv,
+    output logic [`GPR_SIZE-1:0] out_fu_value,
+    output nzcv_t out_fu_nzcv
 );
 
   logic [`GPR_SIZE-1:0] result_reg;
   nzcv_t nzcv;
 
-  logic cond_val;
   cond_holds c_holds (
       .cond(in_cond),
       .nzcv(in_prev_nzcv),
-      .cond_holds(cond_val)
+      .cond_holds(out_cond_val)
   );
-  assign out_cond_val = cond_val;
 
   always_comb begin : main_switch
     casez (in_alu_op)
@@ -94,7 +92,7 @@ module ArithmeticExecuteUnit (
       casez (in_alu_op)  /* Setting carry flag */
         ALU_OP_PLUS: nzcv.C = (result_reg < in_val_a) | (result_reg < in_val_b);
         ALU_OP_MINUS: nzcv.C = in_val_a >= in_val_b;
-        default: out_nzcv.C = 0;
+        default: out_fu_nzcv.C = 0;
       endcase
       casez (in_alu_op)  /* Setting overflow flag */
         ALU_OP_PLUS:
@@ -106,19 +104,19 @@ module ArithmeticExecuteUnit (
         default: nzcv.V = 0;
       endcase
     end
-    out_nzcv = nzcv;
+    out_fu_nzcv = nzcv;
     if(in_alu_op == ALU_OP_CSEL || in_alu_op == ALU_OP_CSNEG || in_alu_op == ALU_OP_CSINC ||
                                        in_alu_op == ALU_OP_CSINV) begin
-      if (cond_val == 0) begin
-        out_res = result_reg;
+      if (out_cond_val == 0) begin
+        out_fu_value = result_reg;
       end else begin
-        out_res = in_val_a;
+        out_fu_value = in_val_a;
       end
     end else begin
-      out_res = result_reg;
+      out_fu_value = result_reg;
     end
 `ifdef DEBUG_PRINT
-    $display("ALU: out_res = %d, out_nzcv = %d, out_cond_val = %d", out_res, out_nzcv,
+    $display("ALU: out_fu_value = %d, out_fu_nzcv = %d, out_cond_val = %d", out_fu_value, out_fu_nzcv,
              out_cond_val);
 `endif
     out_fu_done = 1;
@@ -129,14 +127,14 @@ module OP_UBFM_module (
     input  logic [63:0] in_val_a,
     input  logic [ 5:0] in_imms,
     input  logic [ 5:0] in_immr,
-    output logic [63:0] out_res
+    output logic [63:0] out_fu_value
 );
 
   always_comb begin
     if (in_imms >= in_immr) begin
-      out_res = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
+      out_fu_value = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
     end else begin
-      out_res = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
+      out_fu_value = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
     end
   end
 
@@ -146,14 +144,14 @@ module OP_SBFM_module (
     input  logic signed [63:0] in_val_a,
     input  logic signed [ 5:0] in_imms,
     input  logic signed [ 5:0] in_immr,
-    output logic signed [63:0] out_res
+    output logic signed [63:0] out_fu_value
 );
 
   always_comb begin
     if (in_imms >= in_immr) begin
-      out_res = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
+      out_fu_value = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
     end else begin
-      out_res = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
+      out_fu_value = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
     end
   end
 

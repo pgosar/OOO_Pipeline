@@ -35,9 +35,9 @@ module reg_module (
     output logic [`GPR_SIZE-1:0] out_rob_src2_value,
     output logic out_rob_set_nzcv,
     output nzcv_t out_rob_nzcv,
-    // Outputs for RS
+    // Outputs for RS (rob)
     output fu_t out_rob_fu_id,
-    // Outputs for FU
+    // Outputs for FU (rob)
     output alu_op_t out_rob_fu_op
 );
 

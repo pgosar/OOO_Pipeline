@@ -8,8 +8,8 @@ module rob_module (
     input logic in_fu_done,
     input logic [`ROB_IDX_SIZE-1:0] in_fu_dst_rob_index,
     input logic [`GPR_SIZE-1:0] in_fu_value,
-    input logic in_fu_set_nzcv,
-    input nzcv_t in_fu_nzcv,
+    input logic in_fu_set_nzcv, // TODO? why? in_reg_set_nzcv does it
+    input nzcv_t in_fu_nzcv, // out_reg_nzcv?
     input logic in_fu_is_mispred,
     // Inputs from regfile (as part of decode)
     input logic in_reg_ready,  // NOTE(Nate): Is this stall?
@@ -23,7 +23,7 @@ module rob_module (
     input logic [`GPR_SIZE-1:0] in_reg_src1_value,
     input logic [`GPR_SIZE-1:0] in_reg_src2_value,
     input logic in_reg_set_nzcv,
-    input nzcv_t in_reg_nzcv,
+    input nzcv_t in_reg_nzcv, // prev nzcv?
     input fu_t in_reg_fu_id,
     input alu_op_t in_reg_fu_op,
 
