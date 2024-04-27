@@ -109,6 +109,7 @@ module reservation_station_module #(
   logic [`ROB_IDX_SIZE-1:0] rob_dst_rob_index;
   logic [`ROB_IDX_SIZE-1:0] rob_nzcv_rob_index;
   alu_op_t rob_fu_op;
+  logic rob_done;
 
   always_ff @(posedge in_clk) begin
     delayed_clk <= #1 in_clk;
@@ -237,6 +238,7 @@ module reservation_station_module #(
       rob_dst_rob_index <= in_rob_dst_rob_index;
       rob_nzcv_rob_index <= in_rob_nzcv_rob_index;
       rob_fu_op <= in_rob_fu_op;
+      rob_done <= in_rob_done;
     end
   end
 

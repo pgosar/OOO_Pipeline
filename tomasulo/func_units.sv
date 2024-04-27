@@ -1,9 +1,12 @@
+`ifndef FUNC_UNITS
+`define FUNC_UNITS
+
 module func_units (
     // Timing
     input logic in_clk,
     // inputs from RS
     input logic in_rs_alu_start,
-    input logic in_rs_fu_start,
+    input logic in_rs_ls_start,
     input alu_op_t in_rs_alu_op,
     input logic [`GPR_SIZE-1:0] in_rs_alu_val_a,
     input logic [`GPR_SIZE-1:0] in_rs_alu_val_b,
@@ -190,10 +193,10 @@ module imem # (parameter int PAGESIZE)
     addr = in_addr[$clog2(PAGESIZE) - 1:0];
     data = {mem[addr + 3], mem[addr + 2], mem[addr + 1], mem[addr]};
   end: mem_access
-  
+
 endmodule: imem
 
-// set w_enable and w_val if writing, else just set in_addr. should be 
+// set w_enable and w_val if writing, else just set in_addr. should be
 // really easy to integrate since addr is 64 bit
 module dmem # (parameter int PAGESIZE) // AKA load-store
   (
@@ -228,6 +231,7 @@ module dmem # (parameter int PAGESIZE) // AKA load-store
       data <= {mem[addr + 7], mem[addr + 6], mem[addr + 5], mem[addr + 4], mem[addr + 3], mem[addr + 2], mem[addr + 1], mem[addr]};
     end
   end: mem_access
-  
+
 endmodule: dmem
 
+`endif // func_units

@@ -26,7 +26,7 @@ module core (
   logic [31:0] in_fetch_insnbits;
   logic in_fetch_done;
   // Outputs to regfile
-  logic out_reg_ready;
+  logic out_reg_done;
   logic dispatch_out_reg_set_nzcv;  // DUPLICATE
   logic out_reg_use_imm;
   logic [`IMMEDIATE_SIZE-1:0] out_reg_imm;
@@ -84,7 +84,7 @@ module core (
   nzcv_t in_fu_nzcv;
   logic in_fu_is_mispred;
   // Inputs from regfile (as part of decode)
-  logic in_reg_ready;  // NOTE(Nate): Is this stall?
+  logic in_reg_done;  // NOTE(Nate): Is this stall?
   logic in_reg_src1_valid;
   logic in_reg_src2_valid;
   logic in_reg_nzcv_valid;
@@ -148,7 +148,7 @@ module core (
   logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index;
   logic [`GPR_SIZE-1:0] in_rob_broadcast_value;
   logic in_rob_broadcast_set_nzcv;
-  logic in_rob_broadcast_nzcv;
+  nzcv_t in_rob_broadcast_nzcv;
   logic in_rob_is_mispred;
   logic in_fu_ls_ready;
   logic in_fu_alu_ready;  // ready to receive inputs
@@ -164,6 +164,7 @@ module core (
 
   // FUNC UNITS
   logic in_rs_alu_start;
+  logic in_rs_ls_start;
   alu_op_t in_rs_alu_op;
   logic [`GPR_SIZE-1:0] in_rs_alu_val_a;
   logic [`GPR_SIZE-1:0] in_rs_alu_val_b;
@@ -173,6 +174,7 @@ module core (
   logic out_fu_alu_ready;
   logic out_fu_ls_ready;
   // Outputs for RS
+  logic out_rs_ls_ready;
   logic out_rs_alu_ready;
   // Outputs for ROB
   logic out_rob_done;  // Used for both ROB and FU
@@ -181,6 +183,7 @@ module core (
   logic fu_out_rob_set_nzcv;
   nzcv_t fu_out_rob_nzcv;
   logic out_rob_is_mispred;
+  logic out_alu_condition;
 
   // for now just run a single cycle
   initial begin
@@ -196,7 +199,7 @@ module core (
   end
 
   // DISPATCH TO REGFILE regfile inputs = dispatch outputs
-  assign in_d_ready = out_reg_ready;
+  assign in_d_ready = out_reg_done;
   assign in_d_set_nzcv = dispatch_out_reg_set_nzcv;
   assign in_d_use_imm = out_reg_use_imm;
   assign in_d_imm = out_reg_imm;
@@ -215,7 +218,7 @@ module core (
   assign in_rob_commit_rob_index = out_reg_commit_rob_index;
 
   // REGFILE TO ROB rob inputs = regfile outputs
-  assign in_reg_ready = out_rob_ready;
+  assign in_reg_done = out_rob_ready;
   assign in_reg_src1_valid = out_rob_src1_valid;
   assign in_reg_src2_valid = out_rob_src2_valid;
   assign in_reg_nzcv_valid = out_rob_nzcv_valid;
@@ -240,7 +243,7 @@ module core (
   assign in_rob_val_a_value = out_rs_val_a_value;
   assign in_rob_val_b_value = out_rs_val_b_value;
   assign rs_in_rob_nzcv = out_rs_nzcv;
-  assign reg_in_rob_set_nzcv = out_rs_set_nzcv;
+  assign rs_in_rob_set_nzcv = out_rs_set_nzcv;
   assign in_rob_val_a_rob_index = out_rs_val_a_rob_index;
   assign in_rob_val_b_rob_index = out_rs_val_b_rob_index;
   assign in_rob_dst_rob_index = out_rs_dst_rob_idx;
