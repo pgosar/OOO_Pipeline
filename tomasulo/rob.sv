@@ -26,6 +26,7 @@ module rob_module (
     input nzcv_t in_reg_nzcv,
     input fu_t in_reg_fu_id,
     input alu_op_t in_reg_fu_op,
+    input cond_t in_reg_cond_codes,
 
     // Outputs for RS
     output logic out_rs_done,
@@ -43,7 +44,7 @@ module rob_module (
     output logic [`ROB_IDX_SIZE-1:0] out_rs_dst_rob_idx,
     output logic [`ROB_IDX_SIZE-1:0] out_rs_nzcv_rob_idx,
     // Outputs for RS (on broadcast... resultant from FU)
-    output logic out_rs_should_broadcast,
+    output logic out_rs_broadcast_done,
     output logic [`ROB_IDX_SIZE-1:0] out_rs_broadcast_index,
     output logic [`GPR_SIZE-1:0] out_rs_broadcast_value,
     output logic out_rs_broadcast_set_nzcv,
@@ -54,7 +55,8 @@ module rob_module (
     output nzcv_t out_reg_nzcv,
     output logic [`GPR_SIZE-1:0] out_reg_commit_value,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_index,
-    output logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index
+    output logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index,
+    output cond_t out_rs_cond_codes
     // // Outputs for dispatch
     // output logic [`ROB_IDX_SIZE-1:0] out_next_rob_idx,
     // output logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_idx[`MISSPRED_SIZE]
@@ -89,12 +91,16 @@ module rob_module (
 `ifdef DEBUG_PRINT
       $display("(rob) Resetting");
 `endif
-      rob <= 0;  // TODO(Nate): Make sure this actually works
+      reg_done <= 0;
+      for (int i = 0; i < `ROB_SIZE; i++) begin
+        rob[i].valid <= 0;
+      end
     end else begin : modify_rob
       // Copy over unused signals for RS
       out_rs_fu_op <= in_reg_fu_op;
       out_rs_fu_id <= in_reg_fu_id;
       out_rs_set_nzcv <= in_reg_set_nzcv;
+      out_rs_cond_codes <= in_reg_cond_codes;
       // Update state from FU
       if (in_fu_done) begin
 `ifdef DEBUG_PRINT
@@ -111,7 +117,7 @@ module rob_module (
       // Update regfile
       if (in_reg_done) begin
 `ifdef DEBUG_PRINT
-        $display("(rob) Regfile has values from decode. Modifying by adding new entry");
+        $display("(rob) Adding new entry:");
         $display("\tin_reg_dst: %d, in_reg_set_nzcv: %d", in_reg_dst, in_reg_set_nzcv);
 `endif
         // Add a new entry to the ROB and update the regfile
@@ -158,7 +164,7 @@ module rob_module (
     end
     // Broadcast (output) values to the rs after the fu has finished
     if (fu_done) begin : rob_broadcast
-      out_rs_should_broadcast = 1;
+      out_rs_broadcast_done = 1;
       out_rs_broadcast_index = fu_dst;
       out_rs_broadcast_value = rob[fu_dst].value;
       out_rs_broadcast_set_nzcv = rob[fu_dst].set_nzcv;
@@ -168,7 +174,7 @@ module rob_module (
     // Commit rob entry to regfile
     if (rob[commit_ptr].valid) begin : rob_commit
 `ifdef DEBUG_PRINT
-      $display("(rob) Commiting to regfile");
+      $display("(rob) Committing to regfile");
       $display(
           "\tcommit_ptr:%d, rob[cptr].gpr_index: %d, rob[cptr].value: %d, rob[cptr].set_nzcv: %d, rob[cptr].nzcv",
           rob[commit_ptr].gpr_index, rob[commit_ptr].value, rob[commit_ptr].set_nzcv,

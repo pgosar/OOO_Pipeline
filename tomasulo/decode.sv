@@ -108,32 +108,32 @@ module extract_reg (
 );
   always_latch begin
     //out_reg_dst
-    if (opcode != OP_B && opcode != OP_BR && opcode != OP_B_COND &&  //branch dont need out_reg_dst
-        opcode != OP_BL && opcode != OP_BLR && opcode != OP_RET &&  //branch dont need out_reg_dst
-        opcode != OP_NOP && opcode != OP_HLT &&  //S format
-        opcode != OP_CBZ && opcode != OP_CBNZ) begin  //i something format
+    if (opcode != OP_B & opcode != OP_BR & opcode != OP_B_COND &  //branch dont need out_reg_dst
+        opcode != OP_BL & opcode != OP_BLR & opcode != OP_RET &  //branch dont need out_reg_dst
+        opcode != OP_NOP & opcode != OP_HLT &  //S format
+        opcode != OP_CBZ & opcode != OP_CBNZ) begin  //i something format
       out_reg_dst = in_insnbits[4:0];
     end else if (opcode == OP_BL) begin
       out_reg_dst = 5'd30;
     end
 
     //out_reg_src1
-    if (opcode != OP_MOVK && opcode != OP_MOVZ && opcode != OP_ADR || opcode != OP_ADRP ||
-            opcode != OP_B && opcode != OP_BR && opcode != OP_B_COND && opcode != OP_BL && opcode
-            != OP_BLR && opcode != OP_NOP && opcode != OP_HLT
-            && opcode != OP_CBZ && opcode != OP_CBNZ) begin
+    if (opcode != OP_MOVK & opcode != OP_MOVZ & opcode != OP_ADR | opcode != OP_ADRP |
+            opcode != OP_B & opcode != OP_BR & opcode != OP_B_COND & opcode != OP_BL & opcode
+            != OP_BLR & opcode != OP_NOP & opcode != OP_HLT
+            & opcode != OP_CBZ & opcode != OP_CBNZ) begin
       out_reg_src1 = in_insnbits[9:5];
-    end else if (opcode == OP_CBZ || opcode == OP_CBNZ) begin
+    end else if (opcode == OP_CBZ | opcode == OP_CBNZ) begin
       out_reg_src1 = in_insnbits[4:0];
     end
 
     //out_reg_src2
     if (opcode == OP_STUR) begin
       out_reg_src2 = in_insnbits[4:0];
-    end else if (opcode == OP_ADDS || opcode == OP_SUBS || opcode == OP_ORN ||
-                        opcode == OP_ORR || opcode == OP_EOR || opcode == OP_ANDS ||
-                        opcode == OP_CSEL || opcode == OP_CSINV || opcode == OP_CSINC
-                        || opcode == OP_CSNEG) begin // extra credit checks
+    end else if (opcode == OP_ADDS | opcode == OP_SUBS | opcode == OP_ORN |
+                        opcode == OP_ORR | opcode == OP_EOR | opcode == OP_ANDS |
+                        opcode == OP_CSEL | opcode == OP_CSINV | opcode == OP_CSINC
+                        | opcode == OP_CSNEG) begin // extra credit checks
       out_reg_src2 = in_insnbits[20:16];
     end
   end
@@ -185,21 +185,21 @@ module pipeline_control (
   always_comb begin
     src2_sel = (op == OP_STUR);
 
-    valb_sel = (op == OP_ADDS  || op == OP_ANDS  || op == OP_SUBS
-                            || op == OP_ORR
-                            || op == OP_EOR  || op == OP_ORN
-                            || op == OP_CSEL || op == OP_CSINV || op == OP_CSINC || op == OP_CSNEG);
-    set_CC = (op == OP_ADDS || op == OP_ANDS || op == OP_SUBS);
+    valb_sel = (op == OP_ADDS  | op == OP_ANDS  | op == OP_SUBS
+                            | op == OP_ORR
+                            | op == OP_EOR  | op == OP_ORN
+                            | op == OP_CSEL | op == OP_CSINV | op == OP_CSINC | op == OP_CSNEG);
+    set_CC = (op == OP_ADDS | op == OP_ANDS | op == OP_SUBS);
 
     dmem_read = (op == OP_LDUR);
     dmem_write = (op == OP_STUR);
 
-    dst_sel = (op == OP_BL || op == OP_BLR);
+    dst_sel = (op == OP_BL | op == OP_BLR);
     wval_sel = (op == OP_LDUR);
-    w_enable = !(op == OP_STUR || op == OP_B
-                            || op == OP_B_COND || op == OP_RET || op == OP_NOP
-                            || op == OP_HLT
-                            || op == OP_CBZ || op == OP_CBNZ || op == OP_BR);
+    w_enable = !(op == OP_STUR | op == OP_B
+                            | op == OP_B_COND | op == OP_RET | op == OP_NOP
+                            | op == OP_HLT
+                            | op == OP_CBZ | op == OP_CBNZ | op == OP_BR);
   end
 
 endmodule
@@ -209,7 +209,7 @@ module fu_decider (
     output fu_t out_reg_fu_id
 );
   always_comb begin
-    if (opcode == OP_STUR || opcode == OP_LDUR || opcode == OP_LDP || opcode == OP_STP) begin
+    if (opcode == OP_STUR | opcode == OP_LDUR | opcode == OP_LDP | opcode == OP_STP) begin
       out_reg_fu_id = FU_LS;
     end else begin
       out_reg_fu_id = FU_ALU;
@@ -224,7 +224,7 @@ module sets_nzcv (
 );
 
   always_comb begin
-    if (opcode == OP_ADDS || opcode == OP_SUBS || opcode == OP_ANDS) begin : g_set_nzcv
+    if (opcode == OP_ADDS | opcode == OP_SUBS | opcode == OP_ANDS) begin : g_set_nzcv
       out_reg_set_nzcv = 1;
     end else begin : g_no_set_nzcv
       out_reg_set_nzcv = 0;
@@ -239,12 +239,30 @@ module use_out_reg_imm (
 );
 
   always_comb begin
-    if(opcode == OP_LDUR || opcode == OP_STUR || opcode == OP_LDP || opcode == OP_STP || opcode == OP_MOVK || opcode == OP_MOVZ ||
-   opcode == OP_ADR || opcode == OP_ADRP || opcode == OP_SUB || opcode == OP_ADD || opcode == OP_AND || opcode == OP_UBFM ||
-   opcode == OP_SBFM || opcode == OP_B || opcode == OP_BR || opcode == OP_B_COND || opcode == OP_BL || opcode == OP_BLR) begin
+    if(opcode == OP_LDUR | opcode == OP_STUR | opcode == OP_LDP | opcode == OP_STP | opcode == OP_MOVK | opcode == OP_MOVZ |
+   opcode == OP_ADR | opcode == OP_ADRP | opcode == OP_SUB | opcode == OP_ADD | opcode == OP_AND | opcode == OP_UBFM |
+   opcode == OP_SBFM | opcode == OP_B | opcode == OP_BR | opcode == OP_B_COND | opcode == OP_BL | opcode == OP_BLR) begin
       out_reg_use_imm = 1;
     end else begin
       out_reg_use_imm = 0;
+    end
+  end
+
+endmodule
+
+module find_cond_code (
+    input opcode_t in_opcode,
+    input [`INSNBITS_SIZE-1:0] in_insnbits,
+    output cond_t out_reg_cond_codes
+);
+
+  always_comb begin
+    if (in_opcode == OP_B_COND) begin
+      out_reg_cond_codes = cond_t'(in_insnbits[3:0]);
+    end else if (in_opcode == OP_CSEL | in_opcode == OP_CSINC | in_opcode == OP_CSINV | in_opcode == OP_CSNEG) begin
+      out_reg_cond_codes = cond_t'(in_insnbits[15:12]);
+    end else begin
+      out_reg_cond_codes = cond_t'(0);
     end
   end
 
@@ -268,7 +286,8 @@ module dispatch (
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
     output fu_t out_reg_fu_id,
     output alu_op_t out_reg_fu_op,
-    output logic [`GPR_IDX_SIZE-1:0] out_reg_dst
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_dst,
+    output cond_t out_reg_cond_codes
     // Outputs to be broadcasted.
     // output logic out_stalled
 );
@@ -288,24 +307,29 @@ module dispatch (
       .*,
       .in_insnbits(insnbits)
   );
+
+  find_cond_code cond_holds (
+      .*,
+      .in_opcode  (opcode),
+      .in_insnbits(insnbits)
+  );
   use_out_reg_imm imm_selector (.*);
   decide_alu alu_decider (.*);  // decides alu op
   fu_decider fu (.*);
   sets_nzcv nzcv_setter (.*);
 
   always_ff @(posedge in_clk) begin
+    out_reg_done <= in_fetch_done;
     if (in_fetch_done) begin
-      out_reg_done <= 1;
       insnbits <= in_fetch_insnbits;
 `ifdef DEBUG_PRINT
       $display("(dec) decoding: %b", in_fetch_insnbits);
 `endif
-    end else begin
-      out_reg_done <= 0;
     end
   end
 
 
+  // Print statements only in here
   always_ff @(posedge in_clk) begin
     if (in_fetch_done) begin
 `ifdef DEBUG_PRINT
