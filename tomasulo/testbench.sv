@@ -55,7 +55,7 @@
 
 // endmodule
 
-module ArithmeticExecuteUnit_tb;
+module alu_tb;
   logic clk;
   logic rst;
   logic start;
@@ -72,7 +72,7 @@ module ArithmeticExecuteUnit_tb;
   nzcv_t nzcv;
   nzcv_t in_nzcv;
 
-  ArithmeticExecuteUnit dut (
+  alu dut (
       .in_alu_op(ALUop),
       .in_val_a(alu_vala),
       .in_val_b(alu_valb),
@@ -81,9 +81,9 @@ module ArithmeticExecuteUnit_tb;
       .in_cond(cond),
       .in_prev_nzcv(in_nzcv),
       .out_cond_val(cond_val),
-      .out_fu_value(res),
-      .out_fu_nzcv(nzcv),
-      .out_fu_done(done)
+      .out_alu_value(res),
+      .out_alu_nzcv(nzcv),
+      .out_alu_done(done)
   );
 
   initial begin
@@ -92,8 +92,8 @@ module ArithmeticExecuteUnit_tb;
   end
 
   initial begin
-    $dumpfile("ArithmeticExecuteUnit.vcd");  // Dump waveform to VCD file
-    $dumpvars(0, ArithmeticExecuteUnit_tb);  // Dump all signals
+    $dumpfile("alu.vcd");  // Dump waveform to VCD file
+    $dumpvars(0, alu_tb);  // Dump all signals
 
     // Reset
     rst = 1;

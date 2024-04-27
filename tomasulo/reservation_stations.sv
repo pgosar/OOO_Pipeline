@@ -23,16 +23,18 @@ module reservation_stations (
     input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
     input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
     input logic in_rob_broadcast_set_nzcv,
-    input nzcv_t in_rob_broadcast_nzcv,  // NEW
+    input nzcv_t in_rob_broadcast_nzcv,
     input logic in_rob_is_mispred,
-    // Inputs from FU
-    input logic in_fu_ready,  // ready to receive inputs
-    // Outputs for FU
-    output logic [`GPR_SIZE-1:0] out_fu_val_a,
-    output logic [`GPR_SIZE-1:0] out_fu_val_b,
-    output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,
-    output logic out_fu_set_nzcv,
-    output nzcv_t out_fu_nzcv
+    // Inputs from FU (ALU)
+    input logic in_fu_alu_ready,  // ready to receive inputs
+    // Outputs for FU (ALU)
+    output logic out_fu_alu_start,
+    output alu_op_t out_fu_alu_op,
+    output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,
+    output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
+    output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,
+    output logic out_fu_alu_set_nzcv,
+    output nzcv_t out_fu_alu_nzcv
 );
 
   logic ls_ready, alu_ready;
@@ -75,16 +77,16 @@ module reservation_station_module #(
     input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
     input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
     input logic in_rob_broadcast_set_nzcv,
-    input nzcv_t in_rob_broadcast_nzcv,  // NEW
+    input nzcv_t in_rob_broadcast_nzcv,
     input logic in_rob_is_mispred,
     // Inputs from FU
     input logic in_fu_ready,  // ready to receive inputs
-    // Outputs for FU
-    output logic [`GPR_SIZE-1:0] out_fu_val_a,
-    output logic [`GPR_SIZE-1:0] out_fu_val_b,
-    output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,
-    output logic out_fu_set_nzcv,
-    output nzcv_t out_fu_nzcv
+    // Outputs for FU (ALU)
+    output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,
+    output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
+    output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,
+    output logic out_fu_alu_set_nzcv,
+    output nzcv_t out_fu_alu_nzcv
 );
 
   // Internal state`
@@ -142,7 +144,8 @@ module reservation_station_module #(
   logic [RS_SIZE:0] ready_entries;
   logic [RS_IDX_SIZE:0] ready_station_index;
   for (genvar i = 0; i < RS_SIZE; i += 1) begin
-    assign ready_entries[i] = rs[i].entry_valid & rs_valid[i] & (~set_nzcv | (set_nzcv & nzcv_valid));
+    // assign ready_entries[i] = rs[i].entry_valid & rs_valid[i] & (~rob_set_nzcv | (rob_set_nzcv & nzcv_valid));
+    assign ready_entries[i] = rs[i].entry_valid & rs_valid[i] & (rob_set_nzcv ? rob_nzcv_valid : 1);
   end
   assign ready_entries[INVALID_INDEX] = 1;
 
@@ -188,25 +191,27 @@ module reservation_station_module #(
                 rs[i].op2.valid <= 1;
               end
               if (in_rob_broadcast_set_nzcv && rs[i].set_nzcv && rs[i].nzcv_rob_index == in_rob_broadcast_index) begin
-                rs[i].nzcv <= rs[i];
+                rs[i].nzcv <= in_rob_broadcast_nzcv;
                 rs[i].nzcv_valid <= 1;
               end
             end
           end : rs_broadcast_loop
         end
-        // TODO(Nate): The below feels like a race condition. Starts here
         if (ready_station_index != INVALID_INDEX) begin
           // Allow the FU to read the value
-          out_fu_val_a <= rs[ready_station_index].op1.value;
-          out_fu_val_b <= rs[ready_station_index].op2.value;
-          out_fu_dst_rob_index <= rs[ready_station_index].dst_rob_index;
-          out_fu_nzcv <= rs[ready_station_index].nzcv;
-          out_fu_set_nzcv <= rs[ready_station_index].set_nzcv;
+          out_fu_alu_val_a <= rs[ready_station_index].op1.value;
+          out_fu_alu_val_b <= rs[ready_station_index].op2.value;
+          out_fu_alu_dst_rob_index <= rs[ready_station_index].dst_rob_index;
+          out_fu_alu_nzcv <= rs[ready_station_index].nzcv;
+          out_fu_alu_set_nzcv <= rs[ready_station_index].set_nzcv;
+          // NOTE(Nate): I believe this is a race condition because we update
+          //             the ready_station_index at the start of this cycle,
+          //             but this is okay, because the outputs are only updated
+          //             at the start of the cycle as well.
         end
         if (in_fu_ready && ready_station_index != INVALID_INDEX) begin
           rs[ready_station_index].valid <= 0;
         end
-        // TODO(Nate): Race condition ends here
 `ifdef DEBUG_PRINT
         $display("(reservation_stations) FU ready");
 `endif

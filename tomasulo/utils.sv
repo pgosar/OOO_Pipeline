@@ -1,17 +1,5 @@
 `include "data_structures.sv"
 
-// module instr_format_decoder (
-//     input opcode op
-//     output instr ;
-// );
-// always_comb begin : decode
-//     // casez(opcode)
-
-//     // endcase
-// end
-
-// endmodule
-
 module cond_holds (
     input  cond_t cond,
     input  nzcv_t nzcv,
@@ -46,95 +34,18 @@ module cond_holds (
 
 endmodule
 
-// TODO output to RS if ready or not
-module ArithmeticExecuteUnit (
-    input alu_op_t in_alu_op,
-    input logic [`GPR_SIZE-1:0] in_val_a,
-    input logic [`GPR_SIZE-1:0] in_val_b,
-    input logic [5:0] in_alu_val_hw,
-    input logic in_set_CC,
-    input cond_t in_cond,
-    input nzcv_t in_prev_nzcv,
-    output logic out_fu_done,  // Done signal indicating operation completion
-    output logic out_cond_val,
-    output logic [`GPR_SIZE-1:0] out_fu_value,
-    output nzcv_t out_fu_nzcv
-);
-
-  logic [`GPR_SIZE-1:0] result_reg;
-  nzcv_t nzcv;
-
-  cond_holds c_holds (
-      .cond(in_cond),
-      .nzcv(in_prev_nzcv),
-      .cond_holds(out_cond_val)
-  );
-
-  always_comb begin : main_switch
-    casez (in_alu_op)
-      ALU_OP_PLUS: result_reg = in_val_a + in_val_b;
-      ALU_OP_MINUS: result_reg = in_val_a - in_val_b;
-      ALU_OP_ORN: result_reg = in_val_a | (~in_val_b);
-      ALU_OP_OR: result_reg = in_val_a | in_val_b;
-      ALU_OP_EOR: result_reg = in_val_a ^ in_val_b;
-      ALU_OP_AND: result_reg = in_val_a & in_val_b;
-      ALU_OP_MOV: result_reg = in_val_a | (in_val_b << in_alu_val_hw);
-      ALU_OP_CSNEG: result_reg = in_val_b + 1;
-      ALU_OP_CSINC: result_reg = in_val_b + 1;
-      ALU_OP_CSINV: result_reg = in_val_b;
-      ALU_OP_CSEL: result_reg = in_val_b;
-      ALU_OP_PASS_A: result_reg = in_val_a;
-      default: result_reg = 0;
-    endcase
-    if (in_set_CC) begin
-      nzcv.N = result_reg[`GPR_SIZE-1];
-      nzcv.Z = result_reg == 0;
-      casez (in_alu_op)  /* Setting carry flag */
-        ALU_OP_PLUS: nzcv.C = (result_reg < in_val_a) | (result_reg < in_val_b);
-        ALU_OP_MINUS: nzcv.C = in_val_a >= in_val_b;
-        default: out_fu_nzcv.C = 0;
-      endcase
-      casez (in_alu_op)  /* Setting overflow flag */
-        ALU_OP_PLUS:
-        nzcv.V = (~in_val_a[`GPR_SIZE-1] & ~in_val_b[`GPR_SIZE-1] & nzcv.N) |
-                                      (in_val_a[`GPR_SIZE-1] & in_val_b[`GPR_SIZE-1] & ~nzcv.N);
-        ALU_OP_MINUS:
-        nzcv.V = (~in_val_a[`GPR_SIZE-1] & in_val_b[`GPR_SIZE-1] & nzcv.N) |
-                                       (in_val_a[`GPR_SIZE-1] & ~in_val_b[`GPR_SIZE-1] & ~nzcv.N);
-        default: nzcv.V = 0;
-      endcase
-    end
-    out_fu_nzcv = nzcv;
-    if(in_alu_op == ALU_OP_CSEL || in_alu_op == ALU_OP_CSNEG || in_alu_op == ALU_OP_CSINC ||
-                                       in_alu_op == ALU_OP_CSINV) begin
-      if (out_cond_val == 0) begin
-        out_fu_value = result_reg;
-      end else begin
-        out_fu_value = in_val_a;
-      end
-    end else begin
-      out_fu_value = result_reg;
-    end
-`ifdef DEBUG_PRINT
-    $display("ALU: out_fu_value = %d, out_fu_nzcv = %d, out_cond_val = %d", out_fu_value,
-             out_fu_nzcv, out_cond_val);
-`endif
-    out_fu_done = 1;
-  end
-endmodule
-
 module OP_UBFM_module (
     input  logic [63:0] in_val_a,
     input  logic [ 5:0] in_imms,
     input  logic [ 5:0] in_immr,
-    output logic [63:0] out_fu_value
+    output logic [63:0] out_value
 );
 
   always_comb begin
     if (in_imms >= in_immr) begin
-      out_fu_value = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
+      out_value = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
     end else begin
-      out_fu_value = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
+      out_value = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
     end
   end
 
@@ -144,14 +55,14 @@ module OP_SBFM_module (
     input  logic signed [63:0] in_val_a,
     input  logic signed [ 5:0] in_imms,
     input  logic signed [ 5:0] in_immr,
-    output logic signed [63:0] out_fu_value
+    output logic signed [63:0] out_value
 );
 
   always_comb begin
     if (in_imms >= in_immr) begin
-      out_fu_value = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
+      out_value = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
     end else begin
-      out_fu_value = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
+      out_value = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
     end
   end
 

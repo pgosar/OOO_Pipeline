@@ -4,14 +4,14 @@ module rob_module (
     // Timing
     input logic in_rst,
     input logic in_clk,
-    // Inputs from FU
+    // Inputs from FU (to broadcast)
     input logic in_fu_done,
     input logic [`ROB_IDX_SIZE-1:0] in_fu_dst_rob_index,
     input logic [`GPR_SIZE-1:0] in_fu_value,
-    input logic in_fu_set_nzcv,  // TODO? why? in_reg_set_nzcv does it
-    input nzcv_t in_fu_nzcv,  // out_reg_nzcv?
+    input logic in_fu_set_nzcv,
+    input nzcv_t in_fu_nzcv,
     input logic in_fu_is_mispred,
-    // Inputs from regfile (as part of decode)
+    // Inputs from regfile (to forward to rs)
     input logic in_reg_ready,  // NOTE(Nate): Is this stall?
     input logic in_reg_src1_valid,
     input logic in_reg_src2_valid,
@@ -23,7 +23,7 @@ module rob_module (
     input logic [`GPR_SIZE-1:0] in_reg_src1_value,
     input logic [`GPR_SIZE-1:0] in_reg_src2_value,
     input logic in_reg_set_nzcv,
-    input nzcv_t in_reg_nzcv,  // prev nzcv?
+    input nzcv_t in_reg_nzcv,
     input fu_t in_reg_fu_id,
     input alu_op_t in_reg_fu_op,
 
@@ -68,9 +68,11 @@ module rob_module (
   logic reg_ready;
   logic [`GPR_SIZE-1:0] reg_src1_value;
   logic [`GPR_SIZE-1:0] reg_src2_value;
+  nzcv_t reg_nzcv;
   logic [`ROB_IDX_SIZE-1:0] reg_src1_rob_index;
   logic [`ROB_IDX_SIZE-1:0] reg_src2_rob_index;
   logic [`ROB_IDX_SIZE-1:0] reg_nzcv_rob_index;
+  logic reg_nzcv_valid;
   logic reg_src1_valid;
   logic reg_src2_valid;
   logic [`ROB_IDX_SIZE-1:0] fu_dst;
@@ -122,8 +124,10 @@ module rob_module (
       reg_ready <= in_reg_ready;
       reg_src1_value <= in_reg_src1_value;
       reg_src1_valid <= in_reg_src1_valid;
+      reg_nzcv <= in_reg_nzcv;
       reg_src2_value <= in_reg_src2_value;
       reg_src2_valid <= in_reg_src2_valid;
+      reg_nzcv_valid <= in_reg_nzcv_valid;
       reg_src1_rob_index <= in_reg_src1_rob_index;
       reg_src2_rob_index <= in_reg_src2_rob_index;
       reg_nzcv_rob_index <= in_reg_nzcv_rob_index;
@@ -145,8 +149,8 @@ module rob_module (
       out_rs_val_b_valid <= reg_src2_valid ? reg_src2_valid : rob[reg_src2_rob_index].valid;
       out_rs_val_b_value <= reg_src2_valid ? reg_src2_value : rob[reg_src2_rob_index].value;
 
-      out_rs_nzcv_valid <= nzcv_valid ? reg_src2_valid : rob[reg_nzcv_rob_index].valid;
-      out_rs_nzcv <= nzcv_valid ? nzcv_value : rob[reg_nzcv_rob_index].value;
+      out_rs_nzcv_valid <= reg_nzcv_valid ? reg_src2_valid : rob[reg_nzcv_rob_index].valid;
+      out_rs_nzcv <= reg_nzcv_valid ? reg_nzcv : rob[reg_nzcv_rob_index].value;
 
       // Output dst rob index to rs
       out_rs_dst_rob_idx <= next_ptr;
