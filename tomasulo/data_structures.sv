@@ -6,6 +6,7 @@
 `define ROB_SIZE ((`RS_SIZE)*2+2)
 `define ROB_IDX_SIZE $clog2(`ROB_SIZE)
 `define GPR_COUNT 32
+`define INSNBITS_SIZE 32
 `define GPR_IDX_SIZE $clog2(`GPR_COUNT)
 `define GPR_SIZE 64 //IDK WHAT ITS SUPPOSED TO DO
 `define IMMEDIATE_SIZE 64

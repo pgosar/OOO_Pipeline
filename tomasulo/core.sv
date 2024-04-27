@@ -99,7 +99,7 @@ module core (
   fu_t in_reg_fu_id;
   alu_op_t in_reg_fu_op;
   // Outputs for RS
-  logic out_rs_ready;
+  logic out_rs_done;
   fu_t out_rs_fu_id;  // NOTE(Nate): Shouldn't this just go to the RS for this functional unit?
   alu_op_t out_rs_fu_op;
   logic out_rs_val_a_valid;
@@ -130,7 +130,7 @@ module core (
   // RESERVATION STATIONS
 
   // Inputs From ROB (sourced from either regfile or ROB)
-  logic in_rob_ready;
+  logic in_rob_done;
   fu_t in_rob_fu_id;
   alu_op_t in_rob_fu_op;
   logic in_rob_val_a_valid;
@@ -150,9 +150,11 @@ module core (
   logic in_rob_broadcast_set_nzcv;
   logic in_rob_broadcast_nzcv;
   logic in_rob_is_mispred;
+  logic in_fu_ls_ready;
   logic in_fu_alu_ready;  // ready to receive inputs
   // Outputs for FU
   logic out_fu_alu_start;
+  logic out_fu_ls_start;
   alu_op_t out_fu_alu_op;
   logic [`GPR_SIZE-1:0] out_fu_alu_val_a;
   logic [`GPR_SIZE-1:0] out_fu_alu_val_b;
@@ -168,13 +170,16 @@ module core (
   logic [`ROB_IDX_SIZE-1:0] in_rs_alu_dst_rob_index;
   logic in_rs_alu_set_nzcv;
   nzcv_t in_rs_alu_nzcv;
+  logic out_fu_alu_ready;
+  logic out_fu_ls_ready;
   // Outputs for RS
   logic out_rs_alu_ready;
+  // Outputs for ROB
   logic out_rob_done;  // Used for both ROB and FU
   logic [`ROB_IDX_SIZE-1:0] out_rob_dst_rob_index;
   logic [`GPR_SIZE-1:0] out_rob_value;
-  logic out_rob_set_nzcv;
-  nzcv_t out_rob_nzcv;
+  logic fu_out_rob_set_nzcv;
+  nzcv_t fu_out_rob_nzcv;
   logic out_rob_is_mispred;
 
   // for now just run a single cycle
@@ -226,7 +231,7 @@ module core (
   assign in_reg_fu_op = out_rob_fu_op;
 
   // ROB TO RS rs inputs = rob outputs
-  assign in_rob_ready = out_rs_ready;
+  assign in_rob_done = out_rs_done;
   assign in_rob_fu_id = out_rs_fu_id;
   assign in_rob_fu_op = out_rs_fu_op;
   assign in_rob_val_a_valid = out_rs_val_a_valid;
@@ -253,6 +258,7 @@ module core (
   assign in_fu_is_mispred = out_rob_is_mispred;
 
   // FU TO RS rs inputs = fu outputs
+  assign in_fu_ls_ready = out_rs_ls_ready;
   assign in_fu_alu_ready = out_rs_alu_ready;
 
   // RS TO FU fu inputs = rs outputs
@@ -263,7 +269,9 @@ module core (
   assign in_rs_alu_dst_rob_index = out_fu_alu_dst_rob_index;
   assign in_rs_alu_set_nzcv = out_fu_alu_set_nzcv;
   assign in_rs_alu_nzcv = out_fu_alu_nzcv;
-  assign out_fu_alu_ready = in_rs_alu_ready;
+
+  assign out_fu_alu_ready = out_fu_alu_start;
+  assign out_fu_ls_ready = out_fu_ls_start;
 
   // modules
   dispatch dp (
@@ -286,7 +294,8 @@ module core (
   );
   func_units fu (
       .*,
-      .
-  )
+      .out_rob_set_nzcv(fu_out_rob_set_nzcv),
+      .out_rob_nzcv(fu_out_rob_nzcv)
+  );
 
 endmodule

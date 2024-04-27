@@ -5,7 +5,7 @@ module reservation_stations (
     input logic in_rst,
     input logic in_clk,
     // Inputs From ROB (sourced from either regfile or ROB)
-    input logic in_rob_ready,
+    input logic in_rob_done,
     input fu_t in_rob_fu_id,
     input alu_op_t in_rob_fu_op,
     input logic in_rob_val_a_valid,
@@ -25,10 +25,13 @@ module reservation_stations (
     input logic in_rob_broadcast_set_nzcv,
     input nzcv_t in_rob_broadcast_nzcv,
     input logic in_rob_is_mispred,
+    // Inputs from FU (LS)
+    input logic in_fu_ls_ready,
     // Inputs from FU (ALU)
     input logic in_fu_alu_ready,  // ready to receive inputs
     // Outputs for FU (ALU)
     output logic out_fu_alu_start,
+    output logic out_fu_ls_start,
     output alu_op_t out_fu_alu_op,
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
@@ -38,15 +41,15 @@ module reservation_stations (
 );
 
   logic ls_ready, alu_ready;
-  assign alu_ready = in_rob_fu_id == FU_ALU && in_rob_ready;
-  assign ls_ready  = in_rob_fu_id == FU_LS && in_rob_ready;
+  assign alu_ready = in_rob_fu_id == FU_ALU && in_rob_done && in_fu_alu_ready;
+  assign ls_ready  = in_rob_fu_id == FU_LS && in_rob_done && in_fu_ls_ready;
   reservation_station_module ls (
       .*,
-      .in_ready(alu_ready)
+      .in_fu_ready(alu_ready)
   );
   reservation_station_module alu (
       .*,
-      .in_ready(ls_ready)
+      .in_fu_ready(ls_ready)
   );
 
 endmodule
@@ -58,8 +61,8 @@ module reservation_station_module #(
     // Timing & Reset
     input logic in_rst,
     input logic in_clk,
-    input logic in_ready,
     // Inputs From ROB
+    input logic in_rob_done,
     input alu_op_t in_rob_fu_op,
     input logic in_rob_val_a_valid,
     input logic in_rob_val_b_valid,
@@ -80,7 +83,7 @@ module reservation_station_module #(
     input nzcv_t in_rob_broadcast_nzcv,
     input logic in_rob_is_mispred,
     // Inputs from FU
-    input logic in_fu_ready,  // ready to receive inputs
+    input logic in_fu_ready,
     // Outputs for FU (ALU)
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
@@ -89,7 +92,7 @@ module reservation_station_module #(
     output nzcv_t out_fu_alu_nzcv
 );
 
-  // Internal state`
+  // Internal state
   rs_entry_t [RS_SIZE-1:0] rs;
   logic [RS_SIZE-1:0] rs_valid;
   logic delayed_clk;
@@ -210,11 +213,11 @@ module reservation_station_module #(
           //             at the start of the cycle as well.
         end
         if (in_fu_ready && ready_station_index != INVALID_INDEX) begin
-          rs[ready_station_index].valid <= 0;
+          rs[ready_station_index].entry_valid <= 0;
         end
-`ifdef DEBUG_PRINT
-        $display("(reservation_stations) FU ready");
-`endif
+        // `ifdef DEBUG_PRINT
+        //         $display("(reservation_stations) FU ready");
+        // `endif
       end else begin  /* in_rob_is_mispred */
 `ifdef DEBUG_PRINT
         $display("(regfile) Deleting mispredicted instructions");

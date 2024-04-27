@@ -1,11 +1,11 @@
 `include "data_structures.sv"
 
 module decode_instruction (
-    input logic [31:0] in_fetch_insnbits,
+    input logic [`INSNBITS_SIZE-1:0] in_insnbits,
     output opcode_t opcode
 );
   always_comb begin
-    casez (in_fetch_insnbits)
+    casez (in_insnbits)
       // All references in this decode are made to the Arm Architecture
       // Reference Manual version K.a released 2024-03-20
       // // C6.2.221 - 64-bit unscaled load.
@@ -79,7 +79,7 @@ module decode_instruction (
 endmodule : decode_instruction
 
 module extract_immval (
-    input logic [31:0] in_fetch_insnbits,
+    input logic [`INSNBITS_SIZE-1:0] in_insnbits,
     input opcode_t opcode,
     output logic [63:0] out_reg_imm
 );
@@ -89,10 +89,10 @@ module extract_immval (
   //             haven't assigned every bit? idk
   always_comb begin
     case (opcode)
-      OP_LDUR, OP_STUR: out_reg_imm = {55'd0, in_fetch_insnbits[20:12]};
-      OP_ADD, OP_SUB, OP_UBFM, OP_SBFM: out_reg_imm = {52'd0, in_fetch_insnbits[21:10]};
-      OP_MOVK, OP_MOVZ: out_reg_imm = {48'd0, in_fetch_insnbits[20:5]};
-      OP_ADRP: out_reg_imm = {31'd0, in_fetch_insnbits[23:5], in_fetch_insnbits[30:29], 12'h000};
+      OP_LDUR, OP_STUR: out_reg_imm = {55'd0, in_insnbits[20:12]};
+      OP_ADD, OP_SUB, OP_UBFM, OP_SBFM: out_reg_imm = {52'd0, in_insnbits[21:10]};
+      OP_MOVK, OP_MOVZ: out_reg_imm = {48'd0, in_insnbits[20:5]};
+      OP_ADRP: out_reg_imm = {31'd0, in_insnbits[23:5], in_insnbits[30:29], 12'h000};
       default: out_reg_imm = 0;
     endcase
   end
@@ -100,7 +100,7 @@ module extract_immval (
 endmodule : extract_immval
 
 module extract_reg (
-    input logic [31:0] in_fetch_insnbits,
+    input logic [`INSNBITS_SIZE-1:0] in_insnbits,
     input opcode_t opcode,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src1,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
@@ -112,7 +112,7 @@ module extract_reg (
         opcode != OP_BL && opcode != OP_BLR && opcode != OP_RET &&  //branch dont need out_reg_dst
         opcode != OP_NOP && opcode != OP_HLT &&  //S format
         opcode != OP_CBZ && opcode != OP_CBNZ) begin  //i something format
-      out_reg_dst = in_fetch_insnbits[4:0];
+      out_reg_dst = in_insnbits[4:0];
     end else if (opcode == OP_BL) begin
       out_reg_dst = 5'd30;
     end
@@ -122,19 +122,19 @@ module extract_reg (
             opcode != OP_B && opcode != OP_BR && opcode != OP_B_COND && opcode != OP_BL && opcode
             != OP_BLR && opcode != OP_NOP && opcode != OP_HLT
             && opcode != OP_CBZ && opcode != OP_CBNZ) begin
-      out_reg_src1 = in_fetch_insnbits[9:5];
+      out_reg_src1 = in_insnbits[9:5];
     end else if (opcode == OP_CBZ || opcode == OP_CBNZ) begin
-      out_reg_src1 = in_fetch_insnbits[4:0];
+      out_reg_src1 = in_insnbits[4:0];
     end
 
     //out_reg_src2
     if (opcode == OP_STUR) begin
-      out_reg_src2 = in_fetch_insnbits[4:0];
+      out_reg_src2 = in_insnbits[4:0];
     end else if (opcode == OP_ADDS || opcode == OP_SUBS || opcode == OP_ORN ||
                         opcode == OP_ORR || opcode == OP_EOR || opcode == OP_ANDS ||
                         opcode == OP_CSEL || opcode == OP_CSINV || opcode == OP_CSINC
                         || opcode == OP_CSNEG) begin // extra credit checks
-      out_reg_src2 = in_fetch_insnbits[20:16];
+      out_reg_src2 = in_insnbits[20:16];
     end
   end
 endmodule
@@ -255,12 +255,12 @@ module dispatch (
     input logic in_clk,
     input logic in_stall,
     // Inputs from fetch
-    input logic [31:0] in_fetch_insnbits,
+    input logic [`INSNBITS_SIZE-1:0] in_fetch_insnbits,
     input logic in_fetch_done,
     // Outputs to regfile. This will (asynchronously) cause the regfile to send
     // signals to the ROB. We assume that this will occur within the same
     // cycle.
-    output logic out_reg_ready,
+    output logic out_reg_done,
     output logic out_reg_set_nzcv,
     output logic out_reg_use_imm,
     output logic [`IMMEDIATE_SIZE-1:0] out_reg_imm,
@@ -273,37 +273,51 @@ module dispatch (
     // output logic out_stalled
 );
 
-  always_ff @(posedge in_clk) begin
-    if (!in_stall) begin
-
-    end
-  end
-  assign out_reg_ready = in_fetch_done;
   opcode_t opcode;
-  always_comb begin
-`ifdef DEBUG_PRINT
-    $display("decode: %b", in_fetch_insnbits);
-`endif
-  end
+  logic [`INSNBITS_SIZE-1:0] insnbits;
 
-  decide_alu alu_decider (.*);  // decides alu op
-  decode_instruction op_decoder (.*);
-  extract_immval imm_extractor (.*);
+  decode_instruction op_decoder (
+      .*,
+      .in_insnbits(insnbits)
+  );
+  extract_immval imm_extractor (
+      .*,
+      .in_insnbits(insnbits)
+  );
+  extract_reg reg_extractor (
+      .*,
+      .in_insnbits(insnbits)
+  );
   use_out_reg_imm imm_selector (.*);
-  extract_reg reg_extractor (.*);
+  decide_alu alu_decider (.*);  // decides alu op
   fu_decider fu (.*);
   sets_nzcv nzcv_setter (.*);
 
-  always_comb begin
+  always_ff @(posedge in_clk) begin
+    if (in_fetch_done) begin
+      out_reg_done <= 1;
+      insnbits <= in_fetch_insnbits;
 `ifdef DEBUG_PRINT
-    $display("opcode: %d", opcode_t'(opcode));
-    $display("out_reg_imm: %d", out_reg_imm);
-    $display("fu: %d", fu_t'(out_reg_fu_id));
-    $display("src1: %d", out_reg_src1);
-    $display("src2: %d", out_reg_src2);
-    $display("dst: %d", out_reg_dst);
-    $display("sets_nzcv: %d", out_reg_set_nzcv);
+      $display("(dec) decoding: %b", in_fetch_insnbits);
 `endif
+    end else begin
+      out_reg_done <= 0;
+    end
+  end
+
+
+  always_ff @(posedge in_clk) begin
+    if (in_fetch_done) begin
+`ifdef DEBUG_PRINT
+      #5 $display("(dec)\topcode: %d", opcode_t'(opcode));
+      $display("(dec)\tout_reg_imm: %d", out_reg_imm);
+      $display("(dec)\tfu: %d", fu_t'(out_reg_fu_id));
+      $display("(dec)\tsrc1: %d", out_reg_src1);
+      $display("(dec)\tsrc2: %d", out_reg_src2);
+      $display("(dec)\tdst: %d", out_reg_dst);
+      $display("(dec)\tsets_nzcv: %d", out_reg_set_nzcv);
+`endif
+    end
   end
 
 endmodule : dispatch

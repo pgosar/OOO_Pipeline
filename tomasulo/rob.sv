@@ -12,7 +12,7 @@ module rob_module (
     input nzcv_t in_fu_nzcv,
     input logic in_fu_is_mispred,
     // Inputs from regfile (to forward to rs)
-    input logic in_reg_ready,  // NOTE(Nate): Is this stall?
+    input logic in_reg_done,  // NOTE(Nate): Is this stall?
     input logic in_reg_src1_valid,
     input logic in_reg_src2_valid,
     input logic in_reg_nzcv_valid,
@@ -28,7 +28,7 @@ module rob_module (
     input alu_op_t in_reg_fu_op,
 
     // Outputs for RS
-    output logic out_rs_ready,
+    output logic out_rs_done,
     output fu_t out_rs_fu_id, // NOTE(Nate): Shouldn't this just go to the RS for this functional unit?
     output alu_op_t out_rs_fu_op,
     output logic out_rs_val_a_valid,
@@ -65,7 +65,7 @@ module rob_module (
   logic [`ROB_IDX_SIZE-1:0] next_ptr;  // Next rob index
 
   // Buffered data
-  logic reg_ready;
+  logic reg_done;
   logic [`GPR_SIZE-1:0] reg_src1_value;
   logic [`GPR_SIZE-1:0] reg_src2_value;
   nzcv_t reg_nzcv;
@@ -109,7 +109,7 @@ module rob_module (
         end
       end
       // Update regfile
-      if (in_reg_ready) begin
+      if (in_reg_done) begin
 `ifdef DEBUG_PRINT
         $display("(rob) Regfile has values from decode. Modifying by adding new entry");
         $display("\tin_reg_dst: %d, in_reg_set_nzcv: %d", in_reg_dst, in_reg_set_nzcv);
@@ -121,7 +121,7 @@ module rob_module (
         rob[next_ptr].valid <= 0;
       end
       // Buffer the incoming state
-      reg_ready <= in_reg_ready;
+      reg_done <= in_reg_done;
       reg_src1_value <= in_reg_src1_value;
       reg_src1_valid <= in_reg_src1_valid;
       reg_nzcv <= in_reg_nzcv;
@@ -139,9 +139,9 @@ module rob_module (
   // Process buffered state
   always_ff @(posedge delayed_clk) begin
     // TODO(Nate): Some of these should not happen if we are stalled
-    out_rs_ready <= reg_ready;
+    out_rs_done <= reg_done;
     // Input
-    if (reg_ready) begin
+    if (reg_done) begin
       // Output srcs to rs
       out_rs_val_a_valid <= reg_src1_valid ? reg_src1_valid : rob[reg_src1_rob_index].valid;
       out_rs_val_a_value <= reg_src1_valid ? reg_src1_value : rob[reg_src1_rob_index].value; // NOTE(Nate): This logic is goofy but works!
@@ -150,7 +150,7 @@ module rob_module (
       out_rs_val_b_value <= reg_src2_valid ? reg_src2_value : rob[reg_src2_rob_index].value;
 
       out_rs_nzcv_valid <= reg_nzcv_valid ? reg_src2_valid : rob[reg_nzcv_rob_index].valid;
-      out_rs_nzcv <= reg_nzcv_valid ? reg_nzcv : rob[reg_nzcv_rob_index].value;
+      out_rs_nzcv <= reg_nzcv_valid ? reg_nzcv : rob[reg_nzcv_rob_index].nzcv;
 
       // Output dst rob index to rs
       out_rs_dst_rob_idx <= next_ptr;
