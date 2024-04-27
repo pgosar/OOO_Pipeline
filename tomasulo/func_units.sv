@@ -167,3 +167,67 @@ module alu_module (
     out_done = 1;
   end
 endmodule
+
+
+// Note: the imem is combinational to make accessing memory super easy.
+//
+module imem # (parameter int PAGESIZE)
+  (
+  input wire [63:0] in_addr,
+  output logic [31:0] data
+  );
+  // read-only instruction memory module.
+  localparam bits_amt = PAGESIZE;
+  localparam fname = "imem.txt";
+  logic [7:0] mem [bits_amt];
+  logic [$clog2(PAGESIZE) - 1:0] addr;
+
+  initial begin: mem_init
+    $readmemb(fname, mem);
+  end: mem_init
+
+  always_comb begin: mem_access
+    addr = in_addr[$clog2(PAGESIZE) - 1:0];
+    data = {mem[addr + 3], mem[addr + 2], mem[addr + 1], mem[addr]};
+  end: mem_access
+  
+endmodule: imem
+
+// set w_enable and w_val if writing, else just set in_addr. should be 
+// really easy to integrate since addr is 64 bit
+module dmem # (parameter int PAGESIZE) // AKA load-store
+  (
+  input wire [63:0] in_addr,
+  input wire clk,
+  input wire w_enable,
+  input wire [63:0] wval,
+  output logic [63:0] data
+  );
+  // read-only instruction memory module.
+  localparam bits_amt = PAGESIZE * 4; // 64 bit access
+  localparam fname = "dmem.txt";
+  logic [7:0] mem [bits_amt];
+
+  initial begin: mem_init
+    $readmemb(fname, mem);
+  end: mem_init
+
+  always_ff @(posedge clk) begin: mem_access
+    localparam addr = in_addr[$clog2(PAGESIZE * 4) - 1:0];
+    if (w_enable) begin
+      mem[addr + 7] <= wval[63:56];
+      mem[addr + 6] <= wval[55:48];
+      mem[addr + 5] <= wval[47:40];
+      mem[addr + 4] <= wval[39:32];
+      mem[addr + 3] <= wval[31:24];
+      mem[addr + 2] <= wval[23:16];
+      mem[addr + 1] <= wval[15:8];
+      mem[addr] <= wval[7:0];
+      data <= wval;
+    end else begin
+      data <= {mem[addr + 7], mem[addr + 6], mem[addr + 5], mem[addr + 4], mem[addr + 3], mem[addr + 2], mem[addr + 1], mem[addr]};
+    end
+  end: mem_access
+  
+endmodule: dmem
+

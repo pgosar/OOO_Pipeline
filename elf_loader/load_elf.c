@@ -172,5 +172,15 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   printf("ENTRY: %llu\n", entry);
-  
+  char fname2[] = "entry.txt";
+  FILE *fout = fopen(fname2, "w");
+  if (fout == NULL) {
+    printf("Error opening file.\n");
+    return 1;
+  }
+  printf("writing...\n");
+  for (int i = 0; i < sizeof(entry) * 8; ++i) {
+    fprintf(fout, "%llu", (entry >> (63 - i) & 1));
+  }
+  fclose(fout);
 }
