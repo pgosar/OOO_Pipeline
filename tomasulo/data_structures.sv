@@ -44,8 +44,8 @@ typedef enum logic [2:0] {
 } states_t;
 
 typedef enum logic [5:0] {
-  ALU_OP_PLUS,    // val_a + (val_b << valhw)
   ALU_OP_MINUS,   // val_a - (val_b << valhw)
+  ALU_OP_PLUS,    // val_a + (val_b << valhw)
   ALU_OP_ORN,     // val_a | (~val_b)
   ALU_OP_OR,      // val_a | val_b
   ALU_OP_EOR,     // val_a ^ val_b

@@ -330,18 +330,20 @@ module dispatch (
 
 
   // Print statements only in here
+`ifdef DEBUG_PRINT
   always_ff @(posedge in_clk) begin
     if (in_fetch_done) begin
-`ifdef DEBUG_PRINT
-      #5 $display("(dec)\topcode: %d", opcode_t'(opcode));
-      $display("(dec)\tout_reg_imm: %d", out_reg_imm);
+      #1 $display("(dec)\topcode: %d", opcode_t'(opcode));
+      #1 $display("(dec)\talu_op: %d", alu_op_t'(out_reg_fu_op));
+      $display("(dec) decoding: %b", in_fetch_insnbits);
+      $display("(dec)\tout_reg_imm: %0d", out_reg_imm);
       $display("(dec)\tfu: %d", fu_t'(out_reg_fu_id));
       $display("(dec)\tsrc1: %d", out_reg_src1);
       $display("(dec)\tsrc2: %d", out_reg_src2);
       $display("(dec)\tdst: %d", out_reg_dst);
       $display("(dec)\tsets_nzcv: %d", out_reg_set_nzcv);
-`endif
     end
   end
+`endif
 
 endmodule : dispatch

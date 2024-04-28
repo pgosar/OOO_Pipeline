@@ -89,6 +89,7 @@ module reservation_station_module #(
     // Outputs for FU (ALU)
     output logic out_fu_alu_start,
     output logic out_fu_ls_start,
+    output alu_op_t out_fu_alu_op,
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
     output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,
@@ -132,9 +133,6 @@ module reservation_station_module #(
   // a LUT in order to determine the index of the next free entry.
   // If all entries are occupied, the INVALID_INDEX will be set.
   logic [RS_SIZE:0] occupied_entries;
-  // TODO: not sure why we have a unoptimizable error here, but looks safe to ignore for now
-  // https://github.com/verilator/verilator/issues/63, fix later
-  /* verilator lint_off UNOPTFLAT */
   logic [RS_IDX_SIZE:0] free_station_index;
   for (genvar i = 0; i < RS_SIZE; i += 1) begin
     assign occupied_entries[i] = rs[i].entry_valid;
@@ -144,36 +142,37 @@ module reservation_station_module #(
   // Map ready reservation stations entries to wires. These will be used in
   // a LUT in order to determine the index of the next entry to be executed.
   // If none are ready to be executed, the INVALID_INDEX will be set.
-  genvar i;
   logic [RS_SIZE:0] ready_entries;
   logic [RS_IDX_SIZE:0] ready_station_index;
   // Wires up the ready entry of each rs
-  always_comb begin
-    $display(
-        "rs[%0d].entry_valid: %b, rs[%0d].op1.valid: %b, rs[%0d].op2.valid: %b, rs[%0d].set_nzcv: %b, rs[%0d].nzcv_valid: %b",
-        i, rs[i].entry_valid, i, rs[i].op1.valid, i, rs[i].op2.valid, i, rs[i].set_nzcv, i,
-        rs[i].nzcv_valid);
-  end
-  for (i = 0; i < RS_SIZE; i += 1) begin
-    // always_comb begin
-    //   for (int i = 0; i < RS_SIZE; i++) begin
-    assign ready_entries[i] = rs[i].entry_valid & rs[i].op1.valid & rs[i].op2.valid & (rs[i].set_nzcv ? rs[i].nzcv_valid : 1);
-    //   end
-  end
+  // always_comb begin
+  //   $display(
+  //       "rs[%0d].entry_valid: %b, rs[%0d].op1.valid: %b, rs[%0d].op2.valid: %b, rs[%0d].set_nzcv: %b, rs[%0d].nzcv_valid: %b",
+  //       i, rs[i].entry_valid, i, rs[i].op1.valid, i, rs[i].op2.valid, i, rs[i].set_nzcv, i,
+  //       rs[i].nzcv_valid);
   // end
-  assign ready_entries[INVALID_INDEX] = 1;
+  always_comb begin
+    for (int i = 0; i < RS_SIZE; i += 1) begin
+      // $monitor(
+      //     "rs[%0d].entry_valid: %b, rs[%0d].op1.valid: %b, rs[%0d].op2.valid: %b, rs[%0d].set_nzcv: %b, rs[%0d].nzcv_valid: %b",
+      //     i, rs[i].entry_valid, i, rs[i].op1.valid, i, rs[i].op2.valid, i, rs[i].set_nzcv, i,
+      //     rs[i].nzcv_valid);
+      ready_entries[i] = rs[i].entry_valid & rs[i].op1.valid & rs[i].op2.valid & (rs[i].set_nzcv ? rs[i].nzcv_valid : 1);
+    end
 
+    ready_entries[INVALID_INDEX] = 1;
+  end
   // Set the indexes
   always_comb begin
     // Priority encoder LUT for most significant 0 bit
     free_station_index = INVALID_INDEX;
-    for (logic [RS_IDX_SIZE:0] i = RS_IDX_SIZE - 1; i != INVALID_INDEX; i -= 1) begin
+    for (logic [RS_IDX_SIZE:0] i = RS_IDX_SIZE - 1; i < INVALID_INDEX; i -= 1) begin
       if (occupied_entries[i] == 1'b0) free_station_index = i;
     end
 
     ready_station_index = INVALID_INDEX;
     // Priority encoder LUT for most significant 1 bit
-    for (logic [RS_IDX_SIZE:0] i = RS_IDX_SIZE - 1; i != INVALID_INDEX; i -= 1) begin
+    for (logic [RS_IDX_SIZE:0] i = RS_IDX_SIZE - 1; i < INVALID_INDEX; i -= 1) begin
       if (ready_entries[i] == 1'b1) ready_station_index = i;
     end
   end
@@ -221,6 +220,7 @@ module reservation_station_module #(
         end
         if (fu_alu_ready & ready_station_index != INVALID_INDEX) begin
           // Allow the FU to read the value
+          out_fu_alu_op <= rs[ready_station_index].op;
           out_fu_alu_val_a <= rs[ready_station_index].op1.value;
           out_fu_alu_val_b <= rs[ready_station_index].op2.value;
           out_fu_alu_dst_rob_index <= rs[ready_station_index].dst_rob_index;
@@ -291,17 +291,14 @@ module reservation_station_module #(
 
 `ifdef DEBUG_PRINT
       $display(
-          "(RS) Inserting RS[%0d] = %0d, op1 val: %0d, op1 rob_idx %d, op2 val: %0d, op2 rob_idx dst: %d, nzcv: %d, set_nzcv: %d, nzcv_valid: %d, nzcv: %d, op: %d",
-          free_station_index, rob_val_a_value, rob_val_b_value, rob_val_a_rob_index,
-          rob_val_b_rob_index, rob_dst_rob_index, rob_nzcv_rob_index, rob_set_nzcv, rob_nzcv_valid,
-          rob_nzcv, rob_fu_op);
+          "(RS) Adding new entry to RS[%0d]: op1 valid: %0d, op1 value: %0d op2 valid: %0d, op2 value: %0d set nzcv: %0d nzcv valid: %b nzcv value: %d: fu op %d",
+          free_station_index, rob_val_a_valid, rob_val_a_value, rob_val_b_valid, rob_val_b_value,
+          rob_set_nzcv, rob_nzcv_valid, rob_nzcv, rob_fu_op);
       last_index <= free_station_index;
 `endif
     end : rs_add_entry
     // Update entry because FU has consumed the value. This will execute
     // in lockstep with the FU actually consuming the value.
-    $display("(RS) WILL I UPDATE???: fu_alu_ready: %b, ready_station_index: %b", fu_alu_ready,
-             ready_station_index);
     out_fu_alu_start <= fu_alu_ready & (ready_station_index != INVALID_INDEX);
     if (fu_alu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
 `ifdef DEBUG_PRINT

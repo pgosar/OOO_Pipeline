@@ -6,3 +6,4 @@ run_arm.c
 .nvim/
 obj_dir/
 .vscode/
+*.txt

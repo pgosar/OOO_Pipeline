@@ -84,29 +84,29 @@ module reg_module (
         out_rob_dst <= in_d_dst;
         out_rob_set_nzcv <= in_d_set_nzcv;
         out_rob_fu_op <= in_d_fu_op;
-        // Commit
-        if (in_rob_should_commit & (in_rob_commit_rob_index == gprs[in_rob_reg_index].rob_index)) begin : rob_commit
-          gprs[in_rob_reg_index].value <= in_rob_commit_value;
-          gprs[in_rob_reg_index].valid <= 1;
-          if (in_rob_set_nzcv) begin
-            nzcv <= in_rob_nzcv;
-            nzcv_valid <= 1;
-          end
-`ifdef DEBUG_PRINT
-          $display("(regfile) Committing to GPR[%0d] = %0d", in_rob_reg_index, in_rob_commit_value);
-`endif
-        end : rob_commit
       end
-      // Buffer unused state
-      d_done <= in_d_done;
-      d_src1 <= in_d_src1;
-      d_src2 <= in_d_src2;
-      d_dst <= in_d_dst;
-      d_set_nzcv <= in_d_set_nzcv;
-      d_imm <= in_d_imm;
-      d_use_imm <= in_d_use_imm;
-      fu_id <= in_d_fu_id;
+      // Commit
+      if (in_rob_should_commit & (in_rob_commit_rob_index == gprs[in_rob_reg_index].rob_index)) begin : rob_commit
+        gprs[in_rob_reg_index].value <= in_rob_commit_value;
+        gprs[in_rob_reg_index].valid <= 1;
+        if (in_rob_set_nzcv) begin
+          nzcv <= in_rob_nzcv;
+          nzcv_valid <= 1;
+        end
+`ifdef DEBUG_PRINT
+        $display("(regfile) Committing to GPR[%0d] = %0d", in_rob_reg_index, in_rob_commit_value);
+`endif
+      end : rob_commit
     end
+    // Buffer unused state
+    d_done <= in_d_done;
+    d_src1 <= in_d_src1;
+    d_src2 <= in_d_src2;
+    d_dst <= in_d_dst;
+    d_set_nzcv <= in_d_set_nzcv;
+    d_imm <= in_d_imm;
+    d_use_imm <= in_d_use_imm;
+    fu_id <= in_d_fu_id;
   end
   // Process buffered state
   always_ff @(posedge delayed_clk) begin
@@ -128,11 +128,16 @@ module reg_module (
         out_rob_src1_rob_index <= gprs[d_src1].rob_index;
       end
       // Src 2
-      out_rob_src1_valid <= gprs[d_src1].valid;
-      if (gprs[d_src2].valid) begin
-        out_rob_src2_value <= gprs[d_src2].value;
+      if (d_use_imm) begin
+        out_rob_src2_value <= d_imm;
+        out_rob_src2_valid <= 1;
       end else begin
-        out_rob_src2_rob_index <= gprs[d_src2].rob_index;
+        out_rob_src2_valid <= gprs[d_src2].valid;
+        if (gprs[d_src2].valid) begin
+          out_rob_src2_value <= gprs[d_src2].value;
+        end else begin
+          out_rob_src2_rob_index <= gprs[d_src2].rob_index;
+        end
       end
 
       // nzcv

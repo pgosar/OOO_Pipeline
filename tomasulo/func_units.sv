@@ -80,8 +80,13 @@ module func_units (
       rs_alu_set_nzcv = in_rs_alu_set_nzcv;
       rs_alu_nzcv = in_rs_alu_nzcv;
 `ifdef DEBUG_PRINT
-      $display("ALU: out_value = %d, out_nzcv = %d, out_alu_condition = %d", alu_out_value,
-               alu_out_nzcv, out_alu_condition);
+      #1
+      $display(
+          "(ALU) out_value = %0d, out_nzcv = %0d, out_alu_condition = %0d",
+          alu_out_value,
+          alu_out_nzcv,
+          out_alu_condition
+      );
 `endif
 
     end
