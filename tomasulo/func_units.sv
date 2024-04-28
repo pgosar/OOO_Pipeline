@@ -49,7 +49,6 @@ module func_units (
   logic [`ROB_IDX_SIZE-1:0] alu_out_dst_rob_index;
   logic [`GPR_SIZE-1:0] alu_out_value;
   logic alu_out_set_nzcv;
-  nzcv_t alu_out_nzcv;
 
   // Buffered state (for clocking ALU)
   logic rs_alu_start;
@@ -63,8 +62,6 @@ module func_units (
   // Temporarily connect alu to FU out always
   assign out_rob_dst_rob_index = alu_out_dst_rob_index;
   assign out_rob_value = alu_out_value;
-  assign out_rob_set_nzcv = alu_out_set_nzcv;
-  assign out_rob_nzcv = alu_out_nzcv;
   assign out_rs_alu_ready = 1;
   // assign out_rob_is_mispred = out_alu_condition;  // TODO(Nate): WRONG!!!
   // TODO(Nate): Much more thinking needs to be done on handling conditions.
@@ -80,13 +77,11 @@ module func_units (
       rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
       rs_alu_nzcv <= in_rs_alu_nzcv;
 `ifdef DEBUG_PRINT
-      #1
+      $display("(ALU) #0 about to run op %0d! set_nzcv: %b", rs_alu_op, in_rs_alu_set_nzcv);
+      #3
       $display(
-          "(ALU) out_value = %0d, out_nzcv = %0d, out_alu_condition = %0d",
-          alu_out_value,
-          alu_out_nzcv,
-          out_alu_condition
-      );
+          "(ALU) #1 just ran! out_value = %0d, out_nzcv = %4b, out_alu_condition = %0d, val_a: %0d, val_b: %0d",
+          alu_out_value, out_alu_condition, out_rob_nzcv, rs_alu_val_a, rs_alu_val_b);
 `endif
 
     end
@@ -103,7 +98,7 @@ module func_units (
       .out_done(out_rob_done),  // Done signal indicating operation completion
       .out_alu_condition(out_alu_condition),
       .out_value(alu_out_value),
-      .out_nzcv(alu_out_nzcv),
+      .out_nzcv(out_rob_nzcv),
       .out_set_nzcv(alu_out_set_nzcv),
       .out_dst_rob_index(alu_out_dst_rob_index)
   );
@@ -156,6 +151,7 @@ module alu_module (
   //     .cond_holds(out_alu_condition)
   // );
 
+
   logic result_negative = result[`GPR_SIZE-1];
   always_comb begin
     casez (in_op)
@@ -176,12 +172,13 @@ module alu_module (
 
     if (set_nzcv) begin
       out_nzcv.N = result_negative;
-      out_nzcv.Z = result == 0;
+      out_nzcv.Z = result[`GPR_SIZE-1:0] == 0;
       out_nzcv.C = result[`GPR_SIZE];
       out_nzcv.V = (val_a_negative ^ val_b_negative) ? 0 : (result_negative ^ val_a_negative);
     end else begin
       out_nzcv = in_nzcv;
     end
+
     // if(in_op == ALU_OP_CSEL | in_op == ALU_OP_CSNEG | in_op == ALU_OP_CSINC | in_op == ALU_OP_CSINV) begin
     //   if (out_alu_condition == 0) begin
     //      <= result;

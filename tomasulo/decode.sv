@@ -268,6 +268,22 @@ module find_cond_code (
 
 endmodule
 
+module uses_nzcv (
+    input opcode_t in_opcode,
+    output logic op_uses_nzcv
+);
+
+  always_comb begin
+    if (in_opcode == OP_B_COND | in_opcode == OP_CSINV | in_opcode == OP_CSINV | in_opcode == OP_CSNEG |
+        in_opcode == OP_CSEL) begin
+      op_uses_nzcv = 1;
+    end else begin
+      op_uses_nzcv = 0;
+    end
+  end
+
+endmodule
+
 module dispatch (
     // Inputs from core
     input logic in_clk,
@@ -287,7 +303,8 @@ module dispatch (
     output fu_t out_reg_fu_id,
     output alu_op_t out_reg_fu_op,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_dst,
-    output cond_t out_reg_cond_codes
+    output cond_t out_reg_cond_codes,
+    output logic out_reg_instr_uses_nzcv
     // Outputs to be broadcasted.
     // output logic out_stalled
 );
@@ -313,6 +330,11 @@ module dispatch (
       .in_opcode  (opcode),
       .in_insnbits(insnbits)
   );
+
+  // uses_nzcv instr_uses_nzcv(
+  //     .in_opcode(opcode),
+  //     .op_uses_nzcv(out_reg_instr_uses_nzcv)
+  // );
   use_out_reg_imm imm_selector (.*);
   decide_alu alu_decider (.*);  // decides alu op
   fu_decider fu (.*);

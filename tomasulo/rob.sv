@@ -1,5 +1,6 @@
 `include "data_structures.sv"
 
+
 module rob_module (
     // Timing
     input logic in_rst,
@@ -27,6 +28,7 @@ module rob_module (
     input fu_t in_reg_fu_id,
     input alu_op_t in_reg_fu_op,
     input cond_t in_reg_cond_codes,
+    input logic in_reg_instr_uses_nzcv,
 
     // Outputs for RS
     output logic out_rs_done,
@@ -57,6 +59,7 @@ module rob_module (
     output logic [`GPR_IDX_SIZE-1:0] out_reg_index,
     output logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index,
     output cond_t out_rs_cond_codes,
+    output logic out_rs_instr_uses_nzcv,
     // Output for regfile (for the next ROB insertion)
     output logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index
     // // Outputs for dispatch
@@ -82,9 +85,11 @@ module rob_module (
   logic [`ROB_IDX_SIZE-1:0] fu_dst;
   logic fu_done;
   logic delayed_clk;
+  logic delayed_clk_2;
 
   always_ff @(posedge in_clk, negedge in_clk) begin
-    delayed_clk <= #1 in_clk;
+    delayed_clk   <= #1 in_clk;
+    delayed_clk_2 <= #2 in_clk;
   end
 
   // Update from FU and copy signals
@@ -103,11 +108,12 @@ module rob_module (
       out_rs_fu_id <= in_reg_fu_id;
       out_rs_set_nzcv <= in_reg_set_nzcv;
       out_rs_cond_codes <= in_reg_cond_codes;
+      out_rs_instr_uses_nzcv <= in_reg_instr_uses_nzcv;
       // Update state from FU
       if (in_fu_done) begin
 `ifdef DEBUG_PRINT
-        $display("(rob) [in_fu_done] FU complete. Modifying values:");
-        $display("\tin_fu_dst_rob_index: %0d, in_fu_value: %0d", in_fu_dst_rob_index, in_fu_value);
+        $display("(rob) Received result from FU. ROB[%0d] -> %0d", in_fu_dst_rob_index,
+                 in_fu_value);
 `endif
         // Modify the line which the FU has updated
         rob[in_fu_dst_rob_index].value <= in_fu_value;
@@ -119,8 +125,7 @@ module rob_module (
       // Update regfile
       if (in_reg_done) begin
 `ifdef DEBUG_PRINT
-        $display("(rob) Adding new entry:");
-        $display("\tin_reg_dst: %d, in_reg_set_nzcv: %d", in_reg_dst, in_reg_set_nzcv);
+        $display("(rob) Inserting new entry @ ROB[%0d] -> use_nzcv: N/a", in_reg_dst);
 `endif
         // Add a new entry to the ROB and update the regfile
         rob[next_ptr].gpr_index <= in_reg_dst;
@@ -164,36 +169,37 @@ module rob_module (
       // Output dst rob index to rs
       out_rs_dst_rob_idx <= next_ptr;
       next_ptr <= (next_ptr + 1) % `ROB_SIZE;
-      $display("(reg) REGFILE DONE. next_ptr: (%0d + 1) %% %0d", next_ptr, `ROB_SIZE);
+      $display("(rob) Setting outputs: [src1_valid: %b], [src2_valid: %b], [nzcv_valid: %b]",
+               reg_src1_valid, reg_src2_valid, reg_nzcv_valid);
     end
     // Broadcast (output) values to the rs after the fu has finished
+    out_rs_broadcast_done <= fu_done;
     if (fu_done) begin : rob_broadcast
-      out_rs_broadcast_done = 1;
-      out_rs_broadcast_index = fu_dst;
-      out_rs_broadcast_value = rob[fu_dst].value;
-      out_rs_broadcast_set_nzcv = rob[fu_dst].set_nzcv;
-      out_rs_broadcast_nzcv = rob[fu_dst].nzcv;
+      out_rs_broadcast_index <= fu_dst;
+      out_rs_broadcast_value <= rob[fu_dst].value;
+      out_rs_broadcast_set_nzcv <= rob[fu_dst].set_nzcv;
+      out_rs_broadcast_nzcv <= rob[fu_dst].nzcv;
     end : rob_broadcast
-    else begin
-      out_rs_broadcast_done = 0;
-    end
 
+  end
+
+  always_ff @(posedge delayed_clk_2) begin
     // Commit rob entry to regfile
     out_reg_should_commit = rob[commit_ptr].valid;
     if (rob[commit_ptr].valid) begin : rob_commit
 `ifdef DEBUG_PRINT
-      $display("(rob) Committing to regfile");
+      $display("(rob) Sending commit to regfile");
       $display(
-          "\tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv",
-          rob[commit_ptr].gpr_index, rob[commit_ptr].value, rob[commit_ptr].set_nzcv,
+          "\tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b",
+          commit_ptr, rob[commit_ptr].gpr_index, rob[commit_ptr].value, rob[commit_ptr].set_nzcv,
           rob[commit_ptr].nzcv);
 `endif
-      out_reg_commit_value = rob[commit_ptr].value;
-      out_reg_set_nzcv = rob[commit_ptr].set_nzcv;
-      out_reg_nzcv = rob[commit_ptr].nzcv;
-      out_reg_commit_value = rob[commit_ptr].value;
-      out_reg_index = rob[commit_ptr].gpr_index;
-      out_reg_commit_rob_index = commit_ptr;
+      out_reg_commit_value <= rob[commit_ptr].value;
+      out_reg_set_nzcv <= rob[commit_ptr].set_nzcv;
+      out_reg_nzcv <= rob[commit_ptr].nzcv;
+      out_reg_commit_value <= rob[commit_ptr].value;
+      out_reg_index <= rob[commit_ptr].gpr_index;
+      out_reg_commit_rob_index <= commit_ptr;
       commit_ptr <= (commit_ptr + 1) % `ROB_SIZE;
     end : rob_commit
   end

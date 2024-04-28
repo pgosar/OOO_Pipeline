@@ -24,6 +24,7 @@ module reg_module (
     input logic [`ROB_IDX_SIZE-1:0] in_rob_commit_rob_index,
     // Inputs from ROB (to show which ROB entry an invalid GPR is in)
     input logic [`ROB_IDX_SIZE-1:0] in_rob_next_rob_index,
+    input logic in_rob_instr_uses_nzcv,
     // Outputs for ROB
     output logic out_rob_done,
     output logic out_rob_src1_valid,
@@ -39,6 +40,7 @@ module reg_module (
     output nzcv_t out_rob_nzcv,
     // Outputs for ROB
     output fu_t out_rob_fu_id,
+    output logic out_rob_instr_uses_nzcv,
     // Outputs for FU (rob)
     output alu_op_t out_rob_fu_op
 );
@@ -87,6 +89,9 @@ module reg_module (
         out_rob_fu_op <= in_d_fu_op;
       end
       // Commit
+      $display("in_rob_should_commit: %0d, in_rob_commit_rob_index: %0d, gprs[%0d].rob_index: %0d",
+               in_rob_should_commit, in_rob_commit_rob_index, in_rob_reg_index,
+               gprs[in_rob_reg_index].rob_index);
       if (in_rob_should_commit & (in_rob_commit_rob_index == gprs[in_rob_reg_index].rob_index)) begin : rob_commit
         gprs[in_rob_reg_index].value <= in_rob_commit_value;
         gprs[in_rob_reg_index].valid <= 1;
@@ -144,7 +149,7 @@ module reg_module (
       end
 
       // Set dst (and nzcv sometimes) to be invalid, and point to the dst rob index
-      out_rob_dst <= in_d_dst;
+      out_rob_dst <= d_dst;
       out_rob_set_nzcv <= d_set_nzcv;
       gprs[d_dst].valid <= 0;
       gprs[d_dst].rob_index <= in_rob_next_rob_index;

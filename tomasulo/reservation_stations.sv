@@ -25,6 +25,7 @@ module reservation_stations (
     input logic in_rob_broadcast_set_nzcv,
     input nzcv_t in_rob_broadcast_nzcv,
     input logic in_rob_is_mispred,
+    input logic in_rob_instr_uses_nzcv,
     // Inputs from FU (LS)
     input logic in_fu_ls_ready,
     // Inputs from FU (ALU)
@@ -37,7 +38,8 @@ module reservation_stations (
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
     output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,
     output logic out_fu_alu_set_nzcv,
-    output nzcv_t out_fu_alu_nzcv
+    output nzcv_t out_fu_alu_nzcv,
+    output logic out_fu_instr_uses_nzcv
 );
 
   logic ls_ready, alu_ready;
@@ -75,6 +77,8 @@ module reservation_station_module #(
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
+    input logic in_rob_instr_uses_nzcv,
+
     // Inputs from ROB (for broadcast)
     input logic in_rob_broadcast_done,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
@@ -82,6 +86,8 @@ module reservation_station_module #(
     input logic in_rob_broadcast_set_nzcv,
     input nzcv_t in_rob_broadcast_nzcv,
     input logic in_rob_is_mispred,
+
+
     // Inputs from FU (LS)
     input logic in_fu_ls_ready,
     // Inputs from FU (ALU)
@@ -94,6 +100,7 @@ module reservation_station_module #(
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
     output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,
     output logic out_fu_alu_set_nzcv,
+    output logic out_fu_instr_uses_nzcv,
     output nzcv_t out_fu_alu_nzcv
 );
   // TODO(Nate): Need to take a look at the look up table
@@ -154,11 +161,11 @@ module reservation_station_module #(
   // end
   always_comb begin
     for (int i = 0; i < RS_SIZE; i += 1) begin
-      // $monitor(
-      //     "rs[%0d].entry_valid: %b, rs[%0d].op1.valid: %b, rs[%0d].op2.valid: %b, rs[%0d].set_nzcv: %b, rs[%0d].nzcv_valid: %b",
-      //     i, rs[i].entry_valid, i, rs[i].op1.valid, i, rs[i].op2.valid, i, rs[i].set_nzcv, i,
-      //     rs[i].nzcv_valid);
-      ready_entries[i] = rs[i].entry_valid & rs[i].op1.valid & rs[i].op2.valid & (rs[i].set_nzcv ? rs[i].nzcv_valid : 1);
+      $monitor(
+          "rs[%0d].entry_valid: %b, rs[%0d].op1.valid: %b, rs[%0d].op2.valid: %b, rs[%0d].set_nzcv: %b, rs[%0d].nzcv_valid: %b",
+          i, rs[i].entry_valid, i, rs[i].op1.valid, i, rs[i].op2.valid, i, rs[i].set_nzcv, i,
+          rs[i].nzcv_valid);
+      ready_entries[i] = rs[i].entry_valid & rs[i].op1.valid & rs[i].op2.valid /* & (rs[i].set_nzcv ? rs[i].nzcv_valid : 1) */;
     end
 
     ready_entries[INVALID_INDEX] = 1;
@@ -199,14 +206,14 @@ module reservation_station_module #(
             if (rs[i].entry_valid) begin
               if (rs[i].op1.rob_index == in_rob_broadcast_index) begin
 `ifdef DEBUG_PRINT
-                $display("(RS) not mispred Updating RS[%0d] op1", i);
+                $display("(RS) Updating RS[%0d] op1 -> %0d", i, in_rob_broadcast_value);
 `endif
                 rs[i].op1.value <= in_rob_broadcast_value;
                 rs[i].op1.valid <= 1;
               end
               if (rs[i].op2.rob_index == in_rob_broadcast_index) begin
 `ifdef DEBUG_PRINT
-                $display("(RS) not mispred Updating RS[%0d] op2", i);
+                $display("(RS) Updating RS[%0d] op2 -> %0d", i, in_rob_broadcast_value);
 `endif
 
                 rs[i].op2.value <= in_rob_broadcast_value;
@@ -218,15 +225,6 @@ module reservation_station_module #(
               end
             end
           end : rs_broadcast_loop
-        end
-        if (fu_alu_ready & ready_station_index != INVALID_INDEX) begin
-          // Allow the FU to read the value
-          out_fu_alu_op <= rs[ready_station_index].op;
-          out_fu_alu_val_a <= rs[ready_station_index].op1.value;
-          out_fu_alu_val_b <= rs[ready_station_index].op2.value;
-          out_fu_alu_dst_rob_index <= rs[ready_station_index].dst_rob_index;
-          out_fu_alu_nzcv <= rs[ready_station_index].nzcv;
-          out_fu_alu_set_nzcv <= rs[ready_station_index].set_nzcv;
         end
         // `ifdef DEBUG_PRINT
         //         $display("(RS) FU ready");
@@ -266,6 +264,20 @@ module reservation_station_module #(
   end
 
   always_ff @(posedge delayed_clk) begin
+    #3
+    if (fu_alu_ready & ready_station_index != INVALID_INDEX) begin
+      // Allow the FU to read the value
+      out_fu_alu_op <= rs[ready_station_index].op;
+      out_fu_alu_val_a <= rs[ready_station_index].op1.value;
+      out_fu_alu_val_b <= rs[ready_station_index].op2.value;
+      out_fu_alu_dst_rob_index <= rs[ready_station_index].dst_rob_index;
+      out_fu_alu_nzcv <= rs[ready_station_index].nzcv;
+      out_fu_alu_set_nzcv <= rs[ready_station_index].set_nzcv;
+      out_fu_instr_uses_nzcv <= in_rob_instr_uses_nzcv;
+    end
+  end
+
+  always_ff @(posedge delayed_clk) begin
     #2;  // TODO(Nate): Verilator REFUSES to believe that the delayed clk is
     // actually delayed, and throws multi-driven signal errors without
     // this line
@@ -300,6 +312,8 @@ module reservation_station_module #(
     end : rs_add_entry
     // Update entry because FU has consumed the value. This will execute
     // in lockstep with the FU actually consuming the value.
+    $display("FU ALU Ready: %0d, Ready Station Index: %0d, invalid index", fu_alu_ready,
+             ready_station_index, INVALID_INDEX);
     out_fu_alu_start <= fu_alu_ready & (ready_station_index != INVALID_INDEX);
     if (fu_alu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
 `ifdef DEBUG_PRINT

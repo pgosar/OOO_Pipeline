@@ -36,6 +36,7 @@ module core (
   alu_op_t out_reg_fu_op;
   logic [`GPR_IDX_SIZE-1:0] out_reg_dst;
   cond_t out_reg_cond_codes;
+  logic out_reg_instr_uses_nzcv;
 
   // REGFILE
 
@@ -74,6 +75,7 @@ module core (
   nzcv_t out_rob_nzcv;
   cond_t out_rob_cond_codes;
   fu_t out_rob_fu_id;
+  logic out_rob_instr_uses_nzcv;
 
 
   // ROB
@@ -101,6 +103,7 @@ module core (
   fu_t in_reg_fu_id;
   alu_op_t in_reg_fu_op;
   cond_t in_reg_cond_codes;
+  logic in_reg_instr_uses_nzcv;
   // Outputs for RS
   logic out_rs_done;
   fu_t out_rs_fu_id;  // NOTE(Nate): Shouldn't this just go to the RS for this functional unit?
@@ -117,6 +120,7 @@ module core (
   logic [`ROB_IDX_SIZE-1:0] out_rs_dst_rob_idx;
   logic [`ROB_IDX_SIZE-1:0] out_rs_nzcv_rob_idx;
   cond_t out_rs_cond_codes;
+  logic out_rs_instr_uses_nzcv;
   // Outputs for RS (on broadcast... resultant from FU)
   logic out_rs_broadcast_done;
   logic [`ROB_IDX_SIZE-1:0] out_rs_broadcast_index;
@@ -159,6 +163,7 @@ module core (
   logic in_fu_ls_ready;
   logic in_fu_alu_ready;  // ready to receive inputs
   cond_t in_rob_cond_codes;
+  logic in_rob_instr_uses_nzcv;
   // Outputs for FU
   logic out_fu_alu_start;
   logic out_fu_ls_start;
@@ -172,6 +177,7 @@ module core (
   alu_op_t out_rob_fu_op;
   logic out_fu_alu_ready;
   logic out_fu_ls_ready;
+  logic out_fu_instr_uses_nzcv;
 
   // FUNC UNITS
   logic in_rs_alu_start;
@@ -183,6 +189,7 @@ module core (
   logic in_rs_alu_set_nzcv;
   nzcv_t in_rs_alu_nzcv;
   cond_t in_rs_cond_codes;
+  logic in_rs_instr_uses_nzcv;
 
 
   // Outputs for RS
@@ -201,12 +208,20 @@ module core (
   int i;
   initial begin
     in_clk = 0;
-    for (i = 1; i <= 10; i += 1) begin
+    for (i = 1; i <= 25; i += 1) begin
       #1 $display("\n>>>>> CYCLE COUNT: %0d <<<<<", i);
       #5 in_clk = ~in_clk;  // 100 MHz clock
       #4 in_clk = ~in_clk;
     end
   end
+
+  //TODO: Kavya double check with nate and pranay
+  /*
+      fetch #(4096) fetch_inst (
+        .clk(in_clk),
+        .insnbits(in_fetch_insnbits)
+    );
+  */
 
   initial begin
     in_rst = 1;
@@ -217,7 +232,13 @@ module core (
     in_fetch_insnbits = 32'b1001000100_111111111111_00001_00001;  // add x1, x1, #0xfff
     #10 in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1
     #10 in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1
-    #10 in_fetch_insnbits = 32'b1101_0101_0000_0011_0010_0000_0001_1111;  // NOP
+    #10
+    in_fetch_insnbits = 32'b11101011000_00001_000000_00001_00011;  // subs x3, x1, x1 set zero flag
+    #10
+    in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag
+    #10
+    in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag
+    // #10 in_fetch_insnbits = 32'b1101_0101_0000_0011_0010_0000_0001_1111;  // NOP
     in_fetch_done = 0;
 
   end
@@ -241,6 +262,7 @@ module core (
   assign in_rob_reg_index = out_reg_index;
   assign in_rob_commit_rob_index = out_reg_commit_rob_index;
   assign in_rob_next_rob_index = out_reg_next_rob_index;
+  assign in_rob_instr_uses_nzcv = out_reg_instr_uses_nzcv;
   // assign in_rob_cond_codes = out_reg_cond_codes;
 
   // REGFILE TO ROB rob inputs = regfile outputs
@@ -259,6 +281,7 @@ module core (
   assign in_reg_fu_id = out_rob_fu_id;
   assign in_reg_fu_op = out_rob_fu_op;
   assign in_reg_cond_codes = out_rob_cond_codes;
+  assign in_reg_instr_uses_nzcv = out_rob_instr_uses_nzcv;
 
   // ROB TO RS rs inputs = rob outputs
   assign in_rob_done = out_rs_done;
@@ -279,6 +302,7 @@ module core (
   assign in_rob_broadcast_index = out_rs_broadcast_index;
   assign in_rob_broadcast_value = out_rs_broadcast_value;
   assign in_rob_cond_codes = out_rs_cond_codes;
+  // assign in_rob_instr_uses_nzcv = out_rs_instr_uses_nzcv;
 
   // FU TO ROB rob inputs = fu outputs
   assign in_fu_done = fu_out_rob_done;
@@ -310,6 +334,7 @@ module core (
 
   // RS toFU
   assign out_fu_cond_codes = in_rs_cond_codes;
+  assign out_fu_instr_uses_nzcv = in_rs_instr_uses_nzcv;
 
   // modules
   dispatch dp (
@@ -339,3 +364,10 @@ module core (
   );
 
 endmodule
+
+
+// module testbehhcn(
+
+// );
+
+// endmodule
