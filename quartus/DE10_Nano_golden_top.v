@@ -5,8 +5,8 @@
 // Permission:
 //
 //   Terasic grants permission to use and modify this code for use
-//   in synthesis for all Terasic Development Boards and Altera Development 
-//   Kits made by Terasic.  Other use of this code, including the selling 
+//   in synthesis for all Terasic Development Boards and Altera Development
+//   Kits made by Terasic.  Other use of this code, including the selling
 //   ,duplication, or modification of any portion is strictly prohibited.
 //
 // Disclaimer:
@@ -15,16 +15,16 @@
 //   which illustrates how these types of functions can be implemented.
 //   It is the user's responsibility to verify their design for
 //   consistency and functionality through the use of formal
-//   verification methods.  Terasic provides no warranty regarding the use 
+//   verification methods.  Terasic provides no warranty regarding the use
 //   or functionality of this code.
 //
 // ============================================================================
-//           
+//
 //  Terasic Technologies Inc
 //  9F., No.176, Sec.2, Gongdao 5th Rd, East Dist, Hsinchu City, 30070. Taiwan
-//  
-//  
-//                     web: http://www.terasic.com/  
+//
+//
+//                     web: http://www.terasic.com/
 //                     email: support@terasic.com
 //
 // ============================================================================
@@ -152,7 +152,7 @@ module DE10_Nano_golden_top(
 // - Change the re-order-buffer to use a struct
 typedef struct packed {
     logic valid;
-    logic [`GPR_IDX_SIZE-1:0] gpr_idx;
+    logic [`GPR_IDX_SIZE-1:0] gpr_index;
     logic [`REG_SIZE-1:0] value;
 } rs_op;
 
@@ -173,8 +173,8 @@ typedef struct packed {
 // BIOS needs to be the code which prepares to receive input from the test
 // bench. In other words, the steps are as follows:
 // 1. Upon receiving a reset signal, the processor begins executing from
-// address 0xfffffff0. This is where our ROM program is. The job of this 
-// program is to wait for input (via a button), before it begins running 
+// address 0xfffffff0. This is where our ROM program is. The job of this
+// program is to wait for input (via a button), before it begins running
 // our testbench.
 // 2. We load in the program into memory. The starting memory address must
 // always be at a particular location in memory.
@@ -213,11 +213,11 @@ module testbench ();
 
     core #(.RS_SIZE(2), .ROB_SIZE(2)) cpu_core (.o_debug(debug_data), .i_clk(clk), .i_reset(reset));
 
-    initial begin 
+    initial begin
         clk = 0;
         reset = 1;
         #5;
-        clk = 1; 
+        clk = 1;
         #5;
         clk = 0;
         reset = 0;
@@ -228,10 +228,10 @@ module testbench ();
             $write("Reservation Station: op1_valid: %1h | op1_value: %d | op1_gpr_idx: %d | op2_valid: %d | op2_value: %d | op2_gpr_idx: %d",
                 debug_data.rs[0].op1.valid,
                 debug_data.rs[0].op1.value,
-                debug_data.rs[0].op1.gpr_idx,
+                debug_data.rs[0].op1.gpr_index,
                 debug_data.rs[0].op2.valid,
                 debug_data.rs[0].op2.value,
-                debug_data.rs[0].op2.gpr_idx
+                debug_data.rs[0].op2.gpr_index
             );
         end
     end

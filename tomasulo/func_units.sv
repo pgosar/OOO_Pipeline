@@ -70,15 +70,15 @@ module func_units (
   // TODO(Nate): Much more thinking needs to be done on handling conditions.
 
   always_ff @(posedge in_clk) begin
+    rs_alu_start <= in_rs_alu_start;
     if (in_rs_alu_start) begin
       // buffered state (so that it is clocked)
-      rs_alu_start = in_rs_alu_start;
-      rs_alu_op = in_rs_alu_op;
-      rs_alu_val_a = in_rs_alu_val_a;
-      rs_alu_val_b = in_rs_alu_val_b;
-      rs_alu_dst_rob_index = in_rs_alu_dst_rob_index;
-      rs_alu_set_nzcv = in_rs_alu_set_nzcv;
-      rs_alu_nzcv = in_rs_alu_nzcv;
+      rs_alu_op <= in_rs_alu_op;
+      rs_alu_val_a <= in_rs_alu_val_a;
+      rs_alu_val_b <= in_rs_alu_val_b;
+      rs_alu_dst_rob_index <= in_rs_alu_dst_rob_index;
+      rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
+      rs_alu_nzcv <= in_rs_alu_nzcv;
 `ifdef DEBUG_PRINT
       #1
       $display(

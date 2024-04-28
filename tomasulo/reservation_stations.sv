@@ -96,6 +96,7 @@ module reservation_station_module #(
     output logic out_fu_alu_set_nzcv,
     output nzcv_t out_fu_alu_nzcv
 );
+  // TODO(Nate): Need to take a look at the look up table
 
   // Internal state
   rs_entry_t [RS_SIZE-1:0] rs;
@@ -265,7 +266,7 @@ module reservation_station_module #(
   end
 
   always_ff @(posedge delayed_clk) begin
-    #1;  // TODO(Nate): Verilator REFUSES to believe that the delayed clk is
+    #2;  // TODO(Nate): Verilator REFUSES to believe that the delayed clk is
     // actually delayed, and throws multi-driven signal errors without
     // this line
 
@@ -291,7 +292,7 @@ module reservation_station_module #(
 
 `ifdef DEBUG_PRINT
       $display(
-          "(RS) Adding new entry to RS[%0d]: op1 valid: %0d, op1 value: %0d op2 valid: %0d, op2 value: %0d set nzcv: %0d nzcv valid: %b nzcv value: %d: fu op %d",
+          "(RS) Adding new entry to RS[%0d]: op1 valid: %0d, op1 value: %0d op2 valid: %0d, op2 value: %0d set nzcv: %0d nzcv valid: %b nzcv value: %b: fu op %d",
           free_station_index, rob_val_a_valid, rob_val_a_value, rob_val_b_valid, rob_val_b_value,
           rob_set_nzcv, rob_nzcv_valid, rob_nzcv, rob_fu_op);
       last_index <= free_station_index;
@@ -302,7 +303,8 @@ module reservation_station_module #(
     out_fu_alu_start <= fu_alu_ready & (ready_station_index != INVALID_INDEX);
     if (fu_alu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
 `ifdef DEBUG_PRINT
-      $display("(RS) FU consumed RS[%0d]", ready_station_index);
+      $display("(RS) Remove entry RS[%0d] becasue FU is ready to run on next cycle",
+               ready_station_index);
 `endif
       rs[ready_station_index].entry_valid <= ~fu_alu_ready;
     end : fu_consume_entry

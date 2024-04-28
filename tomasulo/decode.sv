@@ -133,7 +133,7 @@ module extract_reg (
     end else if (opcode == OP_ADDS | opcode == OP_SUBS | opcode == OP_ORN |
                         opcode == OP_ORR | opcode == OP_EOR | opcode == OP_ANDS |
                         opcode == OP_CSEL | opcode == OP_CSINV | opcode == OP_CSINC
-                        | opcode == OP_CSNEG) begin // extra credit checks
+                        | opcode == OP_CSNEG) begin
       out_reg_src2 = in_insnbits[20:16];
     end
   end
@@ -322,9 +322,6 @@ module dispatch (
     out_reg_done <= in_fetch_done;
     if (in_fetch_done) begin
       insnbits <= in_fetch_insnbits;
-`ifdef DEBUG_PRINT
-      $display("(dec) decoding: %b", in_fetch_insnbits);
-`endif
     end
   end
 

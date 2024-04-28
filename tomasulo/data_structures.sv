@@ -162,7 +162,7 @@ typedef struct packed {
   logic valid;
   logic [`ROB_IDX_SIZE-1:0] rob_index;
   logic [`GPR_SIZE-1:0] value;
-  logic [`GPR_IDX_SIZE-1:0] gpr_idx;
+  logic [`GPR_IDX_SIZE-1:0] gpr_index;
 } gpr_entry_t;
 
 typedef struct packed {

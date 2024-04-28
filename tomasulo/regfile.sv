@@ -22,6 +22,8 @@ module reg_module (
     input logic [`GPR_SIZE-1:0] in_rob_commit_value,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_reg_index,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_commit_rob_index,
+    // Inputs from ROB (to show which ROB entry an invalid GPR is in)
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_next_rob_index,
     // Outputs for ROB
     output logic out_rob_done,
     output logic out_rob_src1_valid,
@@ -57,6 +59,7 @@ module reg_module (
   logic [`GPR_IDX_SIZE-1:0] d_src1;
   logic [`GPR_IDX_SIZE-1:0] d_src2;
   logic [`GPR_IDX_SIZE-1:0] d_dst;
+  logic [`GPR_IDX_SIZE-1:0] rob_next_rob_index;
   logic d_set_nzcv;
   logic [`GPR_SIZE-1:0] d_imm;
   logic d_use_imm;
@@ -81,8 +84,6 @@ module reg_module (
     end else begin
       if (in_d_done) begin
         // Copy over unused signals
-        out_rob_dst <= in_d_dst;
-        out_rob_set_nzcv <= in_d_set_nzcv;
         out_rob_fu_op <= in_d_fu_op;
       end
       // Commit
@@ -107,19 +108,12 @@ module reg_module (
     d_imm <= in_d_imm;
     d_use_imm <= in_d_use_imm;
     fu_id <= in_d_fu_id;
+    rob_next_rob_index <= in_rob_next_rob_index;
   end
   // Process buffered state
-  always_ff @(posedge delayed_clk) begin
-
-    out_rob_done <= d_done;  // Not necessary to buffer, but makes logical sense to wait.
+  always_ff @(posedge in_clk) begin
+    #2 out_rob_done <= d_done;  // Not necessary to buffer, but makes logical sense to wait.
     if (d_done) begin
-`ifdef DEBUG_PRINT
-      $display("(regfile) Dispatch read GPR[%0d] = %0d, valid: %d", d_src1, gprs[d_src1].value,
-               gprs[d_src1].valid);
-      $display("(regfile) Dispatch read GPR[%0d] = %0d, valid: %d", d_src2, gprs[d_src2].value,
-               gprs[d_src2].valid);
-`endif
-
       // Src 1
       out_rob_src1_valid <= gprs[d_src1].valid;
       if (gprs[d_src1].valid) begin
@@ -141,13 +135,32 @@ module reg_module (
       end
 
       // nzcv
+      out_rob_set_nzcv   <= d_set_nzcv;
       out_rob_nzcv_valid <= nzcv_valid;
       if (nzcv_valid) begin
         out_rob_nzcv <= nzcv;
       end else begin
         out_rob_nzcv_rob_index <= nzcv_rob_index;
       end
+
+      // Set dst (and nzcv sometimes) to be invalid, and point to the dst rob index
+      out_rob_dst <= in_d_dst;
+      out_rob_set_nzcv <= d_set_nzcv;
+      gprs[d_dst].valid <= 0;
+      gprs[d_dst].rob_index <= in_rob_next_rob_index;
+      if (d_set_nzcv) begin
+        nzcv_valid <= 0;
+        nzcv_rob_index <= in_rob_next_rob_index;
+      end
+
+`ifdef DEBUG_PRINT
+      $display("(regfile) Dispatch read GPR[%0d] = %0d, valid: %d", d_src1, gprs[d_src1].value,
+               gprs[d_src1].valid);
+      $display("(regfile) Dispatch read GPR[%0d] = %0d, valid: %d", d_src2, gprs[d_src2].value,
+               gprs[d_src2].valid);
+      $display("(regfile) Dispatch dest GPR[%0d] renamed to ROB[%0d]", d_dst,
+               in_rob_next_rob_index);
+`endif
     end
   end
-
 endmodule

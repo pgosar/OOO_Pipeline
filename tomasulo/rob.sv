@@ -56,7 +56,9 @@ module rob_module (
     output logic [`GPR_SIZE-1:0] out_reg_commit_value,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_index,
     output logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index,
-    output cond_t out_rs_cond_codes
+    output cond_t out_rs_cond_codes,
+    // Output for regfile (for the next ROB insertion)
+    output logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index
     // // Outputs for dispatch
     // output logic [`ROB_IDX_SIZE-1:0] out_next_rob_idx,
     // output logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_idx[`MISSPRED_SIZE]
@@ -105,7 +107,7 @@ module rob_module (
       if (in_fu_done) begin
 `ifdef DEBUG_PRINT
         $display("(rob) [in_fu_done] FU complete. Modifying values:");
-        $display("\tin_fu_dst_rob_index: %d, in_fu_value: %d", in_fu_dst_rob_index, in_fu_value);
+        $display("\tin_fu_dst_rob_index: %0d, in_fu_value: %0d", in_fu_dst_rob_index, in_fu_value);
 `endif
         // Modify the line which the FU has updated
         rob[in_fu_dst_rob_index].value <= in_fu_value;
@@ -146,6 +148,7 @@ module rob_module (
   always_ff @(posedge delayed_clk) begin
     // TODO(Nate): Some of these should not happen if we are stalled
     out_rs_done <= reg_done;
+    out_reg_next_rob_index <= reg_done ? (next_ptr + 1) % `ROB_SIZE : next_ptr;
     // Input
     if (reg_done) begin
       // Output srcs to rs
@@ -161,6 +164,7 @@ module rob_module (
       // Output dst rob index to rs
       out_rs_dst_rob_idx <= next_ptr;
       next_ptr <= (next_ptr + 1) % `ROB_SIZE;
+      $display("(reg) REGFILE DONE. next_ptr: (%0d + 1) %% %0d", next_ptr, `ROB_SIZE);
     end
     // Broadcast (output) values to the rs after the fu has finished
     if (fu_done) begin : rob_broadcast
@@ -170,17 +174,20 @@ module rob_module (
       out_rs_broadcast_set_nzcv = rob[fu_dst].set_nzcv;
       out_rs_broadcast_nzcv = rob[fu_dst].nzcv;
     end : rob_broadcast
+    else begin
+      out_rs_broadcast_done = 0;
+    end
 
     // Commit rob entry to regfile
+    out_reg_should_commit = rob[commit_ptr].valid;
     if (rob[commit_ptr].valid) begin : rob_commit
 `ifdef DEBUG_PRINT
       $display("(rob) Committing to regfile");
       $display(
-          "\tcommit_ptr:%d, rob[cptr].gpr_index: %d, rob[cptr].value: %d, rob[cptr].set_nzcv: %d, rob[cptr].nzcv",
+          "\tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv",
           rob[commit_ptr].gpr_index, rob[commit_ptr].value, rob[commit_ptr].set_nzcv,
           rob[commit_ptr].nzcv);
 `endif
-      out_reg_should_commit = 1;
       out_reg_commit_value = rob[commit_ptr].value;
       out_reg_set_nzcv = rob[commit_ptr].set_nzcv;
       out_reg_nzcv = rob[commit_ptr].nzcv;
@@ -189,7 +196,6 @@ module rob_module (
       out_reg_commit_rob_index = commit_ptr;
       commit_ptr <= (commit_ptr + 1) % `ROB_SIZE;
     end : rob_commit
-
   end
 
   // TODO branch misprediction

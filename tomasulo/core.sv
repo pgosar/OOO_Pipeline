@@ -57,6 +57,8 @@ module core (
   logic [`GPR_SIZE-1:0] in_rob_commit_value;
   logic [`GPR_IDX_SIZE-1:0] in_rob_reg_index;
   logic [`ROB_IDX_SIZE-1:0] in_rob_commit_rob_index;
+  // Inputs from ROB (invalid GPR)
+  logic [`ROB_IDX_SIZE-1:0] in_rob_next_rob_index;
   // Outputs for ROB
   logic reg_out_rob_done;
   logic out_rob_src1_valid;
@@ -128,6 +130,8 @@ module core (
   logic [`GPR_SIZE-1:0] out_reg_commit_value;
   logic [`GPR_IDX_SIZE-1:0] out_reg_index;
   logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index;
+  // Outputs for regfile (invalid GPR)
+  logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index;
 
   // RESERVATION STATIONS
 
@@ -198,7 +202,7 @@ module core (
   initial begin
     in_clk = 0;
     for (i = 1; i <= 10; i += 1) begin
-      #1 $display("CYCLE COUNT: %0d", i);
+      #1 $display("\n>>>>> CYCLE COUNT: %0d <<<<<", i);
       #5 in_clk = ~in_clk;  // 100 MHz clock
       #4 in_clk = ~in_clk;
     end
@@ -209,10 +213,13 @@ module core (
     in_fetch_done = 0;
     #10 in_rst = 0;
     $display("RESET DONE === BEGIN TEST");
-    in_fetch_insnbits = 32'b1001000100_111111111111_00001_00001;  // add x1, x1, #0xfff
     in_fetch_done = 1;
-    #10 in_fetch_insnbits = 'b1101_0101_0000_0011_0010_0000_0001_1111;  // NOP
+    in_fetch_insnbits = 32'b1001000100_111111111111_00001_00001;  // add x1, x1, #0xfff
+    #10 in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1
+    #10 in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1
+    #10 in_fetch_insnbits = 32'b1101_0101_0000_0011_0010_0000_0001_1111;  // NOP
     in_fetch_done = 0;
+
   end
 
   // DISPATCH TO REGFILE regfile inputs = dispatch outputs
@@ -233,6 +240,7 @@ module core (
   assign in_rob_commit_value = out_reg_commit_value;
   assign in_rob_reg_index = out_reg_index;
   assign in_rob_commit_rob_index = out_reg_commit_rob_index;
+  assign in_rob_next_rob_index = out_reg_next_rob_index;
   // assign in_rob_cond_codes = out_reg_cond_codes;
 
   // REGFILE TO ROB rob inputs = regfile outputs
