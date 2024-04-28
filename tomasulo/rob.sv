@@ -100,11 +100,14 @@ module rob_module (
 `ifdef DEBUG_PRINT
       $display("(rob) Resetting");
 `endif
+      fu_done <= 0;
+      commit_ptr <= 0;
+      next_ptr <= 0;
       reg_done <= 0;
       for (int i = 0; i < `ROB_SIZE; i++) begin
         rob[i].valid <= 0;
       end
-    end else begin : modify_rob
+    end else begin : not_reset
       // Update state from FU
       if (in_fu_done) begin
 `ifdef DEBUG_PRINT
@@ -133,7 +136,7 @@ module rob_module (
         next_ptr <= (next_ptr + 1) % `ROB_SIZE;
       end
       if (rob[commit_ptr].valid) begin : remove_commit
-        commit_ptr = (commit_ptr + 1) % `ROB_SIZE;
+        commit_ptr <= (commit_ptr + 1) % `ROB_SIZE;
 `ifdef DEBUG_PRINT
         $display("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d",
                  (commit_ptr + 1) % `ROB_SIZE);
@@ -164,7 +167,10 @@ module rob_module (
       out_rs_fu_id <= in_reg_fu_id;
       out_rs_set_nzcv <= in_reg_set_nzcv;
       out_rs_cond_codes <= in_reg_cond_codes;
-    end : modify_rob
+      out_rs_instr_uses_nzcv <= in_reg_instr_uses_nzcv;
+      // Set dst
+      out_rs_dst_rob_idx = next_ptr;
+    end : not_reset
   end
 
   // Some printout or sumn
@@ -176,22 +182,22 @@ module rob_module (
     // Outputs to RS (pipeline progression)
     out_rs_done = reg_done;
     out_reg_next_rob_index = next_ptr;
-    out_rs_val_a_valid = reg_src1_valid ? reg_src1_valid : rob[reg_src1_rob_index].valid;
-    out_rs_val_b_valid = reg_src2_valid ? reg_src2_valid : rob[reg_src2_rob_index].valid;
-    out_rs_nzcv_valid = reg_nzcv_valid ? reg_nzcv_valid : rob[reg_nzcv_rob_index].valid;
+
+    out_rs_val_a_valid = reg_src1_valid | rob[reg_src1_rob_index].valid;
+    out_rs_val_b_valid = reg_src2_valid | rob[reg_src2_rob_index].valid;
+    out_rs_nzcv_valid = reg_nzcv_valid | rob[reg_nzcv_rob_index].valid;
 
     out_rs_val_a_value = reg_src1_valid ? reg_src1_value : rob[reg_src1_rob_index].value; // NOTE(Nate): This logic is goofy but works!
     out_rs_val_b_value = reg_src2_valid ? reg_src2_value : rob[reg_src2_rob_index].value;
     out_rs_nzcv = reg_nzcv_valid ? reg_nzcv : rob[reg_nzcv_rob_index].nzcv;
 
-    // Output dst rob index to rs
-    out_rs_dst_rob_idx = next_ptr;
     // Broadcast (output) values to the rs after the fu has finished
     out_rs_broadcast_done = fu_done;
     out_rs_broadcast_index = fu_dst;
     out_rs_broadcast_value = rob[fu_dst].value;
     out_rs_broadcast_set_nzcv = rob[fu_dst].set_nzcv;
     out_rs_broadcast_nzcv = rob[fu_dst].nzcv;
+    // $display("FU DONE: %0d", fu_done);
 
     // Commits
     out_reg_commit_done = rob[commit_ptr].valid;

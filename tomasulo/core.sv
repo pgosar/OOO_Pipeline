@@ -210,9 +210,10 @@ module core (
   initial begin
     in_clk = 0;
     for (i = 1; i <= 25; i += 1) begin
-      #1 $display("\n>>>>> CYCLE COUNT: %0d <<<<<", i);
-      #5 in_clk = ~in_clk;  // 100 MHz clock
-      #4 in_clk = ~in_clk;
+      $display("\n>>>>> CYCLE COUNT: %0d <<<<<", i);
+      #1 in_clk = ~in_clk;  // 100 MHz clock
+      #5 in_clk = ~in_clk;
+      #4;
     end
   end
 
@@ -237,7 +238,7 @@ module core (
     in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1 -> x2 = 8190
     #10
     in_fetch_insnbits = 32'b11101011000_00001_000000_00001_00011;  // subs x3, x1, x1 set zero flag -> x3 = 0
-    #10 $display("NEGATIVE FLAG TIME");
+    #10
     in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -4095
     #10
     in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -8190
@@ -305,7 +306,7 @@ module core (
   assign in_rob_broadcast_index = out_rs_broadcast_index;
   assign in_rob_broadcast_value = out_rs_broadcast_value;
   assign in_rob_cond_codes = out_rs_cond_codes;
-  // assign in_rob_instr_uses_nzcv = out_rs_instr_uses_nzcv;
+  assign in_rob_instr_uses_nzcv = out_rs_instr_uses_nzcv;
 
   // FU TO ROB rob inputs = fu outputs
   assign in_fu_done = fu_out_rob_done;

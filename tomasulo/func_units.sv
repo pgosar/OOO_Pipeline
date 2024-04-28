@@ -75,21 +75,13 @@ module func_units (
       rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
       rs_alu_nzcv <= in_rs_alu_nzcv;
 `ifdef DEBUG_PRINT
-      $display("(ALU) #0 about to run op %0d! set_nzcv: %b", rs_alu_op, in_rs_alu_set_nzcv);
-      #3
-      $display(
-          "(ALU) #1 just ran op %d! out_value = %0d, out_nzcv = %4b, out_alu_condition = %0d, val_a: %0d, val_b: %0d",
-          rs_alu_op,
-          alu_out_value,
-          out_rob_nzcv,
-          out_alu_condition,
-          rs_alu_val_a,
-          rs_alu_val_b
-      );
+#1
+      $display("(ALU) %s calculated: %0d, val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d",
+               rs_alu_op.name, alu_out_value, rs_alu_val_a, rs_alu_val_b, out_rob_nzcv,
+               out_alu_condition);
 `endif
-
     end else begin
-      rs_alu_set_nzcv <= 0;
+      rs_alu_set_nzcv <= 0;  // NOTE(Nate): Why?
     end
   end
 
@@ -111,6 +103,14 @@ module func_units (
 
   // TODO LDUR STUR
 
+  // dmem ls (
+  //     .in_addr(0),
+  //     .clk(in_clk),
+  //     .w_enable(0),
+  //     .wval(0),
+  //     .data(0)
+  // );
+
 
 endmodule
 
@@ -125,7 +125,6 @@ module alu_module (
     input nzcv_t in_nzcv,
     input logic in_set_nzcv,
     // TODO(Nate): We need to include input condition codes
-    // input logic in_uses_nzcv,  // TODO(Nate): use me here, and in the rest of the pipeline
     output logic out_done,  // Done signal indicating operation completion
     output logic out_alu_condition,
     output logic [`GPR_SIZE-1:0] out_value,
@@ -151,6 +150,9 @@ module alu_module (
   // Useful wires
   assign val_a_negative = val_a[`GPR_SIZE-1];
   assign val_b_negative = val_b[`GPR_SIZE-1];
+
+  // Passthroughs
+  assign out_dst_rob_index = in_dst_rob_index;
 
   // TODO(Nate): Conditions are wacky in general rn
   // cond_holds c_holds (

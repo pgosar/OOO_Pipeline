@@ -281,7 +281,6 @@ module uses_nzcv (
       op_uses_nzcv = 0;
     end
   end
-
 endmodule
 
 module dispatch (
@@ -331,10 +330,10 @@ module dispatch (
       .in_insnbits(insnbits)
   );
 
-  // uses_nzcv instr_uses_nzcv(
-  //     .in_opcode(opcode),
-  //     .op_uses_nzcv(out_reg_instr_uses_nzcv)
-  // );
+  uses_nzcv instr_uses_nzcv (
+      .in_opcode(opcode),
+      .op_uses_nzcv(out_reg_instr_uses_nzcv)
+  );
   use_out_reg_imm imm_selector (.*);
   decide_alu alu_decider (.*);  // decides alu op
   fu_decider fu (.*);
@@ -350,17 +349,17 @@ module dispatch (
 
   // Print statements only in here
 `ifdef DEBUG_PRINT
+  logic [`INSNBITS_SIZE-1:0] debug_insnbits;
   always_ff @(posedge in_clk) begin
+    debug_insnbits <= in_fetch_insnbits;
+    #1
     if (in_fetch_done) begin
-      #1 $display("(dec)\topcode: %d", opcode_t'(opcode));
-      #1 $display("(dec)\talu_op: %d", alu_op_t'(out_reg_fu_op));
-      $display("(dec) decoding: %b", in_fetch_insnbits);
-      $display("(dec)\tout_reg_imm: %0d", out_reg_imm);
-      $display("(dec)\tfu: %d", fu_t'(out_reg_fu_id));
-      $display("(dec)\tsrc1: %d", out_reg_src1);
-      $display("(dec)\tsrc2: %d", out_reg_src2);
-      $display("(dec)\tdst: %d", out_reg_dst);
-      $display("(dec)\tsets_nzcv: %d", out_reg_set_nzcv);
+      $display("(dec) Decoding: %b", debug_insnbits);
+      $display("(dec)\tfu_id: %s, opcode: %s, alu_op: %s", out_reg_fu_id.name, opcode.name,
+               out_reg_fu_op.name);
+      $display("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_dst,
+               out_reg_src1, out_reg_src2, out_reg_imm, out_reg_use_imm);
+      $display("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_set_nzcv, out_reg_instr_uses_nzcv);
     end
   end
 `endif

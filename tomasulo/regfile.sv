@@ -61,6 +61,7 @@ module reg_module (
   logic [`GPR_IDX_SIZE-1:0] d_src1;
   logic [`GPR_IDX_SIZE-1:0] d_src2;
   logic [`GPR_IDX_SIZE-1:0] d_dst;
+  logic [`GPR_IDX_SIZE-1:0] dst_rob_index;
   logic [`GPR_IDX_SIZE-1:0] rob_next_rob_index;
   logic d_set_nzcv;
   logic [`GPR_SIZE-1:0] d_imm;
@@ -90,6 +91,14 @@ module reg_module (
         d_imm <= in_d_imm;
         d_use_imm <= in_d_use_imm;
         rob_next_rob_index <= in_rob_next_rob_index;
+        // Update validity
+        gprs[d_dst].valid <= 0;
+        dst_rob_index <= gprs[d_dst].rob_index;
+        gprs[d_dst].rob_index <= in_rob_next_rob_index;
+        if (d_set_nzcv) begin
+          nzcv_valid <= 0;
+          nzcv_rob_index <= in_rob_next_rob_index;
+        end
         // Copy unused signals
         out_rob_fu_id <= in_d_fu_id;
         out_rob_instr_uses_nzcv <= in_d_instr_uses_nzcv;
@@ -103,11 +112,13 @@ module reg_module (
         gprs[in_rob_reg_index].value <= in_rob_commit_value;
         gprs[in_rob_reg_index].valid <= 1;
         if (in_rob_set_nzcv) begin
+          $display("Setting nzcv %4b", in_rob_nzcv);
           nzcv <= in_rob_nzcv;
           nzcv_valid <= 1;
         end
 `ifdef DEBUG_PRINT
-        $display("(regfile) Committing to GPR[%0d] = %0d", in_rob_reg_index, in_rob_commit_value);
+        $display("(regfile) Request to commit to GPR[%0d] -> %0d", in_rob_reg_index, in_rob_commit_value);
+        $display("(regfile) \tGPR ROB: %0d, Sending ROB: %0d", in_rob_commit_rob_index, gprs[in_rob_reg_index].rob_index);
 `endif
       end : rob_commit
     end
@@ -118,21 +129,23 @@ module reg_module (
     #5  // Ugh, Verilator doees not signals to be driven on both the posedge
         // and negedge clk. the bastard.
     if (d_done) begin
-      gprs[d_dst].valid <= 0;
-      gprs[d_dst].rob_index <= in_rob_next_rob_index;
-      if (d_set_nzcv) begin
-        nzcv_valid <= 0;
-        nzcv_rob_index <= in_rob_next_rob_index;
-      end
+      // gprs[d_dst].valid <= 0;
+      // gprs[d_dst].rob_index <= in_rob_next_rob_index;
+      // if (d_set_nzcv) begin
+      //   nzcv_valid <= 0;
+      //   nzcv_rob_index <= in_rob_next_rob_index;
+      // end
 
 `ifdef DEBUG_PRINT
-      $display("(regfile) src1 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src1, gprs[d_src1].value,
-               gprs[d_src1].valid, gprs[d_src1].rob_index);
+      $display("(regfile) src1 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src1,
+               gprs[d_src1].value, gprs[d_src1].valid,
+               d_src1 == dst_rob_index ? dst_rob_index : gprs[d_src1].rob_index);
       if (d_use_imm) begin
         $display("(regfile) src2 using immediate: %0d", d_imm);
       end else begin
-        $display("(regfile) src2 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src2, gprs[d_src2].value,
-                gprs[d_src2].valid, gprs[d_src2].rob_index);
+        $display("(regfile) src2 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src2,
+                 gprs[d_src2].value, gprs[d_src2].valid,
+                 d_src2 == dst_rob_index ? dst_rob_index : gprs[d_src2].rob_index);
       end
       $display("(regfile) Dispatch dest GPR[%0d] renamed to ROB[%0d]", d_dst,
                in_rob_next_rob_index);
@@ -144,9 +157,9 @@ module reg_module (
   always_comb begin
     out_rob_done = d_done;
     // Src 1
-    out_rob_src1_valid = gprs[d_src1].valid;
+    out_rob_src1_valid = gprs[d_src1].valid; // TODO(Nate): This line is bad, because we set invalid on posedge
     out_rob_src1_value = gprs[d_src1].value;
-    out_rob_src1_rob_index = gprs[d_src1].rob_index;
+    out_rob_src1_rob_index = d_dst == d_src1 ? dst_rob_index : gprs[d_src1].rob_index;
     // Src2
     if (d_use_imm) begin
       out_rob_src2_value = d_imm;
@@ -155,9 +168,10 @@ module reg_module (
       out_rob_src2_valid = gprs[d_src2].valid;
       out_rob_src2_value = gprs[d_src2].value;
     end
-    out_rob_src2_rob_index = gprs[d_src2].rob_index;
+    out_rob_src2_rob_index = d_dst == d_src2 ? dst_rob_index : gprs[d_src2].rob_index;
     // NZCV
     out_rob_nzcv_valid = nzcv_valid;
+    // out_rob_src2_rob_index = d_dst == d_src2 ? dst_rob_index : gprs[d_src2].rob_index;
     out_rob_nzcv_rob_index = nzcv_rob_index;
     out_rob_nzcv = nzcv;
     out_rob_set_nzcv = d_set_nzcv;
