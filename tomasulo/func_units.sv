@@ -28,7 +28,6 @@ module func_units (
   // NOTE(Nate): If the ROB is full, it will need to stall the functional units.
   //             Stalling of the functional units will
 
-  /*
   // Placeholder values for LS
   logic ls_done;
   logic stall_ls;
@@ -36,14 +35,13 @@ module func_units (
 
   // Logic to handle structural hazards when L/S and ALU are both done
   always_comb begin
-    if (ls_done & alu_done) begin
+    if (ls_done & out_rob_done) begin
       stall_ls = 1;
 
     end else begin
       stall_ls = 0;
     end
   end
-  */
 
   // Outputs
   logic [`ROB_IDX_SIZE-1:0] alu_out_dst_rob_index;
@@ -80,10 +78,18 @@ module func_units (
       $display("(ALU) #0 about to run op %0d! set_nzcv: %b", rs_alu_op, in_rs_alu_set_nzcv);
       #3
       $display(
-          "(ALU) #1 just ran! out_value = %0d, out_nzcv = %4b, out_alu_condition = %0d, val_a: %0d, val_b: %0d",
-          alu_out_value, out_alu_condition, out_rob_nzcv, rs_alu_val_a, rs_alu_val_b);
+          "(ALU) #1 just ran op %d! out_value = %0d, out_nzcv = %4b, out_alu_condition = %0d, val_a: %0d, val_b: %0d",
+          rs_alu_op,
+          alu_out_value,
+          out_rob_nzcv,
+          out_alu_condition,
+          rs_alu_val_a,
+          rs_alu_val_b
+      );
 `endif
 
+    end else begin
+      rs_alu_set_nzcv <= 0;
     end
   end
 
@@ -104,6 +110,8 @@ module func_units (
   );
 
   // TODO LDUR STUR
+
+
 endmodule
 
 
@@ -130,7 +138,7 @@ module alu_module (
   logic val_a_negative;
   logic val_b_negative;
   logic set_nzcv;
-  nzcv_t nzcv;
+  nzcv_t nzcv;  // TODO why?
   logic delayed_clk;
   logic [`GPR_SIZE:0] val_a;
   logic [`GPR_SIZE:0] val_b;
@@ -154,6 +162,7 @@ module alu_module (
 
   logic result_negative = result[`GPR_SIZE-1];
   always_comb begin
+
     casez (in_op)
       ALU_OP_PLUS: result = val_a + val_b;
       ALU_OP_MINUS: result = val_a - val_b;
@@ -170,7 +179,7 @@ module alu_module (
       default: result = 0;
     endcase
 
-    if (set_nzcv) begin
+    if (in_set_nzcv) begin
       out_nzcv.N = result_negative;
       out_nzcv.Z = result[`GPR_SIZE-1:0] == 0;
       out_nzcv.C = result[`GPR_SIZE];
@@ -178,7 +187,6 @@ module alu_module (
     end else begin
       out_nzcv = in_nzcv;
     end
-
     // if(in_op == ALU_OP_CSEL | in_op == ALU_OP_CSNEG | in_op == ALU_OP_CSINC | in_op == ALU_OP_CSINV) begin
     //   if (out_alu_condition == 0) begin
     //      <= result;

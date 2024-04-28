@@ -87,23 +87,30 @@ module reservation_station_module #(
     input nzcv_t in_rob_broadcast_nzcv,
     input logic in_rob_is_mispred,
 
-
     // Inputs from FU (LS)
     input logic in_fu_ls_ready,
     // Inputs from FU (ALU)
     input logic in_fu_alu_ready,
+
     // Outputs for FU (ALU)
-    output logic out_fu_alu_start,
-    output logic out_fu_ls_start,
-    output alu_op_t out_fu_alu_op,
-    output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,
-    output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
-    output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,
-    output logic out_fu_alu_set_nzcv,
-    output logic out_fu_instr_uses_nzcv,
-    output nzcv_t out_fu_alu_nzcv
+    output logic out_fu_alu_start,  // A
+    output logic out_fu_ls_start,  // B
+    output alu_op_t out_fu_alu_op,  // AA
+    output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,  // AB
+    output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,  // AC
+    output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,  // AD
+    output logic out_fu_alu_set_nzcv,  // AE
+    output nzcv_t out_fu_alu_nzcv  // AF
 );
-  // TODO(Nate): Need to take a look at the look up table
+
+  // In RS, we create two bitmaps. One shows entries which are READY to
+  // be consumed by the FU. The other shows entries which are FREE and
+  // can receive new values. We use these bitmaps in order to get the
+  // next entry to consume and the next entry to be inserted into using
+  // a priority encoding (which will hopefully be synthesized into a LUT).
+  // An additional entry is added to both tables to represent that there are
+  // no ready or free entries respectively. This sentinel index is referred to
+  // as the INVALID_INDEX.
 
   // Internal state
   rs_entry_t [RS_SIZE-1:0] rs;
@@ -128,49 +135,31 @@ module reservation_station_module #(
     delayed_clk <= #1 in_clk;
   end
 
-  // TODO(Nate): Update these comments lol. We essentially want two bitmaps.
-  // One which shows ready entries, and one which free entires. We can
-  // determine the next index in O(1) time via a priority encoding LUT.
-  // An additional bit is always added to the bitmap which is either always
-  // free or always ready respectively. This is a sentinel value - it
-  // represents an invalid entry in the array. Once a sentinel value is set,
-  // it is clear that the reservation station is either full or empty.
-
   localparam logic [RS_IDX_SIZE:0] INVALID_INDEX = RS_SIZE;
-  // Map occupied reservation stations entries to wires. These will be used in
-  // a LUT in order to determine the index of the next free entry.
-  // If all entries are occupied, the INVALID_INDEX will be set.
+
+  // Create bitmap of occupies entries
   logic [RS_SIZE:0] occupied_entries;
+  assign occupied_entries[INVALID_INDEX] = 0;  // invalid entry always free
   logic [RS_IDX_SIZE:0] free_station_index;
   for (genvar i = 0; i < RS_SIZE; i += 1) begin
     assign occupied_entries[i] = rs[i].entry_valid;
   end
-  assign occupied_entries[INVALID_INDEX] = 0;
 
-  // Map ready reservation stations entries to wires. These will be used in
-  // a LUT in order to determine the index of the next entry to be executed.
-  // If none are ready to be executed, the INVALID_INDEX will be set.
+  // Create bitmap of ready entries
   logic [RS_SIZE:0] ready_entries;
+  assign ready_entries[INVALID_INDEX] = 1;  // invalid entry always ready
   logic [RS_IDX_SIZE:0] ready_station_index;
-  // Wires up the ready entry of each rs
   // always_comb begin
-  //   $display(
-  //       "rs[%0d].entry_valid: %b, rs[%0d].op1.valid: %b, rs[%0d].op2.valid: %b, rs[%0d].set_nzcv: %b, rs[%0d].nzcv_valid: %b",
-  //       i, rs[i].entry_valid, i, rs[i].op1.valid, i, rs[i].op2.valid, i, rs[i].set_nzcv, i,
-  //       rs[i].nzcv_valid);
-  // end
-  always_comb begin
-    for (int i = 0; i < RS_SIZE; i += 1) begin
-      $monitor(
-          "rs[%0d].entry_valid: %b, rs[%0d].op1.valid: %b, rs[%0d].op2.valid: %b, rs[%0d].set_nzcv: %b, rs[%0d].nzcv_valid: %b",
-          i, rs[i].entry_valid, i, rs[i].op1.valid, i, rs[i].op2.valid, i, rs[i].set_nzcv, i,
-          rs[i].nzcv_valid);
-      ready_entries[i] = rs[i].entry_valid & rs[i].op1.valid & rs[i].op2.valid /* & (rs[i].set_nzcv ? rs[i].nzcv_valid : 1) */;
-    end
-
-    ready_entries[INVALID_INDEX] = 1;
+  for (genvar i = 0; i < RS_SIZE; i += 1) begin
+    // $display(
+    //     "rs[%0d].entry_valid: %b, rs[%0d].op1.valid: %b, rs[%0d].op2.valid: %b, rs[%0d].set_nzcv: %b, rs[%0d].nzcv_valid: %b",
+    //     i, rs[i].entry_valid, i, rs[i].op1.valid, i, rs[i].op2.valid, i, rs[i].set_nzcv, i,
+    //     rs[i].nzcv_valid);
+    assign ready_entries[i] = rs[i].entry_valid & rs[i].op1.valid & rs[i].op2.valid & (rs[i].uses_nczv ? rs[i].nzcv_valid : 1);
+    // end
   end
-  // Set the indexes
+
+  // Do priority encoding
   always_comb begin
     // Priority encoder LUT for most significant 0 bit
     free_station_index = INVALID_INDEX;
@@ -192,8 +181,9 @@ module reservation_station_module #(
 `ifdef DEBUG_PRINT
       $display("(RS) Resetting both reservation stations");
 `endif
-      // rs <= 0;
+      // Reset root control signal
       rob_done <= 0;
+      // Reset internal state
       for (int i = 0; i < RS_SIZE; i += 1) begin
         rs[i].entry_valid <= 0;
       end
@@ -251,6 +241,8 @@ module reservation_station_module #(
       rob_done <= in_rob_done;
       fu_alu_ready <= in_fu_alu_ready;
     end
+    $display("val a valid: %0d, val b valid: %0d, nzcv valid: %0d", rob_val_a_valid,
+             rob_val_b_valid, rob_nzcv_valid);
   end
 
 `ifdef DEBUG_PRINT
@@ -263,18 +255,15 @@ module reservation_station_module #(
     end
   end
 
-  always_ff @(posedge delayed_clk) begin
-    #3
-    if (fu_alu_ready & ready_station_index != INVALID_INDEX) begin
-      // Allow the FU to read the value
-      out_fu_alu_op <= rs[ready_station_index].op;
-      out_fu_alu_val_a <= rs[ready_station_index].op1.value;
-      out_fu_alu_val_b <= rs[ready_station_index].op2.value;
-      out_fu_alu_dst_rob_index <= rs[ready_station_index].dst_rob_index;
-      out_fu_alu_nzcv <= rs[ready_station_index].nzcv;
-      out_fu_alu_set_nzcv <= rs[ready_station_index].set_nzcv;
-      out_fu_instr_uses_nzcv <= in_rob_instr_uses_nzcv;
-    end
+  always_comb begin
+    // Allow the ALU to consume the value when ready
+    out_fu_alu_start = fu_alu_ready & ready_station_index != INVALID_INDEX;
+    out_fu_alu_op = rs[ready_station_index].op;
+    out_fu_alu_val_a = rs[ready_station_index].op1.value;
+    out_fu_alu_val_b = rs[ready_station_index].op2.value;
+    out_fu_alu_dst_rob_index = rs[ready_station_index].dst_rob_index;
+    out_fu_alu_nzcv = rs[ready_station_index].nzcv;
+    out_fu_alu_set_nzcv = rs[ready_station_index].set_nzcv;
   end
 
   always_ff @(posedge delayed_clk) begin
@@ -283,7 +272,7 @@ module reservation_station_module #(
     // this line
 
     // Update consumed entry
-    if (fu_alu_ready & ready_station_index != INVALID_INDEX) begin
+    if (fu_alu_ready & (ready_station_index != INVALID_INDEX)) begin
       rs[ready_station_index].entry_valid <= 0;
     end
     // Add new reservation station entry from decode
@@ -314,7 +303,6 @@ module reservation_station_module #(
     // in lockstep with the FU actually consuming the value.
     $display("FU ALU Ready: %0d, Ready Station Index: %0d, invalid index", fu_alu_ready,
              ready_station_index, INVALID_INDEX);
-    out_fu_alu_start <= fu_alu_ready & (ready_station_index != INVALID_INDEX);
     if (fu_alu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
 `ifdef DEBUG_PRINT
       $display("(RS) Remove entry RS[%0d] becasue FU is ready to run on next cycle",

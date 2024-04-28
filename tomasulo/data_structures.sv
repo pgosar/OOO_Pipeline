@@ -34,15 +34,6 @@ typedef struct packed {
   logic w_enable;
 } w_ctl_sigs_t;
 
-typedef enum logic [2:0] {
-  S0,
-  S1,
-  S2,
-  S3,
-  S4,
-  S5
-} states_t;
-
 typedef enum logic [5:0] {
   ALU_OP_MINUS,   // val_a - (val_b << valhw)
   ALU_OP_PLUS,    // val_a + (val_b << valhw)
@@ -153,6 +144,7 @@ typedef struct packed {
   logic entry_valid;
   logic [`ROB_IDX_SIZE-1:0] nzcv_rob_index;
   logic set_nzcv;
+  logic uses_nczv;
   logic nzcv_valid;
   nzcv_t nzcv;
   alu_op_t op;

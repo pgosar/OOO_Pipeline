@@ -27,7 +27,7 @@ module core (
   logic in_fetch_done;
   // Outputs to regfile
   logic out_reg_done;
-  logic dispatch_out_reg_set_nzcv;  // DUPLICATE
+  logic dispatch_out_reg_set_nzcv;
   logic out_reg_use_imm;
   logic [`IMMEDIATE_SIZE-1:0] out_reg_imm;
   logic [`GPR_IDX_SIZE-1:0] out_reg_src1;
@@ -51,10 +51,11 @@ module core (
   logic in_d_use_imm;
   fu_t in_d_fu_id;
   alu_op_t in_d_fu_op;
+  logic in_d_instr_uses_nzcv;
   // Inputs from ROB (for a commit)
   logic in_rob_should_commit;
   logic reg_in_rob_set_nzcv;
-  nzcv_t reg_in_rob_nzcv;  // DUPLICATE
+  nzcv_t reg_in_rob_nzcv;
   logic [`GPR_SIZE-1:0] in_rob_commit_value;
   logic [`GPR_IDX_SIZE-1:0] in_rob_reg_index;
   logic [`ROB_IDX_SIZE-1:0] in_rob_commit_rob_index;
@@ -128,7 +129,7 @@ module core (
   logic out_rs_broadcast_set_nzcv;
   nzcv_t out_rs_broadcast_nzcv;
   // Outputs for regfile (for commits)
-  logic out_reg_should_commit;
+  logic out_reg_commit_done;
   logic rob_out_reg_set_nzcv;
   nzcv_t out_reg_nzcv;
   logic [`GPR_SIZE-1:0] out_reg_commit_value;
@@ -229,21 +230,23 @@ module core (
     #10 in_rst = 0;
     $display("RESET DONE === BEGIN TEST");
     in_fetch_done = 1;
-    in_fetch_insnbits = 32'b1001000100_111111111111_00001_00001;  // add x1, x1, #0xfff
-    #10 in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1
-    #10 in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1
+    in_fetch_insnbits = 32'b1001000100_111111111111_00001_00001;  // add x1, x1, #0xfff -> x1 = 4095
     #10
-    in_fetch_insnbits = 32'b11101011000_00001_000000_00001_00011;  // subs x3, x1, x1 set zero flag
+    in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1 -> x2 = 8190
     #10
-    in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag
+    in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1 -> x2 = 8190
     #10
-    in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag
+    in_fetch_insnbits = 32'b11101011000_00001_000000_00001_00011;  // subs x3, x1, x1 set zero flag -> x3 = 0
+    #10 $display("NEGATIVE FLAG TIME");
+    in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -4095
+    #10
+    in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -8190
     // #10 in_fetch_insnbits = 32'b1101_0101_0000_0011_0010_0000_0001_1111;  // NOP
     in_fetch_done = 0;
 
   end
 
-  // DISPATCH TO REGFILE regfile inputs = dispatch outputs
+  // DISPATCH TO REGFILE (copy args) regfile inputs = dispatch outputs
   assign in_d_done = out_reg_done;
   assign in_d_set_nzcv = dispatch_out_reg_set_nzcv;
   assign in_d_use_imm = out_reg_use_imm;
@@ -253,16 +256,16 @@ module core (
   assign in_d_fu_id = out_reg_fu_id;
   assign in_d_fu_op = out_reg_fu_op;
   assign in_d_dst = out_reg_dst;
+  assign in_d_instr_uses_nzcv = out_reg_instr_uses_nzcv;
 
-  // ROB TO REGFILE regfile inputs = rob outputs
-  assign in_rob_should_commit = out_reg_should_commit;
+  // ROB TO REGFILE (on COMMIT) regfile inputs = rob outputs
+  assign in_rob_should_commit = out_reg_commit_done;
   assign reg_in_rob_set_nzcv = rob_out_reg_set_nzcv;
   assign reg_in_rob_nzcv = out_reg_nzcv;
   assign in_rob_commit_value = out_reg_commit_value;
   assign in_rob_reg_index = out_reg_index;
   assign in_rob_commit_rob_index = out_reg_commit_rob_index;
   assign in_rob_next_rob_index = out_reg_next_rob_index;
-  assign in_rob_instr_uses_nzcv = out_reg_instr_uses_nzcv;
   // assign in_rob_cond_codes = out_reg_cond_codes;
 
   // REGFILE TO ROB rob inputs = regfile outputs
