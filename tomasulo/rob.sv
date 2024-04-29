@@ -51,6 +51,7 @@ module rob_module (
     output logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index,  // D
     // Outputs for RS (on broadcast... resultant from FU)
     output logic out_rs_broadcast_done,  // B
+    // output logic out_rs_is_mispred;
     output logic [`ROB_IDX_SIZE-1:0] out_rs_broadcast_index,  // BA
     output logic [`GPR_SIZE-1:0] out_rs_broadcast_value,  // BB
     output logic out_rs_broadcast_set_nzcv,  // BC

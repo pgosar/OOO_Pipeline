@@ -222,12 +222,12 @@ module reservation_station_module #(
         rs[i].entry_valid <= 0;
       end
     end else begin : rs_not_reset
-      /* if (in_rob_is_mispred) begin
+      if (  /*in_rob_is_mispred*/ 0) begin
 `ifdef DEBUG_PRINT
         $display("(RS) Deleting mispredicted instructions");
 `endif
-        todo handle mispred
-      end else */ begin : rs_not_mispred
+        // todo handle mispred
+      end else begin : rs_not_mispred
         if (fu_alu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
 `ifdef DEBUG_PRINT
           $display("(RS) Remove entry RS[%0d]. FU consumed entry at start of this cycle.",
