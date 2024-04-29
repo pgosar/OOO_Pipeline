@@ -4,18 +4,24 @@
 module func_units (
     // Timing
     input logic in_clk,
-    // inputs from RS
-    input cond_t in_rob_cond_codes,
+    // Inputs from RS (ALU)
     input logic in_rs_alu_start,
-    input logic in_rs_ls_start,
-    input fu_op_t in_rs_fu_op,
+    input fu_op_t in_rs_alu_op,
     input logic [`GPR_SIZE-1:0] in_rs_alu_val_a,
     input logic [`GPR_SIZE-1:0] in_rs_alu_val_b,
     input logic [`ROB_IDX_SIZE-1:0] in_rs_alu_dst_rob_index,
     input logic in_rs_alu_set_nzcv,
     input nzcv_t in_rs_alu_nzcv,
-    // Outputs for RS
+    input cond_t in_rs_alu_cond_codes,
+    // Inputs from FU (LS)
+    input logic in_rs_ls_start,
+    input fu_op_t in_rs_ls_op,
+    input logic [`GPR_SIZE-1:0] in_rs_ls_val_a,
+    input logic [`GPR_SIZE-1:0] in_rs_ls_val_b,
+    input logic [`ROB_IDX_SIZE-1:0] in_rs_ls_dst_rob_index,
+    // Outputs for RS (ALU)
     output logic out_rs_alu_ready,
+    // Outputs for RS (LS)
     output logic out_rs_ls_ready,
     // Outputs for ROB (singular output)
     output logic out_rob_done,
@@ -27,28 +33,29 @@ module func_units (
     // output logic out_rob_is_mispred
 );
 
-  fu_op_t fu_op;
-  logic [`GPR_SIZE-1:0] val_a;
-  logic [`GPR_SIZE-1:0] val_b;
-  logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
+  fu_op_t alu_fu_op;
+  logic [`GPR_SIZE-1:0] alu_val_a;
+  logic [`GPR_SIZE-1:0] alu_val_b;
   logic [`GPR_SIZE-1:0] out_value;
   // Buffered state (for clocking ALU)
   logic rs_alu_set_nzcv;
   nzcv_t rs_alu_nzcv;
   logic [`ROB_IDX_SIZE-1:0] rs_alu_dst_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] rs_ls_dst_rob_index;
   // ALU specific buffers
   logic alu_out_set_nzcv;
 
   // Decide on whether LS or ALU should run
   always_comb begin
-    out_rob_dst_rob_index = dst_rob_index;
     out_rob_value = out_value;
     if (in_rs_ls_start) begin
       out_rs_alu_ready = 0;
-      out_rs_ls_ready  = 1;
+      out_rs_ls_ready = 1;
+      out_rob_dst_rob_index = rs_alu_dst_rob_index;
     end else begin
       out_rs_alu_ready = 1;
-      out_rs_ls_ready  = 0;
+      out_rs_ls_ready = 0;
+      out_rob_dst_rob_index = rs_ls_dst_rob_index;
     end
   end
 
@@ -57,42 +64,73 @@ module func_units (
     out_rob_done <= in_rs_ls_start | in_rs_alu_start;
     if (in_rs_alu_start) begin
       // buffered state (so that it is clocked)
-      fu_op <= in_rs_fu_op;
-      val_a <= in_rs_alu_val_a;
-      val_b <= in_rs_alu_val_b;
-      dst_rob_index <= in_rs_alu_dst_rob_index;
+      alu_fu_op <= in_rs_alu_op;
+      alu_val_a <= in_rs_alu_val_a;
+      alu_val_b <= in_rs_alu_val_b;
+      rs_alu_dst_rob_index <= in_rs_alu_dst_rob_index;
       rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
       rs_alu_nzcv <= in_rs_alu_nzcv;
+      rs_ls_dst_rob_index <= in_rs_ls_dst_rob_index;
 `ifdef DEBUG_PRINT
       #1
-      $display( "(ALU) %s calculated: %0d for dst ROB[%0d] val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d", fu_op.name, $signed( out_value), dst_rob_index, $signed( val_a), $signed( val_b), out_rob_nzcv, out_alu_condition);
+      $display(
+          "(ALU) %s calculated: %0d for dst ROB[%0d] val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d",
+          alu_fu_op.name,
+          $signed(
+              out_value
+          ),
+          rs_alu_dst_rob_index,
+          $signed(
+              alu_val_a
+          ),
+          $signed(
+              alu_val_b
+          ),
+          out_rob_nzcv,
+          out_alu_condition
+      );
 `endif
     end else if (in_rs_ls_start) begin
       // buffered state (so that it is clocked)
-      fu_op <= in_rs_fu_op;
-      val_a <= in_rs_alu_val_a;
-      val_b <= in_rs_alu_val_b;
-      dst_rob_index <= in_rs_alu_dst_rob_index;
+      alu_fu_op <= in_rs_ls_op;
+      alu_val_a <= in_rs_ls_val_a;
+      alu_val_b <= in_rs_ls_val_b;
+      rs_alu_dst_rob_index <= in_rs_ls_dst_rob_index;
 `ifdef DEBUG_PRINT
       #2
-      $display( "(LS) %s executed: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b", fu_op.name, $signed( out_value), dst_rob_index, $signed( val_a), $signed( val_b), out_rob_nzcv); `endif
+      $display(
+          "(LS) %s executed: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b",
+          alu_fu_op.name,
+          $signed(
+              out_value
+          ),
+          rs_ls_dst_rob_index,
+          $signed(
+              alu_val_a
+          ),
+          $signed(
+              alu_val_b
+          ),
+          out_rob_nzcv
+      );
+`endif
     end
   end
 
   logic dmem_clk = in_clk & in_rs_ls_start;
   dmem dmem_module (
       .clk(dmem_clk),
-      .in_addr(in_rs_alu_val_a),
-      .w_enable(in_rs_fu_op == FU_OP_STUR),
-      .wval(in_rs_alu_val_b),
+      .in_addr(in_rs_ls_val_a),
+      .w_enable(in_rs_ls_op == FU_OP_STUR),
+      .wval(in_rs_ls_val_b),
       .data(out_value)
   );
 
   alu_module alu (
-      .in_cond(in_rob_cond_codes),
-      .in_op(fu_op),
-      .in_alu_val_a(val_a),
-      .in_alu_val_b(val_b),
+      .in_cond(in_rs_alu_cond_codes),
+      .in_op(alu_fu_op),
+      .in_alu_val_a(alu_val_a),
+      .in_alu_val_b(alu_val_b),
       .in_set_nzcv(rs_alu_set_nzcv),
       .in_nzcv(rs_alu_nzcv),
       .out_alu_condition(out_alu_condition),
@@ -158,7 +196,8 @@ module alu_module (
       FU_OP_CSINC: result = out_alu_condition == 0 ? val_b + 1 : val_a;
       FU_OP_CSINV: result = out_alu_condition == 0 ? ~val_b : val_a;
       FU_OP_CSEL: result = out_alu_condition == 0 ? val_b : val_a;
-      // FU_OP_MOV: result = val_a | (val_b << in_alu_val_hw); // NOTE(Nate): What is this?
+      // FU_OP_MOV: result = val_a | (val_b << in_alu_val_hw);
+      FU_OP_MOV: result = val_a | (val_b << 0);
       // FU_OP_PASS_A: result = val_a; // NOTE(Nate): No longer required
       default: result = 0;
     endcase
