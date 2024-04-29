@@ -238,6 +238,12 @@ module core (
     // #10 in_fetch_insnbits = 32'b1101_0101_0000_0011_0010_0000_0001_1111;  // NOP
     in_fetch_done = 0;
 
+    // #10;
+    // while (in_fetch_insnbits != 0) begin
+    //   $display("itr");
+    //   $display("*******insnbits: %x", in_fetch_insnbits);
+    //   #10;
+    // end
   end
 
   // DISPATCH TO REGFILE (copy args) regfile inputs = dispatch outputs
@@ -334,9 +340,8 @@ module core (
   assign out_fu_instr_uses_nzcv = in_rs_instr_uses_nzcv;
 
   // modules
-  // fetch f (
-  //   .*
-  // );
+  fetch f (.*);
+
   dispatch dp (
       .*,
       .out_reg_set_nzcv(dispatch_out_reg_set_nzcv)

@@ -7,3 +7,4 @@ run_arm.c
 obj_dir/
 .vscode/
 *.txt
+build/
