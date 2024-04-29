@@ -296,6 +296,7 @@ module core (
   assign in_rob_dst_rob_index = out_rs_dst_rob_index;
   assign in_rob_nzcv_rob_index = out_rs_nzcv_rob_index;
   assign in_rob_cond_codes = out_rs_cond_codes;
+
   // Inputs from ROB (for broadcast)
   assign in_rob_broadcast_done = out_rs_broadcast_done;
   assign in_rob_broadcast_index = out_rs_broadcast_index;
@@ -304,23 +305,26 @@ module core (
   assign in_rob_broadcast_nzcv = out_rs_broadcast_nzcv;
   // Inputs from FU (ALU)
   assign in_fu_alu_ready = out_rs_alu_ready;
-  // Outputs for FU (ALU)
-  assign out_fu_alu_start = in_rs_alu_start;
-  assign out_fu_alu_op = in_rs_alu_op;
-  assign out_fu_alu_val_a = in_rs_alu_val_a;
-  assign out_fu_alu_val_b = in_rs_alu_val_b;
-  assign out_fu_alu_dst_rob_index = in_rs_alu_dst_rob_index;
-  assign out_fu_alu_set_nzcv = in_rs_alu_set_nzcv;
-  assign out_fu_alu_nzcv = in_rs_alu_nzcv;
-  assign out_fu_alu_cond_codes = in_rs_alu_cond_codes;
+
+  // Outputs for FU (ALU) FU inputs = RS outputs
+  assign in_rs_alu_start = out_fu_alu_start;
+  assign in_rs_alu_op = out_fu_alu_op;
+  assign in_rs_alu_val_a = out_fu_alu_val_a;
+  assign in_rs_alu_val_b = out_fu_alu_val_b;
+  assign in_rs_alu_dst_rob_index = out_fu_alu_dst_rob_index;
+  assign in_rs_alu_set_nzcv = out_fu_alu_set_nzcv;
+  assign in_rs_alu_nzcv = out_fu_alu_nzcv;
+  assign in_rs_alu_cond_codes = out_fu_alu_cond_codes;
+
   // Inputs from FU (LS)
   assign in_fu_ls_ready = out_rs_ls_ready;
   // Outputs for FU (LS)
-  assign out_fu_ls_start = in_rs_ls_start;
-  assign out_fu_ls_op = in_rs_ls_op;
-  assign out_fu_ls_val_a = in_rs_ls_val_a;
-  assign out_fu_ls_val_b = in_rs_ls_val_b;
-  assign out_fu_ls_dst_rob_index = in_rs_ls_dst_rob_index;
+
+  assign in_rs_ls_start = out_fu_ls_start;
+  assign in_rs_ls_op = out_fu_ls_op;
+  assign in_rs_ls_val_a = out_fu_ls_val_a;
+  assign in_rs_ls_val_b = out_fu_ls_val_b;
+  assign in_rs_ls_dst_rob_index = out_fu_ls_dst_rob_index;
 
   // FU TO ROB rob inputs = fu outputs
   assign in_fu_done = fu_out_rob_done;
@@ -347,19 +351,12 @@ module core (
       .out_rob_done(reg_out_rob_done)
   );
   rob_module rob (.*);
-  reservation_stations rs (
-      .*,
-      .out_fu_alu_start(temp)
-      // .in_rob_cond_codes(rs_in_rob_cond_codes),
-      // .in_rob_nzcv(rs_in_rob_nzcv)
-      // .in_rob_set_nzcv(rs_in_rob_set_nzcv)
-  );
+  reservation_stations rs (.*);
   func_units fu (
       .*,
       .out_rob_set_nzcv(fu_out_rob_set_nzcv),
       .out_rob_nzcv(fu_out_rob_nzcv),
-      .out_rob_done(fu_out_rob_done),
-      .in_rs_alu_start(temp)
+      .out_rob_done(fu_out_rob_done)
       // .in_rob_cond_codes(fu_in_rob_cond_codes)
   );
 

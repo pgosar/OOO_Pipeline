@@ -61,7 +61,6 @@ module func_units (
 
   // Buffer inputs
   always_ff @(posedge in_clk) begin
-    $display("(ALU) start: %0d, ls: %0d", in_rs_alu_start, in_rs_ls_start);
     out_rob_done <= in_rs_ls_start | in_rs_alu_start;
     if (in_rs_alu_start) begin
       // buffered state (so that it is clocked)

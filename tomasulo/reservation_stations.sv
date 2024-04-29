@@ -284,7 +284,6 @@ module reservation_station_module #(
                        rob_broadcast_value);
               rs[i].op1.value <= rs[i].op1.value + rob_broadcast_value;
             end else begin
-              $display("hello2");
               rs[i].op1.value <= rob_broadcast_value;
             end
             $display("LDUR/STUR: %0d", rs[i].op1.value);

@@ -172,7 +172,7 @@ module reg_module (
   always_comb begin
     out_rob_done = d_done;
     // Src 1 - With LDUR/STUR, src1 contains base address. If src1 is not
-    // availabe
+    // available
     out_rob_src1_valid = gprs[d_src1].valid;
     out_rob_src1_rob_index = (d_dst == d_src1) ? src1_rob_index : gprs[d_src1].rob_index;
     if (d_fu_op == FU_OP_STUR | d_fu_op == FU_OP_STUR) begin
