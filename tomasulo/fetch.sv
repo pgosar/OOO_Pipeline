@@ -2,6 +2,7 @@
 module fetch # (parameter int PAGESIZE = 4096) // note: this should always be 4096
   (
    input wire in_clk,
+   input wire in_rst,
    output logic [31:0] in_fetch_insnbits,
    output logic in_fetch_done
   );
@@ -19,10 +20,12 @@ module fetch # (parameter int PAGESIZE = 4096) // note: this should always be 40
   // PC is an internal register to fetch.
   logic [63:0] PC_load [0:0]; // to make verilog see it as a memory
   logic [63:0] PC;
+  logic e;
 
   initial begin: init_PC
     $readmemb("mem/entry.txt", PC_load);
     PC = PC_load[0];
+    in_fetch_done = 0;
   end: init_PC
 
   imem #(PAGESIZE) mem(PC, data);
@@ -31,8 +34,35 @@ module fetch # (parameter int PAGESIZE = 4096) // note: this should always be 40
     // fix instruction alias?
     // predict new PC?
     // status updates?
-    in_fetch_insnbits <= data;
-    in_fetch_done <= 1;
-    PC <= PC + 4;
+    // select PC logic: we have correction from ret, and 
+    // correction from cond. 
+    // can use 0 PC to indicate ret?
+    // pseudocode:
+    // if bcond and !condval - we take successor
+    // if ret - we take val_a
+    // else take predicted pc
+    // 
+    // for predicted pc:
+    // if it's bl or bcond or b: predict taken
+    // else: sequential successor
+    // adrp????
+    if (in_rst) begin
+`ifdef DEBUG_PRINT
+      $display("(fetch) resetting");
+`endif
+      in_fetch_insnbits <= 0;
+      in_fetch_done <= 0;
+    end else begin
+      if (data == 0) begin  
+        in_fetch_insnbits <= data;
+        in_fetch_done <= 0;
+      end else begin
+        in_fetch_insnbits <= data;
+        in_fetch_done <= 1;
+        PC <= PC + 4;
+      end
+    end
+
+
   end: fetch_logic
 endmodule: fetch

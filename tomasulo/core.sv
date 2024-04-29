@@ -218,26 +218,35 @@ module core (
 
   initial begin
     in_rst = 1;
-    in_fetch_done = 0;
-    #10 in_rst = 0;
+    #10;
+    in_rst = 0;
     $display("RESET DONE === BEGIN TEST");
-    in_fetch_done = 1;
-    in_fetch_insnbits = 32'b1001000100_111111111111_00001_00001;  // add x1, x1, #0xfff -> x1 = 4095
-    #10
-    in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1 -> x2 = 8190
-    #10
-    in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1 -> x2 = 8190
-    #10
-    in_fetch_insnbits = 32'b11101011000_00001_000000_00001_00011;  // subs x3, x1, x1 set zero flag -> x3 = 0
-    #10
-    in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -4095
-    #10
-    in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -8190
-    #10
-    in_fetch_insnbits = 32'b11011010100_00001_0000_00_00011_00111; // csinv x7, x3, x1, eq -> ffffffffffff0000
-    #10
-    // #10 in_fetch_insnbits = 32'b1101_0101_0000_0011_0010_0000_0001_1111;  // NOP
-    in_fetch_done = 0;
+    while (in_fetch_insnbits != 0) begin
+      $display("%x", in_fetch_insnbits);
+      #10;
+    end
+    
+    //in_rst = 1;
+    //in_fetch_done = 0;
+    //#10 in_rst = 0;
+    //$display("RESET DONE === BEGIN TEST");
+    //in_fetch_done = 1;
+    //in_fetch_insnbits = 32'b1001000100_111111111111_00001_00001;  // add x1, x1, #0xfff -> x1 = 4095
+    //#10
+    //in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1 -> x2 = 8190
+    //#10
+    //in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1 -> x2 = 8190
+    //#10
+    //in_fetch_insnbits = 32'b11101011000_00001_000000_00001_00011;  // subs x3, x1, x1 set zero flag -> x3 = 0
+    //#10
+    //in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -4095
+    //#10
+    //in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -8190
+    //#10
+    //in_fetch_insnbits = 32'b11011010100_00001_0000_00_00011_00111; // csinv x7, x3, x1, eq -> ffffffffffff0000
+    //#10
+    //// #10 in_fetch_insnbits = 32'b1101_0101_0000_0011_0010_0000_0001_1111;  // NOP
+    //in_fetch_done = 0;
 
     // #10;
     // while (in_fetch_insnbits != 0) begin
@@ -341,7 +350,7 @@ module core (
   assign out_fu_instr_uses_nzcv = in_rs_instr_uses_nzcv;
 
   // modules
-  // fetch f (.*);
+  fetch f (.*);
 
   dispatch dp (
       .*,

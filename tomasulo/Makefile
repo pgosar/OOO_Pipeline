@@ -22,6 +22,14 @@ LSCRIPT = mem/ooo.ld
 	@rm $(FNAME)_linked.o $(FNAME).o IMEM_t.txt DMEM_t.txt
 	@echo Output is in mem/imem.txt and mem/dmem.txt.
 
+%.dis : %.s
+	$(eval FNAME := $(basename $<))
+	@$(CC) $(CFLAGS) -o $(FNAME).o $<
+	@$(LD) $(LSCRIPT) $(FNAME).o -o $(FNAME)_linked.o
+	@objdump $(FNAME).o --disassemble
+	@rm $(FNAME).o $(FNAME)_linked.o
+
+
 verilator-debug:
 	verilator --binary --build --cc --trace --trace-structs --timing -j 0 -DDEBUG_PRINT ${SV_FILES} --top-module ${MODULE} -o ${MODULE}_tb
 
