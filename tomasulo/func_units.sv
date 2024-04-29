@@ -79,10 +79,16 @@ module func_units (
       $display(
           "(ALU) %s calculated: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d",
           rs_alu_op.name,
-          alu_out_value,
+          $signed(
+              alu_out_value
+          ),
           rs_alu_dst_rob_index,
-          ,
-          rs_alu_val_b,
+          $signed(
+              rs_alu_val_a
+          ),
+          $signed(
+              rs_alu_val_b
+          ),
           out_rob_nzcv,
           out_alu_condition
       );
@@ -168,8 +174,7 @@ module alu_module (
   //     .cond_holds(out_alu_condition)
   // );
 
-
-  logic result_negative = result[`GPR_SIZE-1];
+  logic result_negative;
   always_comb begin
 
     casez (in_op)
@@ -188,10 +193,11 @@ module alu_module (
       default: result = 0;
     endcase
 
+    result_negative = result[`GPR_SIZE-1];
     if (in_set_nzcv) begin
       out_nzcv.N = result_negative;
       out_nzcv.Z = result[`GPR_SIZE-1:0] == 0;
-      out_nzcv.C = result[`GPR_SIZE];
+      out_nzcv.C = result[`GPR_SIZE] & val_a > val_b;
       out_nzcv.V = (val_a_negative ^ val_b_negative) ? 0 : (result_negative ^ val_a_negative);
     end else begin
       out_nzcv = in_nzcv;

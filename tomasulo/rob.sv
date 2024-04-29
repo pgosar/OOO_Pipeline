@@ -112,7 +112,7 @@ module rob_module (
       if (in_fu_done) begin
 `ifdef DEBUG_PRINT
         $display("(rob) Received result from FU. ROB[%0d] -> %0d + valid", in_fu_dst_rob_index,
-                 in_fu_value);
+                 $signed(in_fu_value));
 `endif
         // Validate the line which the FU has updated
         rob[in_fu_dst_rob_index].value <= in_fu_value;
@@ -142,7 +142,7 @@ module rob_module (
                  (commit_ptr + 1) % `ROB_SIZE);
         $display(
             "(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b",
-            commit_ptr, rob[commit_ptr].gpr_index, rob[commit_ptr].value, rob[commit_ptr].set_nzcv,
+            commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value), rob[commit_ptr].set_nzcv,
             rob[commit_ptr].nzcv);
 `endif
       end : remove_commit
@@ -166,6 +166,9 @@ module rob_module (
       out_rs_set_nzcv <= in_reg_set_nzcv;
       out_rs_cond_codes <= in_reg_cond_codes;
       out_rs_instr_uses_nzcv <= in_reg_instr_uses_nzcv;
+      out_rs_val_a_rob_index <= in_reg_src1_rob_index;
+      out_rs_val_b_rob_index <= in_reg_src2_rob_index;
+      out_rs_nzcv_rob_idx <= in_reg_nzcv_rob_index;
       // Set dst
       out_rs_dst_rob_idx = next_ptr;
     end : not_reset
@@ -184,7 +187,6 @@ module rob_module (
     out_rs_val_a_valid = reg_src1_valid | rob[reg_src1_rob_index].valid;
     out_rs_val_b_valid = reg_src2_valid | rob[reg_src2_rob_index].valid;
     out_rs_nzcv_valid = reg_nzcv_valid | rob[reg_nzcv_rob_index].valid;
-
     out_rs_val_a_value = reg_src1_valid ? reg_src1_value : rob[reg_src1_rob_index].value; // NOTE(Nate): This logic is goofy but works!
     out_rs_val_b_value = reg_src2_valid ? reg_src2_value : rob[reg_src2_rob_index].value;
     out_rs_nzcv = reg_nzcv_valid ? reg_nzcv : rob[reg_nzcv_rob_index].nzcv;
