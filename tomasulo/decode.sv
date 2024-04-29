@@ -9,13 +9,17 @@ module decode_instruction (
       // All references in this decode are made to the Arm Architecture
       // Reference Manual version K.a released 2024-03-20
       // // C6.2.221 - 64-bit unscaled load.
-      // C6.2.389 - 64-bit unscaled store
+      // C6.2.389 - 64-bit unscaled store.
       32'b1111_1000_000?_????_????_00??_????_????: opcode = OP_STUR;
+      // C6.2.388 - 64-bit unscaled load.
+      32'b1111_1000_010?_????_????_00??_????_????: opcode = OP_LDUR;
       // C6.2.186 - 64-bit paired load.
       32'b1010_1000_11??_????_????_????_????_????: opcode = OP_LDP;
       // C6.2.364 - 64-bit paired store.
       32'b1010_1001_00??_????_????_????_????_????: opcode = OP_STP;
-      // C6.2.244 - 64-bit move with keep
+      // C6.2.243 - 64-bit move with zeros
+      32'b1101_0010_1???_????_????_????_????_????: opcode = OP_MOVZ;
+      // C6.2.246 - 64-bit move with keep
       32'b1111_0010_1???_????_????_????_????_????: opcode = OP_MOVK;
       // C6.2.11  - Form PC relative address
       32'b0??1_0000_????_????_????_????_????_????: opcode = OP_ADR;
@@ -106,7 +110,7 @@ module extract_reg (
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_dst
 );
-  always_latch begin
+  always_comb begin
     //out_reg_dst
     if (opcode != OP_B & opcode != OP_BR & opcode != OP_B_COND &  //branch dont need out_reg_dst
         opcode != OP_BL & opcode != OP_BLR & opcode != OP_RET &  //branch dont need out_reg_dst
@@ -115,9 +119,9 @@ module extract_reg (
       out_reg_dst = in_insnbits[4:0];
     end else if (opcode == OP_BL) begin
       out_reg_dst = 5'd30;
+    end else begin
+      out_reg_dst = 0;
     end
-
-
 
     //out_reg_src1
     if (opcode != OP_MOVK & opcode != OP_MOVZ & opcode != OP_ADR | opcode != OP_ADRP |
@@ -127,16 +131,17 @@ module extract_reg (
       out_reg_src1 = in_insnbits[9:5];
     end else if (opcode == OP_CBZ | opcode == OP_CBNZ) begin
       out_reg_src1 = in_insnbits[4:0];
+    end else begin
+      out_reg_src1 = 0;
     end
 
     //out_reg_src2
     if (opcode == OP_STUR) begin
       out_reg_src2 = in_insnbits[4:0];
-    end else if (opcode == OP_ADDS | opcode == OP_SUBS | opcode == OP_ORN |
-                        opcode == OP_ORR | opcode == OP_EOR | opcode == OP_ANDS |
-                        opcode == OP_CSEL | opcode == OP_CSINV | opcode == OP_CSINC
-                        | opcode == OP_CSNEG) begin
+    end else if (opcode == OP_ADDS | opcode == OP_SUBS | opcode == OP_ORN | opcode == OP_ORR | opcode == OP_EOR | opcode == OP_ANDS | opcode == OP_CSEL | opcode == OP_CSINV | opcode == OP_CSINC | opcode == OP_CSNEG) begin
       out_reg_src2 = in_insnbits[20:16];
+    end else begin
+      out_reg_src2 = 0;
     end
   end
 endmodule
@@ -305,13 +310,15 @@ module dispatch (
     output fu_op_t out_reg_fu_op,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_dst,
     output cond_t out_reg_cond_codes,
-    output logic out_reg_instr_uses_nzcv
+    output logic out_reg_instr_uses_nzcv,
+    output opcode_t out_reg_opcode
     // Outputs to be broadcasted.
     // output logic out_stalled
 );
 
   opcode_t opcode;
   logic [`INSNBITS_SIZE-1:0] insnbits;
+  assign out_reg_opcode = opcode;
 
   decode_instruction op_decoder (
       .*,
@@ -348,15 +355,12 @@ module dispatch (
     end
   end
 
-
   // Print statements only in here
 `ifdef DEBUG_PRINT
-  logic [`INSNBITS_SIZE-1:0] debug_insnbits;
   always_ff @(posedge in_clk) begin
-    debug_insnbits <= in_fetch_insnbits;
     #1
     if (in_fetch_done) begin
-      $display("(dec) Decoding: %b", debug_insnbits);
+      $display("(dec) Decoding: %b", insnbits);
       $display("(dec)\tfu_id: %s, opcode: %s, fu_op: %s", out_reg_fu_id.name, opcode.name,
                out_reg_fu_op.name);
       $display("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_dst,

@@ -37,6 +37,7 @@ module core (
   logic [`GPR_IDX_SIZE-1:0] out_reg_dst;
   cond_t out_reg_cond_codes;
   logic out_reg_instr_uses_nzcv;
+  opcode_t out_reg_opcode;
 
   // REGFILE
 
@@ -46,6 +47,7 @@ module core (
   logic [`GPR_IDX_SIZE-1:0] in_d_src1;
   logic [`GPR_IDX_SIZE-1:0] in_d_src2;
   logic [`GPR_IDX_SIZE-1:0] in_d_dst;
+  opcode_t in_d_opcode;
   logic in_d_set_nzcv;
   logic [`GPR_SIZE-1:0] in_d_imm;
   logic in_d_use_imm;
@@ -108,17 +110,17 @@ module core (
   logic out_rs_done;
   fu_t out_rs_fu_id;  // NOTE(Nate): Shouldn't this just go to the RS for this functional unit?
   fu_op_t out_rs_fu_op;
-  logic out_rs_val_a_valid;
-  logic out_rs_val_b_valid;
+  logic out_rs_alu_val_a_valid;
+  logic out_rs_alu_val_b_valid;
   logic out_rs_nzcv_valid;
-  logic [`GPR_SIZE-1:0] out_rs_val_a_value;
-  logic [`GPR_SIZE-1:0] out_rs_val_b_value;
+  logic [`GPR_SIZE-1:0] out_rs_alu_val_a_value;
+  logic [`GPR_SIZE-1:0] out_rs_alu_val_b_value;
   nzcv_t out_rs_nzcv;
   logic out_rs_set_nzcv;
-  logic [`ROB_IDX_SIZE-1:0] out_rs_val_a_rob_index;
-  logic [`ROB_IDX_SIZE-1:0] out_rs_val_b_rob_index;
-  logic [`ROB_IDX_SIZE-1:0] out_rs_dst_rob_idx;
-  logic [`ROB_IDX_SIZE-1:0] out_rs_nzcv_rob_idx;
+  logic [`ROB_IDX_SIZE-1:0] out_rs_alu_val_a_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] out_rs_alu_val_b_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] out_rs_alu_dst_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] out_rs_nzcv_rob_index;
   cond_t out_rs_cond_codes;
   logic out_rs_instr_uses_nzcv;
   // Outputs for RS (on broadcast... resultant from FU)
@@ -143,15 +145,15 @@ module core (
   logic in_rob_done;
   fu_t in_rob_fu_id;
   fu_op_t in_rob_fu_op;
-  logic in_rob_val_a_valid;
-  logic in_rob_val_b_valid;
+  logic in_rob_alu_val_a_valid;
+  logic in_rob_alu_val_b_valid;
   logic in_rob_nzcv_valid;
-  logic [`GPR_SIZE-1:0] in_rob_val_a_value;
-  logic [`GPR_SIZE-1:0] in_rob_val_b_value;
+  logic [`GPR_SIZE-1:0] in_rob_alu_val_a_value;
+  logic [`GPR_SIZE-1:0] in_rob_alu_val_b_value;
   nzcv_t rs_in_rob_nzcv;
   logic rs_in_rob_set_nzcv;
-  logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index;
-  logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_a_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_b_rob_index;
   logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index;
   logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index;
   logic in_rob_broadcast_done;
@@ -168,8 +170,8 @@ module core (
   logic out_fu_alu_start;
   logic out_fu_ls_start;
   fu_op_t out_fu_fu_op;
-  logic [`GPR_SIZE-1:0] out_fu_val_a;
-  logic [`GPR_SIZE-1:0] out_fu_val_b;
+  logic [`GPR_SIZE-1:0] out_fu_alu_val_a;
+  logic [`GPR_SIZE-1:0] out_fu_alu_val_b;
   logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index;
   logic out_fu_alu_set_nzcv;
   nzcv_t out_fu_alu_nzcv;
@@ -183,9 +185,9 @@ module core (
   logic in_rs_alu_start;
   logic in_rs_ls_start;
   fu_op_t in_rs_fu_op;
-  logic [`GPR_SIZE-1:0] in_rs_val_a;
-  logic [`GPR_SIZE-1:0] in_rs_val_b;
-  logic [`ROB_IDX_SIZE-1:0] in_rs_dst_rob_index;
+  logic [`GPR_SIZE-1:0] in_rs_alu_val_a;
+  logic [`GPR_SIZE-1:0] in_rs_alu_val_b;
+  logic [`ROB_IDX_SIZE-1:0] in_rs_alu_dst_rob_index;
   logic in_rs_alu_set_nzcv;
   nzcv_t in_rs_alu_nzcv;
   cond_t in_rob_cond_codes;
@@ -222,38 +224,10 @@ module core (
     in_rst = 0;
     $display("RESET DONE === BEGIN TEST");
     while (in_fetch_insnbits != 0) begin
-      $display("%x", in_fetch_insnbits);
+      $display("itr");
+      $display("*******insnbits: %b", in_fetch_insnbits);
       #10;
     end
-    
-    //in_rst = 1;
-    //in_fetch_done = 0;
-    //#10 in_rst = 0;
-    //$display("RESET DONE === BEGIN TEST");
-    //in_fetch_done = 1;
-    //in_fetch_insnbits = 32'b1001000100_111111111111_00001_00001;  // add x1, x1, #0xfff -> x1 = 4095
-    //#10
-    //in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1 -> x2 = 8190
-    //#10
-    //in_fetch_insnbits = 32'b10101011000_00001_000000_00001_00010;  // adds x2, x1, x1 -> x2 = 8190
-    //#10
-    //in_fetch_insnbits = 32'b11101011000_00001_000000_00001_00011;  // subs x3, x1, x1 set zero flag -> x3 = 0
-    //#10
-    //in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -4095
-    //#10
-    //in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -8190
-    //#10
-    //in_fetch_insnbits = 32'b11011010100_00001_0000_00_00011_00111; // csinv x7, x3, x1, eq -> ffffffffffff0000
-    //#10
-    //// #10 in_fetch_insnbits = 32'b1101_0101_0000_0011_0010_0000_0001_1111;  // NOP
-    //in_fetch_done = 0;
-
-    // #10;
-    // while (in_fetch_insnbits != 0) begin
-    //   $display("itr");
-    //   $display("*******insnbits: %x", in_fetch_insnbits);
-    //   #10;
-    // end
   end
 
   // DISPATCH TO REGFILE (copy args) regfile inputs = dispatch outputs
@@ -263,6 +237,7 @@ module core (
   assign in_d_imm = out_reg_imm;
   assign in_d_src1 = out_reg_src1;
   assign in_d_src2 = out_reg_src2;
+  assign in_d_opcode = out_reg_opcode;
   assign in_d_fu_id = out_reg_fu_id;
   assign in_d_fu_op = out_reg_fu_op;
   assign in_d_dst = out_reg_dst;
@@ -300,17 +275,17 @@ module core (
   assign in_rob_done = out_rs_done;
   assign in_rob_fu_id = out_rs_fu_id;
   assign in_rob_fu_op = out_rs_fu_op;
-  assign in_rob_val_a_valid = out_rs_val_a_valid;
-  assign in_rob_val_b_valid = out_rs_val_b_valid;
+  assign in_rob_alu_val_a_valid = out_rs_alu_val_a_valid;
+  assign in_rob_alu_val_b_valid = out_rs_alu_val_b_valid;
   assign in_rob_nzcv_valid = out_rs_nzcv_valid;
-  assign in_rob_val_a_value = out_rs_val_a_value;
-  assign in_rob_val_b_value = out_rs_val_b_value;
+  assign in_rob_alu_val_a_value = out_rs_alu_val_a_value;
+  assign in_rob_alu_val_b_value = out_rs_alu_val_b_value;
   assign rs_in_rob_nzcv = out_rs_nzcv;
   assign rs_in_rob_set_nzcv = out_rs_set_nzcv;
-  assign in_rob_val_a_rob_index = out_rs_val_a_rob_index;
-  assign in_rob_val_b_rob_index = out_rs_val_b_rob_index;
-  assign in_rob_dst_rob_index = out_rs_dst_rob_idx;
-  assign in_rob_nzcv_rob_index = out_rs_nzcv_rob_idx;
+  assign in_rob_alu_val_a_rob_index = out_rs_alu_val_a_rob_index;
+  assign in_rob_alu_val_b_rob_index = out_rs_alu_val_b_rob_index;
+  assign in_rob_dst_rob_index = out_rs_alu_dst_rob_index;
+  assign in_rob_nzcv_rob_index = out_rs_nzcv_rob_index;
   assign in_rob_broadcast_done = out_rs_broadcast_done;
   assign in_rob_broadcast_index = out_rs_broadcast_index;
   assign in_rob_broadcast_value = out_rs_broadcast_value;
@@ -333,9 +308,9 @@ module core (
   assign in_rs_alu_start = out_fu_alu_start;
   assign in_rs_ls_start = out_fu_ls_start;
   assign in_rs_fu_op = out_fu_fu_op;
-  assign in_rs_val_a = out_fu_val_a;
-  assign in_rs_val_b = out_fu_val_b;
-  assign in_rs_dst_rob_index = out_fu_dst_rob_index;
+  assign in_rs_alu_val_a = out_fu_alu_val_a;
+  assign in_rs_alu_val_b = out_fu_alu_val_b;
+  assign in_rs_alu_dst_rob_index = out_fu_dst_rob_index;
   assign in_rs_alu_set_nzcv = out_fu_alu_set_nzcv;
   assign in_rs_alu_nzcv = out_fu_alu_nzcv;
 

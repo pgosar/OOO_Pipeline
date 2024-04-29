@@ -9,15 +9,15 @@ module reservation_stations (
     input logic in_rob_done,
     input fu_t in_rob_fu_id,
     input fu_op_t in_rob_fu_op,
-    input logic in_rob_val_a_valid,
-    input logic in_rob_val_b_valid,
+    input logic in_rob_alu_val_a_valid,
+    input logic in_rob_alu_val_b_valid,
     input logic in_rob_nzcv_valid,
-    input logic [`GPR_SIZE-1:0] in_rob_val_a_value,
-    input logic [`GPR_SIZE-1:0] in_rob_val_b_value,
+    input logic [`GPR_SIZE-1:0] in_rob_alu_val_a_value,
+    input logic [`GPR_SIZE-1:0] in_rob_alu_val_b_value,
     input nzcv_t in_rob_nzcv,
     input logic in_rob_set_nzcv,
-    input logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index,
-    input logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_a_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_b_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
     input logic in_rob_broadcast_done,
@@ -35,8 +35,8 @@ module reservation_stations (
     output logic out_fu_alu_start,
     output logic out_fu_ls_start,
     output fu_op_t out_fu_fu_op,
-    output logic [`GPR_SIZE-1:0] out_fu_val_a,
-    output logic [`GPR_SIZE-1:0] out_fu_val_b,
+    output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,
+    output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
     output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,
     output logic out_fu_alu_set_nzcv,
     output nzcv_t out_fu_alu_nzcv,
@@ -68,15 +68,15 @@ module reservation_station_module #(
     input cond_t in_rob_cond_codes,
     input logic in_rob_done,
     input fu_op_t in_rob_fu_op,
-    input logic in_rob_val_a_valid,
-    input logic in_rob_val_b_valid,
+    input logic in_rob_alu_val_a_valid,
+    input logic in_rob_alu_val_b_valid,
     input logic in_rob_nzcv_valid,
-    input logic [`GPR_SIZE-1:0] in_rob_val_a_value,
-    input logic [`GPR_SIZE-1:0] in_rob_val_b_value,
+    input logic [`GPR_SIZE-1:0] in_rob_alu_val_a_value,
+    input logic [`GPR_SIZE-1:0] in_rob_alu_val_b_value,
     input nzcv_t in_rob_nzcv,
     input logic in_rob_set_nzcv,
-    input logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index,
-    input logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_a_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_b_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
     input logic in_rob_instr_uses_nzcv,
@@ -98,8 +98,8 @@ module reservation_station_module #(
     output logic out_fu_alu_start,  // A
     output logic out_fu_ls_start,  // B
     output fu_op_t out_fu_fu_op,  // AA
-    output logic [`GPR_SIZE-1:0] out_fu_val_a,  // AB
-    output logic [`GPR_SIZE-1:0] out_fu_val_b,  // AC
+    output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,  // AB
+    output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,  // AC
     output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,  // AD
     output logic out_fu_alu_set_nzcv,  // AE
     output nzcv_t out_fu_alu_nzcv,  // AF
@@ -119,15 +119,15 @@ module reservation_station_module #(
   rs_entry_t [RS_SIZE-1:0] rs  /*verilator public*/;
   logic delayed_clk;
   // Buffered state
-  logic rob_val_a_valid;
-  logic rob_val_b_valid;
+  logic rob_alu_val_a_valid;
+  logic rob_alu_val_b_valid;
   logic rob_nzcv_valid;
-  logic [`GPR_SIZE-1:0] rob_val_a_value  /*verilator public*/;
-  logic [`GPR_SIZE-1:0] rob_val_b_value;
+  logic [`GPR_SIZE-1:0] rob_alu_val_a_value  /*verilator public*/;
+  logic [`GPR_SIZE-1:0] rob_alu_val_b_value;
   logic rob_set_nzcv;
   nzcv_t rob_nzcv;
-  logic [`ROB_IDX_SIZE-1:0] rob_val_a_rob_index;
-  logic [`ROB_IDX_SIZE-1:0] rob_val_b_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] rob_alu_val_a_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] rob_alu_val_b_rob_index;
   logic [`ROB_IDX_SIZE-1:0] rob_dst_rob_index;
   logic [`ROB_IDX_SIZE-1:0] rob_nzcv_rob_index;
   fu_op_t rob_fu_op;
@@ -213,15 +213,15 @@ module reservation_station_module #(
         end : fu_consume_entry
       end : rs_not_mispred
       // Buffer state
-      rob_val_a_valid <= in_rob_val_a_valid;
-      rob_val_b_valid <= in_rob_val_b_valid;
+      rob_alu_val_a_valid <= in_rob_alu_val_a_valid;
+      rob_alu_val_b_valid <= in_rob_alu_val_b_valid;
       rob_nzcv_valid <= in_rob_nzcv_valid;
-      rob_val_a_value <= in_rob_val_a_value;
-      rob_val_b_value <= in_rob_val_b_value;
+      rob_alu_val_a_value <= in_rob_alu_val_a_value;
+      rob_alu_val_b_value <= in_rob_alu_val_b_value;
       rob_set_nzcv <= in_rob_set_nzcv;
       rob_nzcv <= in_rob_nzcv;
-      rob_val_a_rob_index <= in_rob_val_a_rob_index;
-      rob_val_b_rob_index <= in_rob_val_b_rob_index;
+      rob_alu_val_a_rob_index <= in_rob_alu_val_a_rob_index;
+      rob_alu_val_b_rob_index <= in_rob_alu_val_b_rob_index;
       rob_dst_rob_index <= in_rob_dst_rob_index;
       rob_nzcv_rob_index <= in_rob_nzcv_rob_index;
       rob_fu_op <= in_rob_fu_op;
@@ -277,15 +277,15 @@ module reservation_station_module #(
   always_ff @(posedge in_clk) begin
     #1
     if (rob_done & free_station_index != INVALID_INDEX) begin : rs_add_entry
-      rs[free_station_index].op1.valid <= rob_val_a_valid;
-      rs[free_station_index].op2.valid <= rob_val_b_valid;
+      rs[free_station_index].op1.valid <= rob_alu_val_a_valid;
+      rs[free_station_index].op2.valid <= rob_alu_val_b_valid;
       rs[free_station_index].nzcv_valid <= rob_nzcv_valid;
-      rs[free_station_index].op1.value <= rob_val_a_value;
-      rs[free_station_index].op2.value <= rob_val_b_value;
+      rs[free_station_index].op1.value <= rob_alu_val_a_value;
+      rs[free_station_index].op2.value <= rob_alu_val_b_value;
       rs[free_station_index].set_nzcv <= rob_set_nzcv;
       rs[free_station_index].nzcv <= rob_nzcv;
-      rs[free_station_index].op1.rob_index <= rob_val_a_rob_index;
-      rs[free_station_index].op2.rob_index <= rob_val_b_rob_index;
+      rs[free_station_index].op1.rob_index <= rob_alu_val_a_rob_index;
+      rs[free_station_index].op2.rob_index <= rob_alu_val_b_rob_index;
       rs[free_station_index].dst_rob_index <= rob_dst_rob_index;
       rs[free_station_index].nzcv_rob_index <= rob_nzcv_rob_index;
       rs[free_station_index].op <= rob_fu_op;
@@ -296,10 +296,10 @@ module reservation_station_module #(
                rob_dst_rob_index);
       $display("(RS) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %0d", rob_set_nzcv,
                rob_instr_uses_nzcv, rob_fu_op);
-      $display("(RS) \top1: [valid: %0d, value: %0d, rob_index: %0d],", rob_val_a_valid,
-               rob_val_a_value, rob_val_a_rob_index);
-      $display("(RS) \top2: [valid: %0d, value: %0d, rob_index: %0d],", rob_val_b_valid,
-               rob_val_b_value, rob_val_b_rob_index);
+      $display("(RS) \top1: [valid: %0d, value: %0d, rob_index: %0d],", rob_alu_val_a_valid,
+               rob_alu_val_a_value, rob_alu_val_a_rob_index);
+      $display("(RS) \top2: [valid: %0d, value: %0d, rob_index: %0d],", rob_alu_val_b_valid,
+               rob_alu_val_b_value, rob_alu_val_b_rob_index);
       $display("(RS) \tnzcv: [uses: %0d, valid: %0d, value: %0d, rob_index: %0d],",
                rob_instr_uses_nzcv, rob_nzcv_valid, rob_nzcv, rob_nzcv_rob_index);
 `endif
@@ -310,8 +310,8 @@ module reservation_station_module #(
     // Allow the ALU to consume the value when ready
     out_fu_alu_start = fu_alu_ready & ready_station_index != INVALID_INDEX;
     out_fu_fu_op = rs[ready_station_index].op;
-    out_fu_val_a = rs[ready_station_index].op1.value;
-    out_fu_val_b = rs[ready_station_index].op2.value;
+    out_fu_alu_val_a = rs[ready_station_index].op1.value;
+    out_fu_alu_val_b = rs[ready_station_index].op2.value;
     out_fu_dst_rob_index = rs[ready_station_index].dst_rob_index;
     out_fu_alu_nzcv = rs[ready_station_index].nzcv;
     out_fu_alu_set_nzcv = rs[ready_station_index].set_nzcv;

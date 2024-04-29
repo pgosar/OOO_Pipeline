@@ -34,18 +34,18 @@ module rob_module (
     output logic out_rs_done,  // A
     output fu_t out_rs_fu_id,  // AA
     output fu_op_t out_rs_fu_op,  // AB
-    output logic out_rs_val_a_valid,  // AC
-    output logic out_rs_val_b_valid,  // AD
+    output logic out_rs_alu_val_a_valid,  // AC
+    output logic out_rs_alu_val_b_valid,  // AD
     output logic out_rs_nzcv_valid,  // AE
-    output logic [`GPR_SIZE-1:0] out_rs_val_a_value,  // ACA
-    output logic [`GPR_SIZE-1:0] out_rs_val_b_value,  // ADA
+    output logic [`GPR_SIZE-1:0] out_rs_alu_val_a_value,  // ACA
+    output logic [`GPR_SIZE-1:0] out_rs_alu_val_b_value,  // ADA
     output logic out_rs_instr_uses_nzcv,  // AE
     output nzcv_t out_rs_nzcv,  // AEA
     output logic out_rs_set_nzcv,  // AF
-    output logic [`ROB_IDX_SIZE-1:0] out_rs_val_a_rob_index,  // ACB
-    output logic [`ROB_IDX_SIZE-1:0] out_rs_val_b_rob_index,  // ADB
-    output logic [`ROB_IDX_SIZE-1:0] out_rs_dst_rob_idx,  // AG
-    output logic [`ROB_IDX_SIZE-1:0] out_rs_nzcv_rob_idx,  // AH
+    output logic [`ROB_IDX_SIZE-1:0] out_rs_alu_val_a_rob_index,  // ACB
+    output logic [`ROB_IDX_SIZE-1:0] out_rs_alu_val_b_rob_index,  // ADB
+    output logic [`ROB_IDX_SIZE-1:0] out_rs_alu_dst_rob_index,  // AG
+    output logic [`ROB_IDX_SIZE-1:0] out_rs_nzcv_rob_index,  // AH
     // Output for regfile (for the next ROB insertion)
     output logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index,  // D
     // Outputs for RS (on broadcast... resultant from FU)
@@ -63,8 +63,8 @@ module rob_module (
     output logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index,  // CD
     output cond_t out_rs_cond_codes  // CE ???
     // // Outputs for dispatch
-    // output logic [`ROB_IDX_SIZE-1:0] out_next_rob_idx,
-    // output logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_idx[`MISSPRED_SIZE]
+    // output logic [`ROB_IDX_SIZE-1:0] out_next_rob_index,
+    // output logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_index[`MISSPRED_SIZE]
 );
   // Internal state
   rob_entry_t [`ROB_SIZE-1:0] rob;
@@ -166,11 +166,11 @@ module rob_module (
       out_rs_set_nzcv <= in_reg_set_nzcv;
       out_rs_cond_codes <= in_reg_cond_codes;
       out_rs_instr_uses_nzcv <= in_reg_instr_uses_nzcv;
-      out_rs_val_a_rob_index <= in_reg_src1_rob_index;
-      out_rs_val_b_rob_index <= in_reg_src2_rob_index;
-      out_rs_nzcv_rob_idx <= in_reg_nzcv_rob_index;
+      out_rs_alu_val_a_rob_index <= in_reg_src1_rob_index;
+      out_rs_alu_val_b_rob_index <= in_reg_src2_rob_index;
+      out_rs_nzcv_rob_index <= in_reg_nzcv_rob_index;
       // Set dst
-      out_rs_dst_rob_idx = next_ptr;
+      out_rs_alu_dst_rob_index = next_ptr;
     end : not_reset
   end
 
@@ -184,11 +184,11 @@ module rob_module (
     out_rs_done = reg_done;
     out_reg_next_rob_index = next_ptr;
 
-    out_rs_val_a_valid = reg_src1_valid | rob[reg_src1_rob_index].valid;
-    out_rs_val_b_valid = reg_src2_valid | rob[reg_src2_rob_index].valid;
+    out_rs_alu_val_a_valid = reg_src1_valid | rob[reg_src1_rob_index].valid;
+    out_rs_alu_val_b_valid = reg_src2_valid | rob[reg_src2_rob_index].valid;
     out_rs_nzcv_valid = reg_nzcv_valid | rob[reg_nzcv_rob_index].valid;
-    out_rs_val_a_value = reg_src1_valid ? reg_src1_value : rob[reg_src1_rob_index].value; // NOTE(Nate): This logic is goofy but works!
-    out_rs_val_b_value = reg_src2_valid ? reg_src2_value : rob[reg_src2_rob_index].value;
+    out_rs_alu_val_a_value = reg_src1_valid ? reg_src1_value : rob[reg_src1_rob_index].value; // NOTE(Nate): This logic is goofy but works!
+    out_rs_alu_val_b_value = reg_src2_valid ? reg_src2_value : rob[reg_src2_rob_index].value;
     out_rs_nzcv = reg_nzcv_valid ? reg_nzcv : rob[reg_nzcv_rob_index].nzcv;
 
     // Broadcast (output) values to the rs after the fu has finished
@@ -221,9 +221,9 @@ module rob_module (
       // rob[in_fu_dst_rob_index] <= 0;
       // rob[in_fu_dst_rob_index - 1] <= 0;
       // rob[in_fu_dst_rob_index - 2] <= 0;
-      // out_delete_mispred_idx[0] <= (in_fu_dst_rob_index + `ROB_SIZE) % `ROB_SIZE;
-      // out_delete_mispred_idx[1] <= (in_fu_dst_rob_index - 1 + `ROB_SIZE) % `ROB_SIZE;
-      // out_delete_mispred_idx[2] <= (in_fu_dst_rob_index - 2 + `ROB_SIZE) % `ROB_SIZE;
+      // out_delete_mispred_index[0] <= (in_fu_dst_rob_index + `ROB_SIZE) % `ROB_SIZE;
+      // out_delete_mispred_index[1] <= (in_fu_dst_rob_index - 1 + `ROB_SIZE) % `ROB_SIZE;
+      // out_delete_mispred_index[2] <= (in_fu_dst_rob_index - 2 + `ROB_SIZE) % `ROB_SIZE;
     end
   end
 

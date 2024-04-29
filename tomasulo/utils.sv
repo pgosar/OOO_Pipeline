@@ -35,7 +35,7 @@ module cond_holds (
 endmodule
 
 module OP_UBFM_module (
-    input  logic [63:0] in_val_a,
+    input  logic [63:0] in_alu_val_a,
     input  logic [ 5:0] in_imms,
     input  logic [ 5:0] in_immr,
     output logic [63:0] out_value
@@ -43,16 +43,16 @@ module OP_UBFM_module (
 
   always_comb begin
     if (in_imms >= in_immr) begin
-      out_value = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
+      out_value = (in_alu_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
     end else begin
-      out_value = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
+      out_value = (in_alu_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
     end
   end
 
 endmodule
 
 module OP_SBFM_module (
-    input  logic signed [63:0] in_val_a,
+    input  logic signed [63:0] in_alu_val_a,
     input  logic signed [ 5:0] in_imms,
     input  logic signed [ 5:0] in_immr,
     output logic signed [63:0] out_value
@@ -60,9 +60,9 @@ module OP_SBFM_module (
 
   always_comb begin
     if (in_imms >= in_immr) begin
-      out_value = (in_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
+      out_value = (in_alu_val_a >> in_immr) & ((1 << (in_imms - in_immr + 1)) - 1);
     end else begin
-      out_value = (in_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
+      out_value = (in_alu_val_a & ((1 << (in_imms + 1)) - 1)) << in_immr;
     end
   end
 

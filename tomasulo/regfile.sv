@@ -7,6 +7,7 @@ module reg_module (
     // Inputs from decode (consumed in decode)
     input logic in_d_done,
     // Inputs from decode (passed through or used)
+    input opcode_t in_d_opcode,
     input logic in_d_set_nzcv,
     input logic in_d_use_imm,
     input logic [`IMMEDIATE_SIZE-1:0] in_d_imm,
@@ -67,6 +68,7 @@ module reg_module (
   logic d_use_imm;
   logic [`GPR_IDX_SIZE-1:0] src1_rob_index;
   logic [`GPR_IDX_SIZE-1:0] src2_rob_index;
+  opcode_t d_opcode;
 
   // Commit & buffer inputs
   always_ff @(posedge in_clk) begin
@@ -91,11 +93,12 @@ module reg_module (
         d_set_nzcv <= in_d_set_nzcv;
         d_imm <= in_d_imm;
         d_use_imm <= in_d_use_imm;
+        d_opcode <= in_d_opcode;
         rob_next_rob_index <= in_rob_next_rob_index;
         // Copy unused signals
+        out_rob_fu_op <= in_d_fu_op;
         out_rob_fu_id <= in_d_fu_id;
         out_rob_instr_uses_nzcv <= in_d_instr_uses_nzcv;
-        out_rob_fu_op <= in_d_fu_op;
       end
       if (d_done) begin
         // Buffer old rob indices first....
@@ -169,20 +172,24 @@ module reg_module (
   // Set outputs
   always_comb begin
     out_rob_done = d_done;
-    // Src 1
-    out_rob_src1_valid = gprs[d_src1].valid; // TODO(Nate): This line is bad, because we set invalid on posedge
+    // Src 1 - With LDUR/STUR, src1 contains base address.
+    out_rob_src1_valid = gprs[d_src1].valid;
     out_rob_src1_value = gprs[d_src1].value;
     out_rob_src1_rob_index = (d_dst == d_src1) ? src1_rob_index : gprs[d_src1].rob_index;
-    // $display(
-    // "out_rob_src1_rob_index: %0d, d_dst: %0d, d_src1: %0d, src1_rob_index: %0d, gprs[d_src1].rob_index: %0d",
-    // out_rob_src1_rob_index, d_dst, d_src1, src1_rob_index, gprs[d_src1].rob_index);
-    // Src2
-    if (d_use_imm) begin
-      out_rob_src2_value = d_imm;
-      out_rob_src2_valid = 1;
-    end else begin
-      out_rob_src2_valid = gprs[d_src2].valid;
-      out_rob_src2_value = gprs[d_src2].value;
+    // Src2 - With LDUR, the immediate is the offset.
+    //      - With STUR, src2 contains value to store. immediate contains the offset
+    if (d_opcode == OP_STUR) begin
+      // out_rob_v
+      // out_rob
+    end else if (d_opcode == OP_LDUR) begin
+    end begin
+      if (d_use_imm) begin
+        out_rob_src2_value = d_imm;
+        out_rob_src2_valid = 1;
+      end else begin
+        out_rob_src2_valid = gprs[d_src2].valid;
+        out_rob_src2_value = gprs[d_src2].value;
+      end
     end
     out_rob_src2_rob_index = (d_dst == d_src2) ? src2_rob_index : gprs[d_src2].rob_index;
     // NZCV

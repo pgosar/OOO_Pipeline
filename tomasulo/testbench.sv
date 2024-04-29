@@ -4,7 +4,7 @@
 
 //     // Inputs
 //     logic clk;
-//     logic [63:0] i_val_a;
+//     logic [63:0] i_alu_val_a;
 //     logic [5:0] imms;
 //     logic [5:0] immr;
 //     logic rst;
@@ -14,7 +14,7 @@
 
 //     // Instantiate UBFM module
 //     ubfm_module dut (
-//         .i_val_a(i_val_a),
+//         .i_alu_val_a(i_alu_val_a),
 //         .clk(clk),
 //         .rst(rst),
 //         .imms(imms),
@@ -33,12 +33,12 @@
 
 //         // Reset
 //         @(posedge clk);
-//         i_val_a = 0;
+//         i_alu_val_a = 0;
 //         imms = 0;
 //         immr = 0;
 
 //         // Test case 1
-//         i_val_a = 64'hFF;
+//         i_alu_val_a = 64'hFF;
 //         imms = 3;
 //         immr = 1;
 //         @(posedge clk);
@@ -74,8 +74,8 @@ module alu_tb;
 
   alu dut (
       .in_fu_op(ALUop),
-      .in_val_a(alu_vala),
-      .in_val_b(alu_valb),
+      .in_alu_val_a(alu_vala),
+      .in_alu_val_b(alu_valb),
       .in_alu_val_hw(alu_val_hw),
       .in_set_CC(set_CC),
       .in_cond(cond),

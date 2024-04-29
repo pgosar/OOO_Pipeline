@@ -74,7 +74,7 @@ module testbench ();
       clk = ~clk;
       $display("\nclk: %b Debug: %x", clk, debug_data.rs[0]);
       $write(
-          "Reservation Station: op1_valid: %1h | op1_value: %d | op1_gpr_idx: %d | op2_valid: %d | op2_value: %d | op2_gpr_idx: %d",
+          "Reservation Station: op1_valid: %1h | op1_value: %d | op1_gpr_index: %d | op2_valid: %d | op2_value: %d | op2_gpr_index: %d",
           debug_data.rs[0].op1.valid, debug_data.rs[0].op1.value, debug_data.rs[0].op1.gpr_index,
           debug_data.rs[0].op2.valid, debug_data.rs[0].op2.value, debug_data.rs[0].op2.gpr_index);
     end

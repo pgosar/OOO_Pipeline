@@ -9,9 +9,9 @@ module func_units (
     input logic in_rs_alu_start,
     input logic in_rs_ls_start,
     input fu_op_t in_rs_fu_op,
-    input logic [`GPR_SIZE-1:0] in_rs_val_a,
-    input logic [`GPR_SIZE-1:0] in_rs_val_b,
-    input logic [`ROB_IDX_SIZE-1:0] in_rs_dst_rob_index,
+    input logic [`GPR_SIZE-1:0] in_rs_alu_val_a,
+    input logic [`GPR_SIZE-1:0] in_rs_alu_val_b,
+    input logic [`ROB_IDX_SIZE-1:0] in_rs_alu_dst_rob_index,
     input logic in_rs_alu_set_nzcv,
     input nzcv_t in_rs_alu_nzcv,
     // Outputs for RS
@@ -26,99 +26,79 @@ module func_units (
     output logic out_alu_condition
     // output logic out_rob_is_mispred
 );
-  // NOTE(Nate): If the ROB is full, it will need to stall the functional units.
-  //             Stalling of the functional units will
 
-  // Placeholder values for LS
-  logic ls_done;
-  logic stall_ls;
-  assign ls_done = 0;
+  fu_op_t fu_op;
+  logic [`GPR_SIZE-1:0] val_a;
+  logic [`GPR_SIZE-1:0] val_b;
+  logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
+  logic [`GPR_SIZE-1:0] out_value;
+  // Buffered state (for clocking ALU)
+  logic rs_alu_set_nzcv;
+  nzcv_t rs_alu_nzcv;
+  logic [`ROB_IDX_SIZE-1:0] rs_alu_dst_rob_index;
+  // ALU specific buffers
+  logic alu_out_set_nzcv;
 
-  // Logic to handle structural hazards when L/S and ALU are both done
+  // Decide on whether LS or ALU should run
   always_comb begin
-    if (ls_done & out_rob_done) begin
-      stall_ls = 1;
-
+    out_rob_dst_rob_index = dst_rob_index;
+    out_rob_value = out_value;
+    if (in_rs_ls_start) begin
+      out_rs_alu_ready = 0;
+      out_rs_ls_ready  = 1;
     end else begin
-      stall_ls = 0;
+      out_rs_alu_ready = 1;
+      out_rs_ls_ready  = 0;
     end
   end
 
-  // Outputs
-  logic [`ROB_IDX_SIZE-1:0] alu_out_dst_rob_index;
-  logic [`GPR_SIZE-1:0] alu_out_value;
-  logic alu_out_set_nzcv;
-
-  // Buffered state (for clocking ALU)
-  logic rs_alu_start;
-  fu_op_t rs_fu_op;
-  logic [`GPR_SIZE-1:0] rs_val_a;
-  logic [`GPR_SIZE-1:0] rs_val_b;
-  logic [`ROB_IDX_SIZE-1:0] rs_dst_rob_index;
-  logic rs_alu_set_nzcv;
-  nzcv_t rs_alu_nzcv;
-
-  // Temporarily connect alu to FU out always
-  assign out_rob_dst_rob_index = alu_out_dst_rob_index;
-  assign out_rob_value = alu_out_value;
-  assign out_rs_alu_ready = 1;
-  assign out_rs_ls_ready = 1;
-
+  // Buffer inputs
   always_ff @(posedge in_clk) begin
+    out_rob_done <= in_rs_ls_start | in_rs_alu_start;
     if (in_rs_alu_start) begin
       // buffered state (so that it is clocked)
-      rs_fu_op <= in_rs_fu_op;
-      rs_val_a <= in_rs_val_a;
-      rs_val_b <= in_rs_val_b;
-      rs_dst_rob_index <= in_rs_dst_rob_index;
+      fu_op <= in_rs_fu_op;
+      val_a <= in_rs_alu_val_a;
+      val_b <= in_rs_alu_val_b;
+      dst_rob_index <= in_rs_alu_dst_rob_index;
       rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
       rs_alu_nzcv <= in_rs_alu_nzcv;
 `ifdef DEBUG_PRINT
       #1
-      $display(
-          "(ALU) %s calculated: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d",
-          rs_fu_op.name,
-          $signed(
-              alu_out_value
-          ),
-          rs_dst_rob_index,
-          $signed(
-              rs_val_a
-          ),
-          $signed(
-              rs_val_b
-          ),
-          out_rob_nzcv,
-          out_alu_condition
-      );
+      $display( "(ALU) %s calculated: %0d for dst ROB[%0d] val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d", fu_op.name, $signed( out_value), dst_rob_index, $signed( val_a), $signed( val_b), out_rob_nzcv, out_alu_condition);
 `endif
+    end else if (in_rs_ls_start) begin
+      // buffered state (so that it is clocked)
+      fu_op <= in_rs_fu_op;
+      val_a <= in_rs_alu_val_a;
+      val_b <= in_rs_alu_val_b;
+      dst_rob_index <= in_rs_alu_dst_rob_index;
+`ifdef DEBUG_PRINT
+      #2
+      $display( "(LS) %s executed: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b", fu_op.name, $signed( out_value), dst_rob_index, $signed( val_a), $signed( val_b), out_rob_nzcv); `endif
     end
   end
 
   logic dmem_clk = in_clk & in_rs_ls_start;
   dmem dmem_module (
       .clk(dmem_clk),
-      .in_addr(in_rs_val_a),
+      .in_addr(in_rs_alu_val_a),
       .w_enable(in_rs_fu_op == FU_OP_STUR),
-      .wval(in_rs_val_b),
-      .data(out_rob_value)
+      .wval(in_rs_alu_val_b),
+      .data(out_value)
   );
 
   alu_module alu (
-      .in_start(rs_alu_start),
       .in_cond(in_rob_cond_codes),
-      .in_op(rs_fu_op),
-      .in_val_a(rs_val_a),
-      .in_val_b(rs_val_b),
-      .in_dst_rob_index(rs_dst_rob_index),
+      .in_op(fu_op),
+      .in_alu_val_a(val_a),
+      .in_alu_val_b(val_b),
       .in_set_nzcv(rs_alu_set_nzcv),
       .in_nzcv(rs_alu_nzcv),
-      .out_done(out_rob_done),  // Done signal indicating operation completion
       .out_alu_condition(out_alu_condition),
-      .out_value(alu_out_value),
+      .out_value(out_value),
       .out_nzcv(out_rob_nzcv),
-      .out_set_nzcv(alu_out_set_nzcv),
-      .out_dst_rob_index(alu_out_dst_rob_index)
+      .out_set_nzcv(alu_out_set_nzcv)
   );
 
 endmodule
@@ -126,21 +106,17 @@ endmodule
 
 // TODO output to RS if ready or not
 module alu_module (
-    input logic in_start,
     input cond_t in_cond,
     input fu_op_t in_op,
-    input logic [`GPR_SIZE-1:0] in_val_a,
-    input logic [`GPR_SIZE-1:0] in_val_b,
-    input logic [`ROB_IDX_SIZE-1:0] in_dst_rob_index,
+    input logic [`GPR_SIZE-1:0] in_alu_val_a,
+    input logic [`GPR_SIZE-1:0] in_alu_val_b,
     input nzcv_t in_nzcv,
     input logic in_set_nzcv,
     // TODO(Nate): We need to include input condition codes
-    output logic out_done,  // Done signal indicating operation completion
     output logic out_alu_condition,
     output logic [`GPR_SIZE-1:0] out_value,
     output nzcv_t out_nzcv,
-    output logic out_set_nzcv,
-    output logic [`ROB_IDX_SIZE-1:0] out_dst_rob_index
+    output logic out_set_nzcv
 );
 
   logic [`GPR_SIZE:0] result;  // add 1 bit for easy carry calculations
@@ -153,16 +129,13 @@ module alu_module (
   logic [`GPR_SIZE:0] val_b;
 
   assign out_value = result[`GPR_SIZE-1:0];
-  assign val_a = {1'b0, in_val_a};
-  assign val_b = {1'b0, in_val_b};
+  assign val_a = {1'b0, in_alu_val_a};
+  assign val_b = {1'b0, in_alu_val_b};
   assign out_alu_condition = 0;
 
   // Useful wires
   assign val_a_negative = val_a[`GPR_SIZE-1];
   assign val_b_negative = val_b[`GPR_SIZE-1];
-
-  // Passthroughs
-  assign out_dst_rob_index = in_dst_rob_index;
 
   // TODO(Nate): Conditions are wacky in general rn
   cond_holds c_holds (
@@ -199,8 +172,6 @@ module alu_module (
     end else begin
       out_nzcv = in_nzcv;
     end
-
-    out_done = in_start;
   end
 endmodule
 
