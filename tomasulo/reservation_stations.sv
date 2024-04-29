@@ -5,6 +5,7 @@ module reservation_stations (
     input logic in_rst,
     input logic in_clk,
     // Inputs From ROB (sourced from either regfile or ROB)
+    input cond_t in_rob_cond_codes,
     input logic in_rob_done,
     input fu_t in_rob_fu_id,
     input alu_op_t in_rob_fu_op,
@@ -38,7 +39,8 @@ module reservation_stations (
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
     output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,
     output logic out_fu_alu_set_nzcv,
-    output nzcv_t out_fu_alu_nzcv
+    output nzcv_t out_fu_alu_nzcv,
+    output cond_t out_fu_cond_codes
 );
 
   logic ls_ready, alu_ready;
@@ -63,6 +65,7 @@ module reservation_station_module #(
     input logic in_rst,
     input logic in_clk,
     // Inputs From ROB
+    input cond_t in_rob_cond_codes,
     input logic in_rob_done,
     input alu_op_t in_rob_fu_op,
     input logic in_rob_val_a_valid,
@@ -99,7 +102,8 @@ module reservation_station_module #(
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,  // AC
     output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,  // AD
     output logic out_fu_alu_set_nzcv,  // AE
-    output nzcv_t out_fu_alu_nzcv  // AF
+    output nzcv_t out_fu_alu_nzcv,  // AF
+    output cond_t out_fu_cond_codes
 );
 
   // In RS, we create two bitmaps. One shows entries which are READY to
@@ -230,6 +234,9 @@ module reservation_station_module #(
       rob_broadcast_nzcv <= in_rob_broadcast_nzcv;
       rob_broadcast_set_nzcv <= in_rob_broadcast_set_nzcv;
       rob_broadcast_done <= in_rob_broadcast_done;
+
+      // Unused state
+      out_fu_cond_codes <= in_rob_cond_codes;
     end : rs_not_reset
   end : rs_on_clk
 

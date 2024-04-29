@@ -360,6 +360,8 @@ module dispatch (
       $display("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_dst,
                out_reg_src1, out_reg_src2, out_reg_imm, out_reg_use_imm);
       $display("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_set_nzcv, out_reg_instr_uses_nzcv);
+      $display("(dec) cond codes %0b", out_reg_cond_codes);
+
     end
   end
 `endif

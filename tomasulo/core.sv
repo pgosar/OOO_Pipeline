@@ -78,7 +78,6 @@ module core (
   fu_t out_rob_fu_id;
   logic out_rob_instr_uses_nzcv;
 
-
   // ROB
 
   // Inputs from FU
@@ -163,7 +162,7 @@ module core (
   logic in_rob_is_mispred;
   logic in_fu_ls_ready;
   logic in_fu_alu_ready;  // ready to receive inputs
-  cond_t in_rob_cond_codes;
+  cond_t rs_in_rob_cond_codes;
   logic in_rob_instr_uses_nzcv;
   // Outputs for FU
   logic out_fu_alu_start;
@@ -189,7 +188,7 @@ module core (
   logic [`ROB_IDX_SIZE-1:0] in_rs_alu_dst_rob_index;
   logic in_rs_alu_set_nzcv;
   nzcv_t in_rs_alu_nzcv;
-  cond_t in_rs_cond_codes;
+  cond_t in_rob_cond_codes;
   logic in_rs_instr_uses_nzcv;
 
 
@@ -235,6 +234,8 @@ module core (
     #10
     in_fetch_insnbits = 32'b11101011000_00001_000000_00011_00011;  // subs x3, x3, x1 set neg flag -> x3 = -8190
     #10
+    in_fetch_insnbits = 32'b11011010100_00001_0000_00_00011_00111; // csinv x7, x3, x1, eq -> ffffffffffff0000
+    #10
     // #10 in_fetch_insnbits = 32'b1101_0101_0000_0011_0010_0000_0001_1111;  // NOP
     in_fetch_done = 0;
 
@@ -266,7 +267,7 @@ module core (
   assign in_rob_reg_index = out_reg_index;
   assign in_rob_commit_rob_index = out_reg_commit_rob_index;
   assign in_rob_next_rob_index = out_reg_next_rob_index;
-  // assign in_rob_cond_codes = out_reg_cond_codes;
+  assign in_rob_cond_codes = out_reg_cond_codes;
 
   // REGFILE TO ROB rob inputs = regfile outputs
   assign in_reg_done = reg_out_rob_done;
@@ -304,7 +305,7 @@ module core (
   assign in_rob_broadcast_done = out_rs_broadcast_done;
   assign in_rob_broadcast_index = out_rs_broadcast_index;
   assign in_rob_broadcast_value = out_rs_broadcast_value;
-  assign in_rob_cond_codes = out_rs_cond_codes;
+  assign rs_in_rob_cond_codes = out_rs_cond_codes;
   assign in_rob_instr_uses_nzcv = out_rs_instr_uses_nzcv;
 
   // FU TO ROB rob inputs = fu outputs
@@ -335,12 +336,12 @@ module core (
   assign out_fu_alu_ready = in_fu_alu_ready;
   assign out_fu_ls_ready = in_fu_ls_ready;
 
-  // RS toFU
-  assign out_fu_cond_codes = in_rs_cond_codes;
+  // RS to FU
+  assign out_fu_cond_codes = in_rob_cond_codes;
   assign out_fu_instr_uses_nzcv = in_rs_instr_uses_nzcv;
 
   // modules
-  fetch f (.*);
+  // fetch f (.*);
 
   dispatch dp (
       .*,
@@ -358,6 +359,7 @@ module core (
   );
   reservation_stations rs (
       .*,
+      .in_rob_cond_codes(rs_in_rob_cond_codes),
       .in_rob_nzcv(rs_in_rob_nzcv),
       .in_rob_set_nzcv(rs_in_rob_set_nzcv)
   );

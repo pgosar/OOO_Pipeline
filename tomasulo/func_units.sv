@@ -5,6 +5,7 @@ module func_units (
     // Timing
     input logic in_clk,
     // inputs from RS
+    input cond_t in_rob_cond_codes,
     input logic in_rs_alu_start,
     input logic in_rs_ls_start,
     input alu_op_t in_rs_alu_op,
@@ -100,6 +101,7 @@ module func_units (
 
   alu_module alu (
       .in_start(rs_alu_start),
+      .in_cond(in_rob_cond_codes),
       .in_op(rs_alu_op),
       .in_val_a(rs_alu_val_a),
       .in_val_b(rs_alu_val_b),
@@ -124,13 +126,13 @@ module func_units (
   //     .data(0)
   // );
 
-
 endmodule
 
 
 // TODO output to RS if ready or not
 module alu_module (
     input logic in_start,
+    input cond_t in_cond,
     input alu_op_t in_op,
     input logic [`GPR_SIZE-1:0] in_val_a,
     input logic [`GPR_SIZE-1:0] in_val_b,
@@ -168,15 +170,15 @@ module alu_module (
   assign out_dst_rob_index = in_dst_rob_index;
 
   // TODO(Nate): Conditions are wacky in general rn
-  // cond_holds c_holds (
-  //     .cond(in_cond),
-  //     .nzcv(in_nzcv),
-  //     .cond_holds(out_alu_condition)
-  // );
+  cond_holds c_holds (
+      .cond(in_cond),
+      .nzcv(in_nzcv),
+      .cond_holds(out_alu_condition)
+  );
+
 
   logic result_negative;
   always_comb begin
-
     casez (in_op)
       ALU_OP_PLUS: result = val_a + val_b;
       ALU_OP_MINUS: result = val_a - val_b;
@@ -184,10 +186,10 @@ module alu_module (
       ALU_OP_OR: result = val_a | val_b;
       ALU_OP_EOR: result = val_a ^ val_b;
       ALU_OP_AND: result = val_a & val_b;
-      ALU_OP_CSNEG: result = val_b + 1;  // NOTE(Nate): Is this correct?
-      ALU_OP_CSINC: result = val_b + 1;
-      ALU_OP_CSINV: result = val_b;
-      ALU_OP_CSEL: result = val_b;
+      ALU_OP_CSNEG: result = out_alu_condition == 0 ? ~val_b + 1 : val_a;
+      ALU_OP_CSINC: result = out_alu_condition == 0 ? val_b + 1 : val_a;
+      ALU_OP_CSINV: result = out_alu_condition == 0 ? ~val_b : val_a;
+      ALU_OP_CSEL: result = out_alu_condition == 0 ? val_b : val_a;
       // ALU_OP_MOV: result = val_a | (val_b << in_alu_val_hw); // NOTE(Nate): What is this?
       // ALU_OP_PASS_A: result = val_a; // NOTE(Nate): No longer required
       default: result = 0;
@@ -202,15 +204,7 @@ module alu_module (
     end else begin
       out_nzcv = in_nzcv;
     end
-    // if(in_op == ALU_OP_CSEL | in_op == ALU_OP_CSNEG | in_op == ALU_OP_CSINC | in_op == ALU_OP_CSINV) begin
-    //   if (out_alu_condition == 0) begin
-    //      <= result;
-    //   end else begin
-    //     out_value = val_a;
-    //   end
-    // end else begin
-    //   out_value = result;
-    // end
+
     out_done = in_start;
   end
 endmodule

@@ -62,9 +62,9 @@ typedef enum logic [`OPCODE_SIZE-1:0] {
   OP_MOVZ,
   OP_ADR,
   OP_ADRP,
-  // OP_CINC,  // alias of CSINC
-  // OP_CINV,  // alias of CSINV
-  // OP_CNEG,  // alias of SCNEG
+  OP_CINC,  // alias of CSINC
+  OP_CINV,  // alias of CSINV
+  OP_CNEG,  // alias of SCNEG
   OP_CSEL,
   // OP_CSET,  // alias of ??
   // OP_CSETM, // alias of ??
