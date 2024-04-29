@@ -1,8 +1,9 @@
 `include "func_units.sv" 
 module fetch # (parameter int PAGESIZE = 4096) // note: this should always be 4096
   (
-   input wire clk,
-   output logic [31:0] insnbits
+   input wire in_clk,
+   output logic [31:0] in_fetch_insnbits,
+   output logic in_fetch_done
   );
   // steps: 
   // 1. select PC (?) assuming no mispredictions for now
@@ -20,17 +21,18 @@ module fetch # (parameter int PAGESIZE = 4096) // note: this should always be 40
   logic [63:0] PC;
 
   initial begin: init_PC
-    $readmemb("entry.txt", PC_load);
+    $readmemb("mem/entry.txt", PC_load);
     PC = PC_load[0];
   end: init_PC
 
   imem #(PAGESIZE) mem(PC, data);
 
-  always_ff @(posedge clk) begin: fetch_logic
+  always_ff @(posedge in_clk) begin: fetch_logic
     // fix instruction alias?
     // predict new PC?
     // status updates?
-    insnbits <= data;
+    in_fetch_insnbits <= data;
+    in_fetch_done <= 1;
     PC <= PC + 4;
   end: fetch_logic
 endmodule: fetch

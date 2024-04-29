@@ -213,7 +213,7 @@ module imem #(
 );
   // read-only instruction memory module.
   localparam bits_amt = PAGESIZE;
-  localparam fname = "imem.txt";
+  localparam fname = "mem/imem.txt";
   logic [7:0] mem[bits_amt];
   logic [$clog2(PAGESIZE) - 1:0] addr;
 
@@ -242,7 +242,7 @@ module dmem #(
 );
   // read-only instruction memory module.
   localparam bits_amt = PAGESIZE * 4;  // 64 bit access
-  localparam fname = "dmem.txt";
+  localparam fname = "mem/dmem.txt";
   logic [7:0] mem[bits_amt];
 
   initial begin : mem_init

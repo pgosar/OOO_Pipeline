@@ -20,5 +20,5 @@ mem: mem.sv
 	@echo Output is in imem.txt and dmem.txt.
 	
 clean: 
-	@rm imem.txt dmem.txt load_elf mem.out
+	@rm imem.txt dmem.txt load_elf mem.out entry.txt
 .PHONY: % clean

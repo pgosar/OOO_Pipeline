@@ -182,5 +182,6 @@ int main(int argc, char* argv[]) {
   for (int i = 0; i < sizeof(entry) * 8; ++i) {
     fprintf(fout, "%llu", (entry >> (63 - i) & 1));
   }
+  fprintf(fout, "\n");
   fclose(fout);
 }
