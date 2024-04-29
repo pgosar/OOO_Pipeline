@@ -11,7 +11,7 @@ module rob_module (
     input logic [`GPR_SIZE-1:0] in_fu_value,
     input logic in_fu_set_nzcv,
     input nzcv_t in_fu_nzcv,
-    input logic in_fu_is_mispred,
+    // input logic in_fu_is_mispred,
     // Inputs from regfile (to forward to rs)
     input logic in_reg_done,  // NOTE(Nate): Is this stall?
     input logic in_reg_src1_valid,
@@ -34,18 +34,19 @@ module rob_module (
     output logic out_rs_done,  // A
     output fu_t out_rs_fu_id,  // AA
     output fu_op_t out_rs_fu_op,  // AB
-    output logic out_rs_alu_val_a_valid,  // AC
-    output logic out_rs_alu_val_b_valid,  // AD
+    output logic out_rs_val_a_valid,  // AC
+    output logic out_rs_val_b_valid,  // AD
     output logic out_rs_nzcv_valid,  // AE
-    output logic [`GPR_SIZE-1:0] out_rs_alu_val_a_value,  // ACA
-    output logic [`GPR_SIZE-1:0] out_rs_alu_val_b_value,  // ADA
+    output logic [`GPR_SIZE-1:0] out_rs_val_a_value,  // ACA
+    output logic [`GPR_SIZE-1:0] out_rs_val_b_value,  // ADA
     output logic out_rs_instr_uses_nzcv,  // AE
     output nzcv_t out_rs_nzcv,  // AEA
     output logic out_rs_set_nzcv,  // AF
-    output logic [`ROB_IDX_SIZE-1:0] out_rs_alu_val_a_rob_index,  // ACB
-    output logic [`ROB_IDX_SIZE-1:0] out_rs_alu_val_b_rob_index,  // ADB
-    output logic [`ROB_IDX_SIZE-1:0] out_rs_alu_dst_rob_index,  // AG
+    output logic [`ROB_IDX_SIZE-1:0] out_rs_val_a_rob_index,  // ACB
+    output logic [`ROB_IDX_SIZE-1:0] out_rs_val_b_rob_index,  // ADB
+    output logic [`ROB_IDX_SIZE-1:0] out_rs_dst_rob_index,  // AG
     output logic [`ROB_IDX_SIZE-1:0] out_rs_nzcv_rob_index,  // AH
+    output cond_t out_rs_cond_codes,  // CE ???
     // Output for regfile (for the next ROB insertion)
     output logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index,  // D
     // Outputs for RS (on broadcast... resultant from FU)
@@ -60,8 +61,7 @@ module rob_module (
     output nzcv_t out_reg_nzcv,  // CAA
     output logic [`GPR_SIZE-1:0] out_reg_commit_value,  // CB
     output logic [`GPR_IDX_SIZE-1:0] out_reg_index,  // CC
-    output logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index,  // CD
-    output cond_t out_rs_cond_codes  // CE ???
+    output logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index  // CD
     // // Outputs for dispatch
     // output logic [`ROB_IDX_SIZE-1:0] out_next_rob_index,
     // output logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_index[`MISSPRED_SIZE]
@@ -166,11 +166,11 @@ module rob_module (
       out_rs_set_nzcv <= in_reg_set_nzcv;
       out_rs_cond_codes <= in_reg_cond_codes;
       out_rs_instr_uses_nzcv <= in_reg_instr_uses_nzcv;
-      out_rs_alu_val_a_rob_index <= in_reg_src1_rob_index;
-      out_rs_alu_val_b_rob_index <= in_reg_src2_rob_index;
+      out_rs_val_a_rob_index <= in_reg_src1_rob_index;
+      out_rs_val_b_rob_index <= in_reg_src2_rob_index;
       out_rs_nzcv_rob_index <= in_reg_nzcv_rob_index;
       // Set dst
-      out_rs_alu_dst_rob_index = next_ptr;
+      out_rs_dst_rob_index = next_ptr;
     end : not_reset
   end
 
@@ -184,11 +184,11 @@ module rob_module (
     out_rs_done = reg_done;
     out_reg_next_rob_index = next_ptr;
 
-    out_rs_alu_val_a_valid = reg_src1_valid | rob[reg_src1_rob_index].valid;
-    out_rs_alu_val_b_valid = reg_src2_valid | rob[reg_src2_rob_index].valid;
+    out_rs_val_a_valid = reg_src1_valid | rob[reg_src1_rob_index].valid;
+    out_rs_val_b_valid = reg_src2_valid | rob[reg_src2_rob_index].valid;
     out_rs_nzcv_valid = reg_nzcv_valid | rob[reg_nzcv_rob_index].valid;
-    out_rs_alu_val_a_value = reg_src1_valid ? reg_src1_value : rob[reg_src1_rob_index].value; // NOTE(Nate): This logic is goofy but works!
-    out_rs_alu_val_b_value = reg_src2_valid ? reg_src2_value : rob[reg_src2_rob_index].value;
+    out_rs_val_a_value = reg_src1_valid ? reg_src1_value : rob[reg_src1_rob_index].value; // NOTE(Nate): This logic is goofy but works!
+    out_rs_val_b_value = reg_src2_valid ? reg_src2_value : rob[reg_src2_rob_index].value;
     out_rs_nzcv = reg_nzcv_valid ? reg_nzcv : rob[reg_nzcv_rob_index].nzcv;
 
     // Broadcast (output) values to the rs after the fu has finished
@@ -210,21 +210,21 @@ module rob_module (
   end
 
   // TODO branch misprediction
-  always_ff @(negedge in_clk) begin
-    if (in_fu_is_mispred) begin
-`ifdef DEBUG_PRINT
-      $display("(rob) NOT IMPLEMENTED: Deleting mispredicted instructions");
-`endif
-      // remove last 3 indexes (fetch, decode, execute)
-      // to fix wraparound, add rob_size and mod by rob_size
-      // commit_ptr <= (commit_ptr + `ROB_SIZE - 3) % `ROB_SIZE;
-      // rob[in_fu_dst_rob_index] <= 0;
-      // rob[in_fu_dst_rob_index - 1] <= 0;
-      // rob[in_fu_dst_rob_index - 2] <= 0;
-      // out_delete_mispred_index[0] <= (in_fu_dst_rob_index + `ROB_SIZE) % `ROB_SIZE;
-      // out_delete_mispred_index[1] <= (in_fu_dst_rob_index - 1 + `ROB_SIZE) % `ROB_SIZE;
-      // out_delete_mispred_index[2] <= (in_fu_dst_rob_index - 2 + `ROB_SIZE) % `ROB_SIZE;
-    end
-  end
+  //   always_ff @(negedge in_clk) begin
+  //     if (in_fu_is_mispred) begin
+  // `ifdef DEBUG_PRINT
+  //       $display("(rob) NOT IMPLEMENTED: Deleting mispredicted instructions");
+  // `endif
+  //       // remove last 3 indexes (fetch, decode, execute)
+  //       // to fix wraparound, add rob_size and mod by rob_size
+  //       // commit_ptr <= (commit_ptr + `ROB_SIZE - 3) % `ROB_SIZE;
+  //       // rob[in_fu_dst_rob_index] <= 0;
+  //       // rob[in_fu_dst_rob_index - 1] <= 0;
+  //       // rob[in_fu_dst_rob_index - 2] <= 0;
+  //       // out_delete_mispred_index[0] <= (in_fu_dst_rob_index + `ROB_SIZE) % `ROB_SIZE;
+  //       // out_delete_mispred_index[1] <= (in_fu_dst_rob_index - 1 + `ROB_SIZE) % `ROB_SIZE;
+  //       // out_delete_mispred_index[2] <= (in_fu_dst_rob_index - 2 + `ROB_SIZE) % `ROB_SIZE;
+  //     end
+  //   end
 
 endmodule

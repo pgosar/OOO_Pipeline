@@ -5,7 +5,6 @@ module reservation_stations (
     input logic in_rst,
     input logic in_clk,
     // Inputs From ROB (sourced from either regfile or ROB)
-    input cond_t in_rob_cond_codes,
     input logic in_rob_done,
     input fu_t in_rob_fu_id,
     input fu_op_t in_rob_fu_op,
@@ -14,19 +13,22 @@ module reservation_stations (
     input logic in_rob_nzcv_valid,
     input logic [`GPR_SIZE-1:0] in_rob_val_a_value,
     input logic [`GPR_SIZE-1:0] in_rob_val_b_value,
+    input logic in_rob_instr_uses_nzcv,
     input nzcv_t in_rob_nzcv,
     input logic in_rob_set_nzcv,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
+    input cond_t in_rob_cond_codes,
+    // Inputs from ROB (for broadcast)
     input logic in_rob_broadcast_done,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
     input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
     input logic in_rob_broadcast_set_nzcv,
     input nzcv_t in_rob_broadcast_nzcv,
-    input logic in_rob_is_mispred,
-    input logic in_rob_instr_uses_nzcv,
+    // Inputs from FU (mispred)
+    // input logic in_rob_is_mispred,
     // Inputs from FU (ALU)
     input logic in_fu_alu_ready,
     // Outputs for FU (ALU)
@@ -50,13 +52,15 @@ module reservation_stations (
 
   logic ls_ready, alu_ready;
   always_ff @(posedge in_clk) begin
-    $display("(MASTER rs) FU ID: %s", in_rob_fu_id.name);
+    // $display("(MASTER rs) FU ID: %s, alu ready", in_rob_fu_id.name);
+    alu_ready <= (in_rob_fu_id == FU_ALU) & in_fu_alu_ready;
+    ls_ready  <= (in_rob_fu_id == FU_LS) & in_fu_ls_ready;
+    // $display("(MASTER rs) Alu start: %0d", out_fu_alu_start);
   end
-  assign alu_ready = in_rob_fu_id == FU_ALU & in_fu_alu_ready;
-  assign ls_ready  = in_rob_fu_id == FU_LS & in_fu_ls_ready;
 
   reservation_station_module ls (
       .*,
+      .in_rob_done(in_rob_done & (in_rob_fu_id == FU_LS)),
       .in_fu_ready(ls_ready),
       .out_fu_start(out_fu_ls_start),
       .out_fu_op(out_fu_ls_op),
@@ -64,8 +68,10 @@ module reservation_stations (
       .out_fu_val_b(out_fu_ls_val_b),
       .out_fu_dst_rob_index(out_fu_ls_dst_rob_index)
   );
+
   reservation_station_module alu (
       .*,
+      .in_rob_done(in_rob_done & (in_rob_fu_id == FU_ALU)),
       .in_fu_ready(alu_ready),
       .out_fu_start(out_fu_alu_start),
       .out_fu_op(out_fu_alu_op),
@@ -108,7 +114,7 @@ module reservation_station_module #(
     input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
     input logic in_rob_broadcast_set_nzcv,
     input nzcv_t in_rob_broadcast_nzcv,
-    input logic in_rob_is_mispred,
+    // input logic in_rob_is_mispred,
 
     // Inputs from FU (general)
     input logic in_fu_ready,
@@ -216,20 +222,21 @@ module reservation_station_module #(
         rs[i].entry_valid <= 0;
       end
     end else begin : rs_not_reset
-      if (in_rob_is_mispred) begin
+      /* if (in_rob_is_mispred) begin
 `ifdef DEBUG_PRINT
         $display("(RS) Deleting mispredicted instructions");
 `endif
-        // todo handle mispred
-      end else begin : rs_not_mispred
+        todo handle mispred
+      end else */ begin : rs_not_mispred
         if (fu_alu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
 `ifdef DEBUG_PRINT
           $display("(RS) Remove entry RS[%0d]. FU consumed entry at start of this cycle.",
                    ready_station_index);
+          $display("(RS) \tOut start: %0d", out_fu_start);
 `endif
           rs[ready_station_index].entry_valid <= ~fu_alu_ready;
         end : fu_consume_entry
-      end : rs_not_mispred
+      end
       // Buffer state
       rob_val_a_valid <= in_rob_val_a_valid;
       rob_val_b_valid <= in_rob_val_b_valid;
