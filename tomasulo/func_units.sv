@@ -251,8 +251,10 @@ module dmem #(
     $readmemb(fname, mem);
   end : mem_init
 
+  logic [$clog2(PAGESIZE*4)-1:0] addr;
   always_ff @(posedge clk) begin : mem_access
-    localparam addr = in_addr[$clog2(PAGESIZE*4)-1:0];
+    addr <= in_addr[$clog2(PAGESIZE*4)-1:0];
+    #1
     if (w_enable) begin
       mem[addr+7] <= wval[63:56];
       mem[addr+6] <= wval[55:48];
