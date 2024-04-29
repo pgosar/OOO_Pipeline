@@ -131,7 +131,7 @@ module core (
   nzcv_t out_rs_broadcast_nzcv;
   // Outputs for regfile (for commits)
   logic out_reg_commit_done;
-  logic out_reg_set_nzcv;
+  logic rob_out_reg_set_nzcv;
   nzcv_t out_reg_nzcv;
   logic [`GPR_SIZE-1:0] out_reg_commit_value;
   logic [`GPR_IDX_SIZE-1:0] out_reg_index;
@@ -215,7 +215,6 @@ module core (
   logic out_rob_is_mispred;
   logic out_alu_condition;
 
-  // for now just run a single cycle
   int i;
   initial begin
     in_clk = 0;
@@ -253,7 +252,7 @@ module core (
 
   // // ROB TO REGFILE (on COMMIT) regfile inputs = rob outputs
   assign in_rob_should_commit = out_reg_commit_done;
-  assign reg_in_rob_set_nzcv = out_reg_set_nzcv;
+  assign reg_in_rob_set_nzcv = rob_out_reg_set_nzcv;
   assign reg_in_rob_nzcv = out_reg_nzcv;
   assign in_rob_commit_value = out_reg_commit_value;
   assign in_rob_reg_index = out_reg_index;
@@ -334,9 +333,6 @@ module core (
   assign in_fu_nzcv = out_rob_nzcv;
   // assign in_fu_is_mispred = out_rob_is_mispred;
 
-
-
-  wire temp;
   // modules
   fetch f (.*);
 
@@ -350,14 +346,16 @@ module core (
       .in_rob_set_nzcv(reg_in_rob_set_nzcv),
       .out_rob_done(reg_out_rob_done)
   );
-  rob_module rob (.*);
+  rob_module rob (
+      .*,
+      .out_reg_set_nzcv(rob_out_reg_set_nzcv)
+  );
   reservation_stations rs (.*);
   func_units fu (
       .*,
       .out_rob_set_nzcv(fu_out_rob_set_nzcv),
       .out_rob_nzcv(fu_out_rob_nzcv),
       .out_rob_done(fu_out_rob_done)
-      // .in_rob_cond_codes(fu_in_rob_cond_codes)
   );
 
 endmodule

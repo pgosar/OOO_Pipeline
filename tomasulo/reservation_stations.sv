@@ -286,7 +286,6 @@ module reservation_station_module #(
             end else begin
               rs[i].op1.value <= rob_broadcast_value;
             end
-            $display("LDUR/STUR: %0d", rs[i].op1.value);
             rs[i].op1.valid <= 1;
           end
           if (rs[i].op2.rob_index == rob_broadcast_index) begin
