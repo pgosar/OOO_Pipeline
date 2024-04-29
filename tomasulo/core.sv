@@ -37,7 +37,6 @@ module core (
   logic [`GPR_IDX_SIZE-1:0] out_reg_dst;
   cond_t out_reg_cond_codes;
   logic out_reg_instr_uses_nzcv;
-  opcode_t out_reg_opcode;
 
   // REGFILE
 
@@ -47,7 +46,6 @@ module core (
   logic [`GPR_IDX_SIZE-1:0] in_d_src1;
   logic [`GPR_IDX_SIZE-1:0] in_d_src2;
   logic [`GPR_IDX_SIZE-1:0] in_d_dst;
-  opcode_t in_d_opcode;
   logic in_d_set_nzcv;
   logic [`GPR_SIZE-1:0] in_d_imm;
   logic in_d_use_imm;
@@ -68,6 +66,7 @@ module core (
   logic out_rob_src1_valid;
   logic out_rob_src2_valid;
   logic out_rob_nzcv_valid;
+  fu_op_t out_rob_fu_op;
   logic [`GPR_IDX_SIZE-1:0] out_rob_dst;  // gpr
   logic [`ROB_IDX_SIZE-1:0] out_rob_src1_rob_index;
   logic [`ROB_IDX_SIZE-1:0] out_rob_src2_rob_index;
@@ -112,6 +111,8 @@ module core (
   fu_op_t out_rs_fu_op;
   logic out_rs_alu_val_a_valid;
   logic out_rs_alu_val_b_valid;
+
+
   logic out_rs_nzcv_valid;
   logic [`GPR_SIZE-1:0] out_rs_alu_val_a_value;
   logic [`GPR_SIZE-1:0] out_rs_alu_val_b_value;
@@ -129,6 +130,7 @@ module core (
   logic [`GPR_SIZE-1:0] out_rs_broadcast_value;
   logic out_rs_broadcast_set_nzcv;
   nzcv_t out_rs_broadcast_nzcv;
+  logic out_rs_is_mispred;
   // Outputs for regfile (for commits)
   logic out_reg_commit_done;
   logic rob_out_reg_set_nzcv;
@@ -141,19 +143,19 @@ module core (
 
   // RESERVATION STATIONS
 
-  // Inputs From ROB (sourced from either regfile or ROB)
+  cond_t in_rob_cond_codes;
   logic in_rob_done;
   fu_t in_rob_fu_id;
   fu_op_t in_rob_fu_op;
-  logic in_rob_alu_val_a_valid;
-  logic in_rob_alu_val_b_valid;
+  logic in_rob_val_a_valid;
+  logic in_rob_val_b_valid;
   logic in_rob_nzcv_valid;
-  logic [`GPR_SIZE-1:0] in_rob_alu_val_a_value;
-  logic [`GPR_SIZE-1:0] in_rob_alu_val_b_value;
-  nzcv_t rs_in_rob_nzcv;
-  logic rs_in_rob_set_nzcv;
-  logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_a_rob_index;
-  logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_b_rob_index;
+  logic [`GPR_SIZE-1:0] in_rob_val_a_value;
+  logic [`GPR_SIZE-1:0] in_rob_val_b_value;
+  nzcv_t in_rob_nzcv;
+  logic in_rob_set_nzcv;
+  logic [`ROB_IDX_SIZE-1:0] in_rob_val_a_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] in_rob_val_b_rob_index;
   logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index;
   logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index;
   logic in_rob_broadcast_done;
@@ -162,37 +164,43 @@ module core (
   logic in_rob_broadcast_set_nzcv;
   nzcv_t in_rob_broadcast_nzcv;
   logic in_rob_is_mispred;
-  logic in_fu_ls_ready;
-  logic in_fu_alu_ready;  // ready to receive inputs
-  cond_t rs_in_rob_cond_codes;
   logic in_rob_instr_uses_nzcv;
-  // Outputs for FU
+  // Inputs from FU (ALU)
+  logic in_fu_alu_ready;
+  // Outputs for FU (ALU)
   logic out_fu_alu_start;
-  logic out_fu_ls_start;
-  fu_op_t out_fu_fu_op;
+  fu_op_t out_fu_alu_op;
   logic [`GPR_SIZE-1:0] out_fu_alu_val_a;
   logic [`GPR_SIZE-1:0] out_fu_alu_val_b;
-  logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index;
   logic out_fu_alu_set_nzcv;
   nzcv_t out_fu_alu_nzcv;
-  cond_t out_fu_cond_codes;
-  fu_op_t out_rob_fu_op;
-  logic out_fu_alu_ready;
-  logic out_fu_ls_ready;
-  logic out_fu_instr_uses_nzcv;
+  cond_t out_fu_alu_cond_codes;
+  // Inputs from FU (LS)
+  logic in_fu_ls_ready;
+  // Outputs for FU (LS)
+  logic out_fu_ls_start;
+  fu_op_t out_fu_ls_op;
+  logic [`GPR_SIZE-1:0] out_fu_ls_val_a;
+  logic [`GPR_SIZE-1:0] out_fu_ls_val_b;
+  logic [`ROB_IDX_SIZE-1:0] out_fu_ls_dst_rob_index;
 
   // FUNC UNITS
   logic in_rs_alu_start;
-  logic in_rs_ls_start;
-  fu_op_t in_rs_fu_op;
+  fu_op_t in_rs_alu_op;
+  fu_op_t in_rs_ls_op;
   logic [`GPR_SIZE-1:0] in_rs_alu_val_a;
   logic [`GPR_SIZE-1:0] in_rs_alu_val_b;
   logic [`ROB_IDX_SIZE-1:0] in_rs_alu_dst_rob_index;
   logic in_rs_alu_set_nzcv;
   nzcv_t in_rs_alu_nzcv;
-  cond_t in_rob_cond_codes;
   logic in_rs_instr_uses_nzcv;
-
+  cond_t in_rs_alu_cond_codes;
+  // Inputs for FU (LS)
+  logic in_rs_ls_start;
+  logic [`GPR_SIZE-1:0] in_rs_ls_val_a;
+  logic [`GPR_SIZE-1:0] in_rs_ls_val_b;
+  logic [`ROB_IDX_SIZE-1:0] in_rs_ls_dst_rob_index;
 
   // Outputs for RS
   logic out_rs_ls_ready;
@@ -203,6 +211,7 @@ module core (
   logic [`GPR_SIZE-1:0] out_rob_value;
   logic fu_out_rob_set_nzcv;
   nzcv_t fu_out_rob_nzcv;
+  logic out_fu_instr_uses_nzcv;
   logic out_rob_is_mispred;
   logic out_alu_condition;
 
@@ -237,21 +246,20 @@ module core (
   assign in_d_imm = out_reg_imm;
   assign in_d_src1 = out_reg_src1;
   assign in_d_src2 = out_reg_src2;
-  assign in_d_opcode = out_reg_opcode;
   assign in_d_fu_id = out_reg_fu_id;
   assign in_d_fu_op = out_reg_fu_op;
   assign in_d_dst = out_reg_dst;
   assign in_d_instr_uses_nzcv = out_reg_instr_uses_nzcv;
 
-  // ROB TO REGFILE (on COMMIT) regfile inputs = rob outputs
-  assign in_rob_should_commit = out_reg_commit_done;
-  assign reg_in_rob_set_nzcv = rob_out_reg_set_nzcv;
-  assign reg_in_rob_nzcv = out_reg_nzcv;
-  assign in_rob_commit_value = out_reg_commit_value;
-  assign in_rob_reg_index = out_reg_index;
-  assign in_rob_commit_rob_index = out_reg_commit_rob_index;
-  assign in_rob_next_rob_index = out_reg_next_rob_index;
-  assign in_rob_cond_codes = out_reg_cond_codes;
+  // // ROB TO REGFILE (on COMMIT) regfile inputs = rob outputs
+  // assign in_rob_should_commit = out_reg_commit_done;
+  // assign reg_in_rob_set_nzcv = rob_out_reg_set_nzcv;
+  // assign reg_in_rob_nzcv = out_reg_nzcv;
+  // assign in_rob_commit_value = out_reg_commit_value;
+  // assign in_rob_reg_index = out_reg_index;
+  // assign in_rob_commit_rob_index = out_reg_commit_rob_index;
+  // assign in_rob_next_rob_index = out_reg_next_rob_index;
+  // assign in_rob_cond_codes = out_reg_cond_codes;
 
   // REGFILE TO ROB rob inputs = regfile outputs
   assign in_reg_done = reg_out_rob_done;
@@ -272,25 +280,31 @@ module core (
   assign in_reg_instr_uses_nzcv = out_rob_instr_uses_nzcv;
 
   // ROB TO RS rs inputs = rob outputs
+  // Inputs From ROB (sourced from either regfile or ROB)
+  assign in_rob_cond_codes = out_rs_cond_codes;
   assign in_rob_done = out_rs_done;
   assign in_rob_fu_id = out_rs_fu_id;
   assign in_rob_fu_op = out_rs_fu_op;
-  assign in_rob_alu_val_a_valid = out_rs_alu_val_a_valid;
-  assign in_rob_alu_val_b_valid = out_rs_alu_val_b_valid;
+  assign in_rob_val_a_valid = out_rs_alu_val_a_valid;
+  assign in_rob_val_b_valid = out_rs_alu_val_b_valid;
   assign in_rob_nzcv_valid = out_rs_nzcv_valid;
-  assign in_rob_alu_val_a_value = out_rs_alu_val_a_value;
-  assign in_rob_alu_val_b_value = out_rs_alu_val_b_value;
-  assign rs_in_rob_nzcv = out_rs_nzcv;
-  assign rs_in_rob_set_nzcv = out_rs_set_nzcv;
-  assign in_rob_alu_val_a_rob_index = out_rs_alu_val_a_rob_index;
-  assign in_rob_alu_val_b_rob_index = out_rs_alu_val_b_rob_index;
+  assign in_rob_val_a_value = out_rs_alu_val_a_value;
+  assign in_rob_val_b_value = out_rs_alu_val_b_value;
+  assign in_rob_nzcv = out_rs_nzcv;
+  assign in_rob_set_nzcv = out_rs_set_nzcv;
+  assign in_rob_val_a_rob_index = out_rs_alu_val_a_rob_index;
+  assign in_rob_val_b_rob_index = out_rs_alu_val_b_rob_index;
   assign in_rob_dst_rob_index = out_rs_alu_dst_rob_index;
   assign in_rob_nzcv_rob_index = out_rs_nzcv_rob_index;
   assign in_rob_broadcast_done = out_rs_broadcast_done;
   assign in_rob_broadcast_index = out_rs_broadcast_index;
   assign in_rob_broadcast_value = out_rs_broadcast_value;
-  assign rs_in_rob_cond_codes = out_rs_cond_codes;
+  assign in_rob_broadcast_set_nzcv = out_rs_broadcast_set_nzcv;
+  assign in_rob_broadcast_nzcv = out_rs_broadcast_nzcv;
+  assign in_rob_is_mispred = out_rs_is_mispred;
   assign in_rob_instr_uses_nzcv = out_rs_instr_uses_nzcv;
+  assign in_fu_alu_ready = out_rs_alu_ready;
+  assign in_fu_ls_ready = out_rs_ls_ready;
 
   // FU TO ROB rob inputs = fu outputs
   assign in_fu_done = fu_out_rob_done;
@@ -300,29 +314,25 @@ module core (
   assign in_fu_nzcv = out_rob_nzcv;
   assign in_fu_is_mispred = out_rob_is_mispred;
 
-  // FU TO RS rs inputs = fu outputs
-  assign in_fu_ls_ready = out_rs_ls_ready;
-  assign in_fu_alu_ready = out_rs_alu_ready;
-
-  // RS TO FU fu inputs = rs outputs
+  // RS TO FU rs inputs = fu outputs
   assign in_rs_alu_start = out_fu_alu_start;
-  assign in_rs_ls_start = out_fu_ls_start;
-  assign in_rs_fu_op = out_fu_fu_op;
+  assign in_rs_alu_op = out_fu_alu_op;
+  assign in_rs_ls_op = out_fu_ls_op;
   assign in_rs_alu_val_a = out_fu_alu_val_a;
   assign in_rs_alu_val_b = out_fu_alu_val_b;
-  assign in_rs_alu_dst_rob_index = out_fu_dst_rob_index;
+  assign in_rs_alu_dst_rob_index = out_fu_alu_dst_rob_index;
   assign in_rs_alu_set_nzcv = out_fu_alu_set_nzcv;
   assign in_rs_alu_nzcv = out_fu_alu_nzcv;
+  assign in_rs_alu_cond_codes = out_fu_alu_cond_codes;
+  assign in_rs_ls_start = out_fu_ls_start;
+  assign in_rs_ls_val_a = out_fu_ls_val_a;
+  assign in_rs_ls_val_b = out_fu_ls_val_b;
+  assign in_rs_ls_dst_rob_index = out_fu_ls_dst_rob_index;
+  assign in_rs_instr_uses_nzcv = out_fu_instr_uses_nzcv;
 
-  // assign out_fu_alu_ready = out_fu_alu_start;
-  // assign out_fu_ls_ready = out_fu_ls_start;
+  assign out_rs_alu_ready = in_fu_alu_ready;
+  assign out_rs_ls_ready = in_fu_ls_ready;
 
-  assign out_fu_alu_ready = in_fu_alu_ready;
-  assign out_fu_ls_ready = in_fu_ls_ready;
-
-  // RS to FU
-  assign out_fu_cond_codes = in_rob_cond_codes;
-  assign out_fu_instr_uses_nzcv = in_rs_instr_uses_nzcv;
 
   // modules
   fetch f (.*);
@@ -342,16 +352,17 @@ module core (
       .out_reg_set_nzcv(rob_out_reg_set_nzcv)
   );
   reservation_stations rs (
-      .*,
-      .in_rob_cond_codes(rs_in_rob_cond_codes),
-      .in_rob_nzcv(rs_in_rob_nzcv),
-      .in_rob_set_nzcv(rs_in_rob_set_nzcv)
+      .*
+      // .in_rob_cond_codes(rs_in_rob_cond_codes),
+      // .in_rob_nzcv(rs_in_rob_nzcv)
+      // .in_rob_set_nzcv(rs_in_rob_set_nzcv)
   );
   func_units fu (
       .*,
       .out_rob_set_nzcv(fu_out_rob_set_nzcv),
       .out_rob_nzcv(fu_out_rob_nzcv),
       .out_rob_done(fu_out_rob_done)
+      // .in_rob_cond_codes(fu_in_rob_cond_codes)
   );
 
 endmodule
