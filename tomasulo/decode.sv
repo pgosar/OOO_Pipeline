@@ -117,6 +117,8 @@ module extract_reg (
       out_reg_dst = 5'd30;
     end
 
+
+
     //out_reg_src1
     if (opcode != OP_MOVK & opcode != OP_MOVZ & opcode != OP_ADR | opcode != OP_ADRP |
             opcode != OP_B & opcode != OP_BR & opcode != OP_B_COND & opcode != OP_BL & opcode
@@ -141,25 +143,25 @@ endmodule
 
 module decide_alu (
     input  opcode_t opcode,
-    output alu_op_t out_reg_fu_op
+    output fu_op_t  out_reg_fu_op
 );
   // TODO op_cmp, op_tst def commented out in opcode_t
   always_comb begin
     casez (opcode)
       OP_LDUR, OP_LDP, OP_STUR, OP_STP, OP_ADD, OP_ADDS, OP_ADR, OP_ADRP:
-      out_reg_fu_op = ALU_OP_PLUS;
-      OP_SUB, OP_SUBS: out_reg_fu_op = ALU_OP_MINUS;
-      OP_ORN: out_reg_fu_op = ALU_OP_ORN;
-      OP_ORR: out_reg_fu_op = ALU_OP_OR;
-      OP_EOR: out_reg_fu_op = ALU_OP_EOR;
-      OP_ANDS: out_reg_fu_op = ALU_OP_AND;
-      OP_UBFM: out_reg_fu_op = ALU_OP_UBFM;
-      OP_SBFM: out_reg_fu_op = ALU_OP_SBFM;
-      OP_MOVK, OP_MOVZ: out_reg_fu_op = ALU_OP_MOV;
-      OP_CSEL: out_reg_fu_op = ALU_OP_CSEL;
-      OP_CSINC: out_reg_fu_op = ALU_OP_CSINC;
-      OP_CSINV: out_reg_fu_op = ALU_OP_CSINV;
-      default: out_reg_fu_op = ALU_OP_PLUS;  //plus for now i will add an error op later
+      out_reg_fu_op = FU_OP_PLUS;
+      OP_SUB, OP_SUBS: out_reg_fu_op = FU_OP_MINUS;
+      OP_ORN: out_reg_fu_op = FU_OP_ORN;
+      OP_ORR: out_reg_fu_op = FU_OP_OR;
+      OP_EOR: out_reg_fu_op = FU_OP_EOR;
+      OP_ANDS: out_reg_fu_op = FU_OP_AND;
+      OP_UBFM: out_reg_fu_op = FU_OP_UBFM;
+      OP_SBFM: out_reg_fu_op = FU_OP_SBFM;
+      OP_MOVK, OP_MOVZ: out_reg_fu_op = FU_OP_MOV;
+      OP_CSEL: out_reg_fu_op = FU_OP_CSEL;
+      OP_CSINC: out_reg_fu_op = FU_OP_CSINC;
+      OP_CSINV: out_reg_fu_op = FU_OP_CSINV;
+      default: out_reg_fu_op = FU_OP_PLUS;  //plus for now i will add an error op later
     endcase
   end
 
@@ -300,7 +302,7 @@ module dispatch (
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src1,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
     output fu_t out_reg_fu_id,
-    output alu_op_t out_reg_fu_op,
+    output fu_op_t out_reg_fu_op,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_dst,
     output cond_t out_reg_cond_codes,
     output logic out_reg_instr_uses_nzcv
@@ -355,7 +357,7 @@ module dispatch (
     #1
     if (in_fetch_done) begin
       $display("(dec) Decoding: %b", debug_insnbits);
-      $display("(dec)\tfu_id: %s, opcode: %s, alu_op: %s", out_reg_fu_id.name, opcode.name,
+      $display("(dec)\tfu_id: %s, opcode: %s, fu_op: %s", out_reg_fu_id.name, opcode.name,
                out_reg_fu_op.name);
       $display("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_dst,
                out_reg_src1, out_reg_src2, out_reg_imm, out_reg_use_imm);

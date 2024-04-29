@@ -26,14 +26,14 @@ module rob_module (
     input logic in_reg_set_nzcv,
     input nzcv_t in_reg_nzcv,
     input fu_t in_reg_fu_id,
-    input alu_op_t in_reg_fu_op,
+    input fu_op_t in_reg_fu_op,
     input cond_t in_reg_cond_codes,
     input logic in_reg_instr_uses_nzcv,
 
     // Outputs for RS
     output logic out_rs_done,  // A
     output fu_t out_rs_fu_id,  // AA
-    output alu_op_t out_rs_fu_op,  // AB
+    output fu_op_t out_rs_fu_op,  // AB
     output logic out_rs_val_a_valid,  // AC
     output logic out_rs_val_b_valid,  // AD
     output logic out_rs_nzcv_valid,  // AE
@@ -142,8 +142,8 @@ module rob_module (
                  (commit_ptr + 1) % `ROB_SIZE);
         $display(
             "(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b",
-            commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value), rob[commit_ptr].set_nzcv,
-            rob[commit_ptr].nzcv);
+            commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value),
+            rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv);
 `endif
       end : remove_commit
       // Buffer the incoming state

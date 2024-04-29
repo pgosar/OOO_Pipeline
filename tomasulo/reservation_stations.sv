@@ -8,7 +8,7 @@ module reservation_stations (
     input cond_t in_rob_cond_codes,
     input logic in_rob_done,
     input fu_t in_rob_fu_id,
-    input alu_op_t in_rob_fu_op,
+    input fu_op_t in_rob_fu_op,
     input logic in_rob_val_a_valid,
     input logic in_rob_val_b_valid,
     input logic in_rob_nzcv_valid,
@@ -34,10 +34,10 @@ module reservation_stations (
     // Outputs for FU (ALU)
     output logic out_fu_alu_start,
     output logic out_fu_ls_start,
-    output alu_op_t out_fu_alu_op,
-    output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,
-    output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
-    output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,
+    output fu_op_t out_fu_fu_op,
+    output logic [`GPR_SIZE-1:0] out_fu_val_a,
+    output logic [`GPR_SIZE-1:0] out_fu_val_b,
+    output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,
     output logic out_fu_alu_set_nzcv,
     output nzcv_t out_fu_alu_nzcv,
     output cond_t out_fu_cond_codes
@@ -67,7 +67,7 @@ module reservation_station_module #(
     // Inputs From ROB
     input cond_t in_rob_cond_codes,
     input logic in_rob_done,
-    input alu_op_t in_rob_fu_op,
+    input fu_op_t in_rob_fu_op,
     input logic in_rob_val_a_valid,
     input logic in_rob_val_b_valid,
     input logic in_rob_nzcv_valid,
@@ -97,10 +97,10 @@ module reservation_station_module #(
     // Outputs for FU (ALU)
     output logic out_fu_alu_start,  // A
     output logic out_fu_ls_start,  // B
-    output alu_op_t out_fu_alu_op,  // AA
-    output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,  // AB
-    output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,  // AC
-    output logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index,  // AD
+    output fu_op_t out_fu_fu_op,  // AA
+    output logic [`GPR_SIZE-1:0] out_fu_val_a,  // AB
+    output logic [`GPR_SIZE-1:0] out_fu_val_b,  // AC
+    output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,  // AD
     output logic out_fu_alu_set_nzcv,  // AE
     output nzcv_t out_fu_alu_nzcv,  // AF
     output cond_t out_fu_cond_codes
@@ -130,7 +130,7 @@ module reservation_station_module #(
   logic [`ROB_IDX_SIZE-1:0] rob_val_b_rob_index;
   logic [`ROB_IDX_SIZE-1:0] rob_dst_rob_index;
   logic [`ROB_IDX_SIZE-1:0] rob_nzcv_rob_index;
-  alu_op_t rob_fu_op;
+  fu_op_t rob_fu_op;
   logic rob_done;
   logic fu_alu_ready;
   logic rob_instr_uses_nzcv;
@@ -309,10 +309,10 @@ module reservation_station_module #(
   always_comb begin
     // Allow the ALU to consume the value when ready
     out_fu_alu_start = fu_alu_ready & ready_station_index != INVALID_INDEX;
-    out_fu_alu_op = rs[ready_station_index].op;
-    out_fu_alu_val_a = rs[ready_station_index].op1.value;
-    out_fu_alu_val_b = rs[ready_station_index].op2.value;
-    out_fu_alu_dst_rob_index = rs[ready_station_index].dst_rob_index;
+    out_fu_fu_op = rs[ready_station_index].op;
+    out_fu_val_a = rs[ready_station_index].op1.value;
+    out_fu_val_b = rs[ready_station_index].op2.value;
+    out_fu_dst_rob_index = rs[ready_station_index].dst_rob_index;
     out_fu_alu_nzcv = rs[ready_station_index].nzcv;
     out_fu_alu_set_nzcv = rs[ready_station_index].set_nzcv;
   end

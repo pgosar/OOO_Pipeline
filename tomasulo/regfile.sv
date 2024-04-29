@@ -13,7 +13,7 @@ module reg_module (
     input logic [`GPR_IDX_SIZE-1:0] in_d_src1,
     input logic [`GPR_IDX_SIZE-1:0] in_d_src2,
     input fu_t in_d_fu_id,
-    input alu_op_t in_d_fu_op,
+    input fu_op_t in_d_fu_op,
     input logic [`GPR_IDX_SIZE-1:0] in_d_dst,
     input logic in_d_instr_uses_nzcv,
     // Inputs from ROB (for a commit)
@@ -41,7 +41,7 @@ module reg_module (
     output logic out_rob_set_nzcv,  // AF
     output fu_t out_rob_fu_id,  // AG
     // Outputs for FU (rob)
-    output alu_op_t out_rob_fu_op  // AH
+    output fu_op_t out_rob_fu_op  // AH
 
 );
 

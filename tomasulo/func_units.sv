@@ -8,10 +8,10 @@ module func_units (
     input cond_t in_rob_cond_codes,
     input logic in_rs_alu_start,
     input logic in_rs_ls_start,
-    input alu_op_t in_rs_alu_op,
-    input logic [`GPR_SIZE-1:0] in_rs_alu_val_a,
-    input logic [`GPR_SIZE-1:0] in_rs_alu_val_b,
-    input logic [`ROB_IDX_SIZE-1:0] in_rs_alu_dst_rob_index,
+    input fu_op_t in_rs_fu_op,
+    input logic [`GPR_SIZE-1:0] in_rs_val_a,
+    input logic [`GPR_SIZE-1:0] in_rs_val_b,
+    input logic [`ROB_IDX_SIZE-1:0] in_rs_dst_rob_index,
     input logic in_rs_alu_set_nzcv,
     input nzcv_t in_rs_alu_nzcv,
     // Outputs for RS
@@ -51,10 +51,10 @@ module func_units (
 
   // Buffered state (for clocking ALU)
   logic rs_alu_start;
-  alu_op_t rs_alu_op;
-  logic [`GPR_SIZE-1:0] rs_alu_val_a;
-  logic [`GPR_SIZE-1:0] rs_alu_val_b;
-  logic [`ROB_IDX_SIZE-1:0] rs_alu_dst_rob_index;
+  fu_op_t rs_fu_op;
+  logic [`GPR_SIZE-1:0] rs_val_a;
+  logic [`GPR_SIZE-1:0] rs_val_b;
+  logic [`ROB_IDX_SIZE-1:0] rs_dst_rob_index;
   logic rs_alu_set_nzcv;
   nzcv_t rs_alu_nzcv;
 
@@ -62,50 +62,55 @@ module func_units (
   assign out_rob_dst_rob_index = alu_out_dst_rob_index;
   assign out_rob_value = alu_out_value;
   assign out_rs_alu_ready = 1;
-  // assign out_rob_is_mispred = out_alu_condition;  // TODO(Nate): WRONG!!!
-  // TODO(Nate): Much more thinking needs to be done on handling conditions.
+  assign out_rs_ls_ready = 1;
 
   always_ff @(posedge in_clk) begin
-    rs_alu_start <= in_rs_alu_start;
     if (in_rs_alu_start) begin
       // buffered state (so that it is clocked)
-      rs_alu_op <= in_rs_alu_op;
-      rs_alu_val_a <= in_rs_alu_val_a;
-      rs_alu_val_b <= in_rs_alu_val_b;
-      rs_alu_dst_rob_index <= in_rs_alu_dst_rob_index;
+      rs_fu_op <= in_rs_fu_op;
+      rs_val_a <= in_rs_val_a;
+      rs_val_b <= in_rs_val_b;
+      rs_dst_rob_index <= in_rs_dst_rob_index;
       rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
       rs_alu_nzcv <= in_rs_alu_nzcv;
 `ifdef DEBUG_PRINT
       #1
       $display(
           "(ALU) %s calculated: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d",
-          rs_alu_op.name,
+          rs_fu_op.name,
           $signed(
               alu_out_value
           ),
-          rs_alu_dst_rob_index,
+          rs_dst_rob_index,
           $signed(
-              rs_alu_val_a
+              rs_val_a
           ),
           $signed(
-              rs_alu_val_b
+              rs_val_b
           ),
           out_rob_nzcv,
           out_alu_condition
       );
 `endif
-    end else begin
-      rs_alu_set_nzcv <= 0;  // NOTE(Nate): Why?
     end
   end
+
+  logic dmem_clk = in_clk & in_rs_ls_start;
+  dmem dmem_module (
+      .clk(dmem_clk),
+      .in_addr(in_rs_val_a),
+      .w_enable(in_rs_fu_op == FU_OP_STUR),
+      .wval(in_rs_val_b),
+      .data(out_rob_value)
+  );
 
   alu_module alu (
       .in_start(rs_alu_start),
       .in_cond(in_rob_cond_codes),
-      .in_op(rs_alu_op),
-      .in_val_a(rs_alu_val_a),
-      .in_val_b(rs_alu_val_b),
-      .in_dst_rob_index(rs_alu_dst_rob_index),
+      .in_op(rs_fu_op),
+      .in_val_a(rs_val_a),
+      .in_val_b(rs_val_b),
+      .in_dst_rob_index(rs_dst_rob_index),
       .in_set_nzcv(rs_alu_set_nzcv),
       .in_nzcv(rs_alu_nzcv),
       .out_done(out_rob_done),  // Done signal indicating operation completion
@@ -116,16 +121,6 @@ module func_units (
       .out_dst_rob_index(alu_out_dst_rob_index)
   );
 
-  // TODO LDUR STUR
-
-  // dmem ls (
-  //     .in_addr(0),
-  //     .clk(in_clk),
-  //     .w_enable(0),
-  //     .wval(0),
-  //     .data(0)
-  // );
-
 endmodule
 
 
@@ -133,7 +128,7 @@ endmodule
 module alu_module (
     input logic in_start,
     input cond_t in_cond,
-    input alu_op_t in_op,
+    input fu_op_t in_op,
     input logic [`GPR_SIZE-1:0] in_val_a,
     input logic [`GPR_SIZE-1:0] in_val_b,
     input logic [`ROB_IDX_SIZE-1:0] in_dst_rob_index,
@@ -180,18 +175,18 @@ module alu_module (
   logic result_negative;
   always_comb begin
     casez (in_op)
-      ALU_OP_PLUS: result = val_a + val_b;
-      ALU_OP_MINUS: result = val_a - val_b;
-      ALU_OP_ORN: result = val_a | (~val_b);
-      ALU_OP_OR: result = val_a | val_b;
-      ALU_OP_EOR: result = val_a ^ val_b;
-      ALU_OP_AND: result = val_a & val_b;
-      ALU_OP_CSNEG: result = out_alu_condition == 0 ? ~val_b + 1 : val_a;
-      ALU_OP_CSINC: result = out_alu_condition == 0 ? val_b + 1 : val_a;
-      ALU_OP_CSINV: result = out_alu_condition == 0 ? ~val_b : val_a;
-      ALU_OP_CSEL: result = out_alu_condition == 0 ? val_b : val_a;
-      // ALU_OP_MOV: result = val_a | (val_b << in_alu_val_hw); // NOTE(Nate): What is this?
-      // ALU_OP_PASS_A: result = val_a; // NOTE(Nate): No longer required
+      FU_OP_PLUS: result = val_a + val_b;
+      FU_OP_MINUS: result = val_a - val_b;
+      FU_OP_ORN: result = val_a | (~val_b);
+      FU_OP_OR: result = val_a | val_b;
+      FU_OP_EOR: result = val_a ^ val_b;
+      FU_OP_AND: result = val_a & val_b;
+      FU_OP_CSNEG: result = out_alu_condition == 0 ? ~val_b + 1 : val_a;
+      FU_OP_CSINC: result = out_alu_condition == 0 ? val_b + 1 : val_a;
+      FU_OP_CSINV: result = out_alu_condition == 0 ? ~val_b : val_a;
+      FU_OP_CSEL: result = out_alu_condition == 0 ? val_b : val_a;
+      // FU_OP_MOV: result = val_a | (val_b << in_alu_val_hw); // NOTE(Nate): What is this?
+      // FU_OP_PASS_A: result = val_a; // NOTE(Nate): No longer required
       default: result = 0;
     endcase
 
@@ -213,7 +208,7 @@ endmodule
 // Note: the imem is combinational to make accessing memory super easy.
 //
 module imem #(
-    parameter int PAGESIZE
+    parameter int PAGESIZE = 4096
 ) (
     input  wire  [63:0] in_addr,
     output logic [31:0] data
@@ -238,7 +233,7 @@ endmodule
 // set w_enable and w_val if writing, else just set in_addr. should be
 // really easy to integrate since addr is 64 bit
 module dmem #(
-    parameter int PAGESIZE
+    parameter int PAGESIZE = 4096
 )  // AKA load-store
 (
     input wire [63:0] in_addr,

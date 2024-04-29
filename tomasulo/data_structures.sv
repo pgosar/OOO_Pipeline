@@ -35,23 +35,25 @@ typedef struct packed {
 } w_ctl_sigs_t;
 
 typedef enum logic [5:0] {
-  ALU_OP_MINUS,   // val_a - (val_b << valhw)
-  ALU_OP_PLUS,    // val_a + (val_b << valhw)
-  ALU_OP_ORN,     // val_a | (~val_b)
-  ALU_OP_OR,      // val_a | val_b
-  ALU_OP_EOR,     // val_a ^ val_b
-  ALU_OP_AND,     // val_a & val_b
-  ALU_OP_MOV,     // val_a | (val_b << valhw)
-  ALU_OP_UBFM,
-  ALU_OP_SBFM,
-  ALU_OP_PASS_A,  // val_a
-  ALU_OP_CSEL,    // EC: used for csel
-  ALU_OP_CSINV,   // EC: used for csinv
-  ALU_OP_CSINC,   // EC: used for csinc
-  ALU_OP_CSNEG,   // EC: used for csneg
-  ALU_OP_CBZ,     // EC: used for cbz
-  ALU_OP_CBNZ     // EC: used for cbnz
-} alu_op_t;
+  FU_OP_MINUS,   // val_a - (val_b << valhw)
+  FU_OP_PLUS,    // val_a + (val_b << valhw)
+  FU_OP_ORN,     // val_a | (~val_b)
+  FU_OP_OR,      // val_a | val_b
+  FU_OP_EOR,     // val_a ^ val_b
+  FU_OP_AND,     // val_a & val_b
+  FU_OP_MOV,     // val_a | (val_b << valhw)
+  FU_OP_UBFM,
+  FU_OP_SBFM,
+  FU_OP_PASS_A,  // val_a
+  FU_OP_CSEL,    // EC: used for csel
+  FU_OP_CSINV,   // EC: used for csinv
+  FU_OP_CSINC,   // EC: used for csinc
+  FU_OP_CSNEG,   // EC: used for csneg
+  FU_OP_CBZ,     // EC: used for cbz
+  FU_OP_CBNZ,    // EC: used for cbnz
+  FU_OP_LDUR,
+  FU_OP_STUR
+} fu_op_t;
 
 typedef enum logic [`OPCODE_SIZE-1:0] {
   OP_LDUR,
@@ -147,7 +149,7 @@ typedef struct packed {
   logic uses_nczv;
   logic nzcv_valid;
   nzcv_t nzcv;
-  alu_op_t op;
+  fu_op_t op;
 } rs_entry_t;
 
 typedef struct packed {
@@ -169,5 +171,10 @@ typedef struct packed {
   rs_entry_t [`RS_SIZE-1:0] rs;
   logic [`ROB_SIZE-1:0] rob;
 } debug_info_t;
+
+typedef enum logic {
+  LOAD,
+  STORE
+} ls_op_t;
 
 `endif  // data_structures

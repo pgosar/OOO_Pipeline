@@ -33,7 +33,7 @@ module core (
   logic [`GPR_IDX_SIZE-1:0] out_reg_src1;
   logic [`GPR_IDX_SIZE-1:0] out_reg_src2;
   fu_t out_reg_fu_id;
-  alu_op_t out_reg_fu_op;
+  fu_op_t out_reg_fu_op;
   logic [`GPR_IDX_SIZE-1:0] out_reg_dst;
   cond_t out_reg_cond_codes;
   logic out_reg_instr_uses_nzcv;
@@ -50,7 +50,7 @@ module core (
   logic [`GPR_SIZE-1:0] in_d_imm;
   logic in_d_use_imm;
   fu_t in_d_fu_id;
-  alu_op_t in_d_fu_op;
+  fu_op_t in_d_fu_op;
   logic in_d_instr_uses_nzcv;
   // Inputs from ROB (for a commit)
   logic in_rob_should_commit;
@@ -101,13 +101,13 @@ module core (
   logic in_reg_set_nzcv;
   nzcv_t in_reg_nzcv;
   fu_t in_reg_fu_id;
-  alu_op_t in_reg_fu_op;
+  fu_op_t in_reg_fu_op;
   cond_t in_reg_cond_codes;
   logic in_reg_instr_uses_nzcv;
   // Outputs for RS
   logic out_rs_done;
   fu_t out_rs_fu_id;  // NOTE(Nate): Shouldn't this just go to the RS for this functional unit?
-  alu_op_t out_rs_fu_op;
+  fu_op_t out_rs_fu_op;
   logic out_rs_val_a_valid;
   logic out_rs_val_b_valid;
   logic out_rs_nzcv_valid;
@@ -142,7 +142,7 @@ module core (
   // Inputs From ROB (sourced from either regfile or ROB)
   logic in_rob_done;
   fu_t in_rob_fu_id;
-  alu_op_t in_rob_fu_op;
+  fu_op_t in_rob_fu_op;
   logic in_rob_val_a_valid;
   logic in_rob_val_b_valid;
   logic in_rob_nzcv_valid;
@@ -167,14 +167,14 @@ module core (
   // Outputs for FU
   logic out_fu_alu_start;
   logic out_fu_ls_start;
-  alu_op_t out_fu_alu_op;
-  logic [`GPR_SIZE-1:0] out_fu_alu_val_a;
-  logic [`GPR_SIZE-1:0] out_fu_alu_val_b;
-  logic [`ROB_IDX_SIZE-1:0] out_fu_alu_dst_rob_index;
+  fu_op_t out_fu_fu_op;
+  logic [`GPR_SIZE-1:0] out_fu_val_a;
+  logic [`GPR_SIZE-1:0] out_fu_val_b;
+  logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index;
   logic out_fu_alu_set_nzcv;
   nzcv_t out_fu_alu_nzcv;
   cond_t out_fu_cond_codes;
-  alu_op_t out_rob_fu_op;
+  fu_op_t out_rob_fu_op;
   logic out_fu_alu_ready;
   logic out_fu_ls_ready;
   logic out_fu_instr_uses_nzcv;
@@ -182,10 +182,10 @@ module core (
   // FUNC UNITS
   logic in_rs_alu_start;
   logic in_rs_ls_start;
-  alu_op_t in_rs_alu_op;
-  logic [`GPR_SIZE-1:0] in_rs_alu_val_a;
-  logic [`GPR_SIZE-1:0] in_rs_alu_val_b;
-  logic [`ROB_IDX_SIZE-1:0] in_rs_alu_dst_rob_index;
+  fu_op_t in_rs_fu_op;
+  logic [`GPR_SIZE-1:0] in_rs_val_a;
+  logic [`GPR_SIZE-1:0] in_rs_val_b;
+  logic [`ROB_IDX_SIZE-1:0] in_rs_dst_rob_index;
   logic in_rs_alu_set_nzcv;
   nzcv_t in_rs_alu_nzcv;
   cond_t in_rob_cond_codes;
@@ -323,10 +323,10 @@ module core (
   // RS TO FU fu inputs = rs outputs
   assign in_rs_alu_start = out_fu_alu_start;
   assign in_rs_ls_start = out_fu_ls_start;
-  assign in_rs_alu_op = out_fu_alu_op;
-  assign in_rs_alu_val_a = out_fu_alu_val_a;
-  assign in_rs_alu_val_b = out_fu_alu_val_b;
-  assign in_rs_alu_dst_rob_index = out_fu_alu_dst_rob_index;
+  assign in_rs_fu_op = out_fu_fu_op;
+  assign in_rs_val_a = out_fu_val_a;
+  assign in_rs_val_b = out_fu_val_b;
+  assign in_rs_dst_rob_index = out_fu_dst_rob_index;
   assign in_rs_alu_set_nzcv = out_fu_alu_set_nzcv;
   assign in_rs_alu_nzcv = out_fu_alu_nzcv;
 

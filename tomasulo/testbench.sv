@@ -59,7 +59,7 @@ module alu_tb;
   logic clk;
   logic rst;
   logic start;
-  alu_op_t ALUop;
+  fu_op_t ALUop;
   logic [63:0] alu_vala;
   logic [63:0] alu_valb;
   logic [5:0] alu_val_hw;
@@ -73,7 +73,7 @@ module alu_tb;
   nzcv_t in_nzcv;
 
   alu dut (
-      .in_alu_op(ALUop),
+      .in_fu_op(ALUop),
       .in_val_a(alu_vala),
       .in_val_b(alu_valb),
       .in_alu_val_hw(alu_val_hw),
@@ -104,7 +104,7 @@ module alu_tb;
     // Test case 1 - posedge clock
     @(negedge clk);
     start = 1;
-    ALUop = ALU_OP_PLUS;
+    ALUop = FU_OP_PLUS;
     alu_vala = 64'h0000000000000001;
     alu_valb = 64'h0000000000000001;
     alu_val_hw = 6'h0;
