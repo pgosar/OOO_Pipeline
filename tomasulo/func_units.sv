@@ -75,10 +75,17 @@ module func_units (
       rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
       rs_alu_nzcv <= in_rs_alu_nzcv;
 `ifdef DEBUG_PRINT
-#1
-      $display("(ALU) %s calculated: %0d, val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d",
-               rs_alu_op.name, alu_out_value, rs_alu_val_a, rs_alu_val_b, out_rob_nzcv,
-               out_alu_condition);
+      #1
+      $display(
+          "(ALU) %s calculated: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d",
+          rs_alu_op.name,
+          alu_out_value,
+          rs_alu_dst_rob_index,
+          ,
+          rs_alu_val_b,
+          out_rob_nzcv,
+          out_alu_condition
+      );
 `endif
     end else begin
       rs_alu_set_nzcv <= 0;  // NOTE(Nate): Why?

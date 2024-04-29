@@ -217,14 +217,6 @@ module core (
     end
   end
 
-  //TODO: Kavya double check with nate and pranay
-  /*
-      fetch #(4096) fetch_inst (
-        .clk(in_clk),
-        .insnbits(in_fetch_insnbits)
-    );
-  */
-
   initial begin
     in_rst = 1;
     in_fetch_done = 0;
