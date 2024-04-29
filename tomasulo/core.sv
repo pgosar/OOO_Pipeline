@@ -210,7 +210,7 @@ module core (
   initial begin
     in_clk = 0;
     for (i = 1; i <= 25; i += 1) begin
-      //$display("\n>>>>> CYCLE COUNT: %0d <<<<<", i);
+      $display("\n>>>>> CYCLE COUNT: %0d <<<<<", i);
       #1 in_clk = ~in_clk;  // 100 MHz clock
       #5 in_clk = ~in_clk;
       #4;
@@ -342,9 +342,9 @@ module core (
   assign out_fu_instr_uses_nzcv = in_rs_instr_uses_nzcv;
 
   // modules
-  fetch f (
-    .*
-  );
+  // fetch f (
+  //   .*
+  // );
   dispatch dp (
       .*,
       .out_reg_set_nzcv(dispatch_out_reg_set_nzcv)
