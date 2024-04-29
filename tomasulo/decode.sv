@@ -97,6 +97,10 @@ module extract_immval (
       OP_ADD, OP_SUB, OP_UBFM, OP_SBFM: out_reg_imm = {52'd0, in_insnbits[21:10]};
       OP_MOVK, OP_MOVZ: out_reg_imm = {48'd0, in_insnbits[20:5]};
       OP_ADRP: out_reg_imm = {31'd0, in_insnbits[23:5], in_insnbits[30:29], 12'h000};
+      OP_B, OP_BL: out_reg_imm = ({38'd0, in_insnbits[25:0]}) * 4;
+      OP_B_COND, OP_CBNZ, OP_CBZ: out_reg_imm = ({45'd0, in_insnbits[23:5]}) * 4;
+      
+
       default: out_reg_imm = 0;
     endcase
   end
