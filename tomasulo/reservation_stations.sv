@@ -112,13 +112,13 @@ module reservation_station_module #(
   // as the INVALID_INDEX.
 
   // Internal state
-  rs_entry_t [RS_SIZE-1:0] rs;
+  rs_entry_t [RS_SIZE-1:0] rs /*verilator public*/;
   logic delayed_clk;
   // Buffered state
   logic rob_val_a_valid;
   logic rob_val_b_valid;
   logic rob_nzcv_valid;
-  logic [`GPR_SIZE-1:0] rob_val_a_value;
+  logic [`GPR_SIZE-1:0] rob_val_a_value /*verilator public*/;
   logic [`GPR_SIZE-1:0] rob_val_b_value;
   logic rob_set_nzcv;
   nzcv_t rob_nzcv;
@@ -297,15 +297,15 @@ module reservation_station_module #(
 
 `ifdef DEBUG_PRINT
       $display("(RS) Adding new entry to RS[%0d] for ROB[%0d]", free_station_index,
-                rob_dst_rob_index);
+               rob_dst_rob_index);
       $display("(RS) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %0d", rob_set_nzcv,
-                rob_instr_uses_nzcv, rob_fu_op);
+               rob_instr_uses_nzcv, rob_fu_op);
       $display("(RS) \top1: [valid: %0d, value: %0d, rob_index: %0d],", rob_val_a_valid,
-                rob_val_a_value, rob_val_a_rob_index);
+               rob_val_a_value, rob_val_a_rob_index);
       $display("(RS) \top2: [valid: %0d, value: %0d, rob_index: %0d],", rob_val_b_valid,
-                rob_val_b_value, rob_val_b_rob_index);
-      $display("(RS) \tnzcv: [valid: %0d, value: %0d, rob_index: %0d],", rob_nzcv_valid,
-                rob_nzcv, rob_nzcv_rob_index);
+               rob_val_b_value, rob_val_b_rob_index);
+      $display("(RS) \tnzcv: [uses: %0d, valid: %0d, value: %0d, rob_index: %0d],",
+               rob_instr_uses_nzcv, rob_nzcv_valid, rob_nzcv, rob_nzcv_rob_index);
 `endif
     end : rs_add_entry
   end

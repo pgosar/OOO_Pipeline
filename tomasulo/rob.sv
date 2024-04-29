@@ -111,7 +111,7 @@ module rob_module (
       // Update state from FU
       if (in_fu_done) begin
 `ifdef DEBUG_PRINT
-        $display("(rob) Received result from FU. ROB[%0d] -> %0d", in_fu_dst_rob_index,
+        $display("(rob) Received result from FU. ROB[%0d] -> %0d + valid", in_fu_dst_rob_index,
                  in_fu_value);
 `endif
         // Validate the line which the FU has updated
@@ -144,8 +144,6 @@ module rob_module (
             "(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b",
             commit_ptr, rob[commit_ptr].gpr_index, rob[commit_ptr].value, rob[commit_ptr].set_nzcv,
             rob[commit_ptr].nzcv);
-        $display("(rob) New validity: src1: %b, src2: %b, nzcv: %b", reg_src1_valid,
-                 reg_src2_valid, reg_nzcv_valid);
 `endif
       end : remove_commit
       // Buffer the incoming state
