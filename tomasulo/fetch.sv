@@ -59,7 +59,7 @@ module fetch #(
 
   decode_instruction decoder (
       .in_insnbits(data),
-      .opcode(opcode)
+      .out_opcode(opcode)
   );
   extract_immval extractor (
       .in_insnbits(data),
