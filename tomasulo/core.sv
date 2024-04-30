@@ -219,7 +219,7 @@ module core (
   initial begin
     in_clk = 0;
     for (i = 1; i <= 25; i += 1) begin
-      $display("\n>>>>> CYCLE COUNT: %0d <<<<<", i);
+      `DEBUG(("\n>>>>> CYCLE COUNT: %0d <<<<<", i))
       #1 in_clk = ~in_clk;  // 100 MHz clock
       #5 in_clk = ~in_clk;
       #4;
@@ -230,10 +230,10 @@ module core (
     in_rst = 1;
     #10;
     in_rst = 0;
-    $display("RESET DONE === BEGIN TEST");
+    `DEBUG(("RESET DONE === BEGIN TEST"))
     while (in_fetch_insnbits != 0) begin
-      $display("itr");
-      $display("*******insnbits: %b", in_fetch_insnbits);
+      `DEBUG(("itr"))
+      `DEBUG(("*******insnbits: %b", in_fetch_insnbits))
       #10;
     end
   end
@@ -334,10 +334,21 @@ module core (
   // assign in_fu_is_mispred = out_rob_is_mispred;
 
   // modules
-  fetch f (.*);
+  fetch f (
+    .in_clk,
+    .in_rst,
+    .out_d_insnbits(fetch_insnbits),
+    .out_d_done(fetch_done)
+  );
+
+  logic [`INSNBITS_SIZE-1:0] fetch_insnbits;
+  logic fetch_done;
 
   dispatch dp (
+      .in_rst,
       .*,
+      .in_fetch_insnbits(fetch_insnbits),
+      .in_fetch_done(fetch_done),
       .out_reg_set_nzcv(dispatch_out_reg_set_nzcv)
   );
   reg_module regfile (

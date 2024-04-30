@@ -8,3 +8,4 @@ obj_dir/
 .vscode/
 *.txt
 build/
+load_elf

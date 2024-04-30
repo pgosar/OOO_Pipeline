@@ -293,6 +293,7 @@ endmodule
 
 module dispatch (
     // Inputs from core
+    input logic in_rst,
     input logic in_clk,
     input logic in_stall,
     // Inputs from fetch
@@ -348,27 +349,30 @@ module dispatch (
   sets_nzcv nzcv_setter (.*);
 
   always_ff @(posedge in_clk) begin
-    out_reg_done <= in_fetch_done;
-    if (in_fetch_done) begin
-      insnbits <= in_fetch_insnbits;
+    if (in_rst) begin
+      `DEBUG(("(dec) Resetting"));
+      out_reg_done <= 0;
+    end else begin
+      out_reg_done <= ~in_rst & in_fetch_done;
+      if (in_fetch_done) begin
+        insnbits <= in_fetch_insnbits;
+    end
     end
   end
 
   // Print statements only in here
-`ifdef DEBUG_PRINT
   always_ff @(posedge in_clk) begin
-    #1
-    if (in_fetch_done) begin
-      $display("(dec) Decoding: %b", insnbits);
-      $display("(dec)\tfu_id: %s, opcode: %s, fu_op: %s", out_reg_fu_id.name, opcode.name,
-               out_reg_fu_op.name);
-      $display("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_dst,
-               out_reg_src1, out_reg_src2, out_reg_imm, out_reg_use_imm);
-      $display("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_set_nzcv, out_reg_instr_uses_nzcv);
-      $display("(dec) cond codes %0b", out_reg_cond_codes);
+    if (in_fetch_done & ~in_rst) begin
+      #1
+      `DEBUG(("(dec) Decoding: %b", insnbits))
+      `DEBUG(("(dec)\tfu_id: %s, opcode: %s, fu_op: %s", out_reg_fu_id.name, opcode.name,
+               out_reg_fu_op.name));
+      `DEBUG(("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_dst,
+               out_reg_src1, out_reg_src2, out_reg_imm, out_reg_use_imm));
+      `DEBUG(("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_set_nzcv, out_reg_instr_uses_nzcv))
+      `DEBUG(("(dec) cond codes %0b", out_reg_cond_codes))
 
     end
   end
-`endif
 
 endmodule : dispatch

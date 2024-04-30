@@ -16,6 +16,11 @@
 `define OPCODE_SIZE $clog2(`NUM_OPCODES)
 `define MISSPRED_SIZE 3
 
+`define DEBUG(ARGS) \
+`ifdef DEBUG_PRINT \
+    $display ARGS; \
+`endif
+
 typedef struct packed {logic src2_sel;} d_ctl_sigs_t;
 
 typedef struct packed {

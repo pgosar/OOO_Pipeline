@@ -72,9 +72,7 @@ module reg_module (
   // Commit & buffer inputs
   always_ff @(posedge in_clk) begin
     if (in_rst) begin
-`ifdef DEBUG_PRINT
-      $display("(regfile) Resetting");
-`endif
+      `DEBUG(("(regfile) Resetting"))
       // Reset root control signal
       d_done <= 0;
       // Reset internal state
@@ -112,23 +110,21 @@ module reg_module (
         end
       end
       // Commit
-      // $display("in_rob_should_commit: %0d, in_rob_commit_rob_index: %0d, gprs[%0d].rob_index: %0d",
+      // `DEBUG(("in_rob_should_commit: %0d, in_rob_commit_rob_index: %0d, gprs[%0d].rob_index: %0d",
       //          in_rob_should_commit, in_rob_commit_rob_index, in_rob_reg_index,
-      //          gprs[in_rob_reg_index].rob_index);
+      //          gprs[in_rob_reg_index].rob_index))
       if (in_rob_should_commit & (in_rob_commit_rob_index == gprs[in_rob_reg_index].rob_index)) begin : rob_commit
         gprs[in_rob_reg_index].value <= in_rob_commit_value;
         gprs[in_rob_reg_index].valid <= 1;
         if (in_rob_set_nzcv) begin
-          $display("Setting nzcv %4b", in_rob_nzcv);
+          `DEBUG(("Setting nzcv %4b", in_rob_nzcv))
           nzcv <= in_rob_nzcv;
           nzcv_valid <= 1;
         end
-`ifdef DEBUG_PRINT
-        $display("(regfile) Request to commit to GPR[%0d] -> %0d", in_rob_reg_index,
-                 $signed(in_rob_commit_value));
-        $display("(regfile) \tGPR ROB: %0d, Sending ROB: %0d", in_rob_commit_rob_index,
-                 gprs[in_rob_reg_index].rob_index);
-`endif
+        `DEBUG(("(regfile) Request to commit to GPR[%0d] -> %0d", 
+            in_rob_reg_index, $signed(in_rob_commit_value)));
+        `DEBUG(("(regfile) \tGPR ROB: %0d, Sending ROB: %0d", in_rob_commit_rob_index,
+                 gprs[in_rob_reg_index].rob_index));
       end : rob_commit
     end
   end
@@ -152,19 +148,17 @@ module reg_module (
       //   nzcv_rob_index <= in_rob_next_rob_index;
       // end
 
-`ifdef DEBUG_PRINT
-      $display("(regfile) src1 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src1,
-               out_rob_src1_value, out_rob_src1_valid, out_rob_src1_rob_index);
+      `DEBUG(("(regfile) src1 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src1,
+               out_rob_src1_value, out_rob_src1_valid, out_rob_src1_rob_index));
       if (d_use_imm) begin
-        $display("(regfile) src2 using immediate: %0d", d_imm);
+        `DEBUG(("(regfile) src2 using immediate: %0d", d_imm))
       end else begin
-        $display("(regfile) src2 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src2,
+        `DEBUG(("(regfile) src2 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src2,
                  gprs[d_src2].value, gprs[d_src2].valid,
-                 d_src2 == d_dst ? src2_rob_index : gprs[d_src2].rob_index);
+                 d_src2 == d_dst ? src2_rob_index : gprs[d_src2].rob_index));
       end
-      $display("(regfile) Dispatch dest GPR[%0d] renamed to ROB[%0d]", d_dst,
-               in_rob_next_rob_index);
-`endif
+      `DEBUG(("(regfile) Dispatch dest GPR[%0d] renamed to ROB[%0d]", d_dst,
+               in_rob_next_rob_index));
     end
   end
 

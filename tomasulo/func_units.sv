@@ -71,49 +71,22 @@ module func_units (
       rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
       rs_alu_nzcv <= in_rs_alu_nzcv;
       rs_ls_dst_rob_index <= in_rs_ls_dst_rob_index;
-`ifdef DEBUG_PRINT
       #1
-      $display(
+      `DEBUG((
           "(ALU) %s calculated: %0d for dst ROB[%0d] val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d",
-          alu_fu_op.name,
-          $signed(
-              out_value
-          ),
-          rs_alu_dst_rob_index,
-          $signed(
-              alu_val_a
-          ),
-          $signed(
-              alu_val_b
-          ),
-          out_rob_nzcv,
-          out_alu_condition
-      );
-`endif
+          alu_fu_op.name, $signed( out_value), rs_alu_dst_rob_index, $signed( alu_val_a), $signed( alu_val_b), out_rob_nzcv, out_alu_condition
+      ));
     end else if (in_rs_ls_start) begin
       // buffered state (so that it is clocked)
       alu_fu_op <= in_rs_ls_op;
       alu_val_a <= in_rs_ls_val_a;
       alu_val_b <= in_rs_ls_val_b;
       rs_alu_dst_rob_index <= in_rs_ls_dst_rob_index;
-`ifdef DEBUG_PRINT
       #2
-      $display(
+      `DEBUG((
           "(LS) %s executed: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b",
-          alu_fu_op.name,
-          $signed(
-              out_value
-          ),
-          rs_ls_dst_rob_index,
-          $signed(
-              alu_val_a
-          ),
-          $signed(
-              alu_val_b
-          ),
-          out_rob_nzcv
-      );
-`endif
+          alu_fu_op.name, $signed( out_value), rs_ls_dst_rob_index, $signed( alu_val_a), $signed( alu_val_b), out_rob_nzcv
+      ));
     end
   end
 
@@ -220,8 +193,8 @@ endmodule
 module imem #(
     parameter int PAGESIZE = 4096
 ) (
-    input  wire  [63:0] in_addr,
-    output logic [31:0] data
+  input  logic  [63:0] in_addr,
+  output logic [31:0] out_data
 );
   // read-only instruction memory module.
   localparam bits_amt = PAGESIZE;
@@ -229,13 +202,14 @@ module imem #(
   logic [7:0] mem[bits_amt];
   logic [$clog2(PAGESIZE) - 1:0] addr;
 
-  initial begin : mem_init
+  // Load initial contents of memory into array
+  initial begin
     $readmemb(fname, mem);
-  end : mem_init
+  end 
 
   always_comb begin : mem_access
     addr = in_addr[$clog2(PAGESIZE)-1:0];
-    data = {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]};
+    out_data = {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]};
   end : mem_access
 
 endmodule

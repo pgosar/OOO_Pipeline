@@ -1,13 +1,32 @@
 `include "func_units.sv"
+
+// NOTE(Namish): Various conditions to think about
+// fix instruction alias?
+// predict new PC?
+// status updates?
+// select PC logic: we have correction from ret, and
+// correction from cond.
+// can use 0 PC to indicate ret?
+// pseudocode:
+// if bcond and !condval - we take successor
+// if ret - we take val_a
+// else take predicted pc
+//
+// for predicted pc:
+// if it's bl or bcond or b: predict taken
+// else: sequential successor
+// adrp????
+
 module fetch #(
     parameter int PAGESIZE = 4096
 )  // note: this should always be 4096
 (
     input wire in_clk,
     input wire in_rst,
-    output logic [31:0] in_fetch_insnbits,
-    output logic in_fetch_done
+    output logic [31:0] out_d_insnbits,
+    output logic out_d_done
 );
+
   // steps:
   // 1. select PC (?) assuming no mispredictions for now
   // 2. access IMEM with correct PC
@@ -20,49 +39,41 @@ module fetch #(
   // access IMEM
   logic [31:0] data;
   // PC is an internal register to fetch.
-  logic [63:0] PC_load[0:0];  // to make verilog see it as a memory
+  logic [63:0] entry_addr[0:0];  // entry point. [0:0] to make verilog see it as a memory
   logic [63:0] PC;
-  logic e;
+  logic rst;
+  logic no_instruction;
+
+  // Load entry point from text file
+  initial begin
+    $readmemb("mem/entry.txt", entry_addr);
+  end
 
   imem #(PAGESIZE) mem (
-      PC,
-      data
+      .in_addr(PC),
+      .out_data(out_d_insnbits)
   );
 
+  always_comb begin
+    no_instruction = out_d_insnbits == 0;
+    out_d_done = ~rst & ~no_instruction;
+  end
+
   always_ff @(posedge in_clk) begin : fetch_logic
-    // fix instruction alias?
-    // predict new PC?
-    // status updates?
-    // select PC logic: we have correction from ret, and
-    // correction from cond.
-    // can use 0 PC to indicate ret?
-    // pseudocode:
-    // if bcond and !condval - we take successor
-    // if ret - we take val_a
-    // else take predicted pc
-    //
-    // for predicted pc:
-    // if it's bl or bcond or b: predict taken
-    // else: sequential successor
-    // adrp????
+    rst <= in_rst;
     if (in_rst) begin
-`ifdef DEBUG_PRINT
-      $display("(fetch) resetting");
-`endif
-      $readmemb("mem/entry.txt", PC_load);
-      PC = PC_load[0];
-      in_fetch_insnbits <= 0;
-      in_fetch_done <= 0;
+      `DEBUG(("(fetch) resetting PC: %16x -> %16x", PC, entry_addr[0]));
+      PC <= entry_addr[0];
     end else begin
-      #1  // There is a data dependency on 'data' from imem
-      if (data == 0) begin
-        in_fetch_insnbits <= data;
-        in_fetch_done <= 0;
+      if (rst) begin
+        `DEBUG(("(fetch) Last cycle was reset. PC remains %16x", PC));
+      end else if (no_instruction) begin
+        `DEBUG(("(fetch) No instruction. PC halted at: %16x", PC));
       end else begin
-        in_fetch_insnbits <= data;
-        in_fetch_done <= 1;
+        `DEBUG(("(fetch) PC: %16x -> %16x", PC, PC + 4));
         PC <= PC + 4;
       end
     end
   end : fetch_logic
+
 endmodule : fetch

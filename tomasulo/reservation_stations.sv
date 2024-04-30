@@ -52,10 +52,10 @@ module reservation_stations (
 
   logic ls_ready, alu_ready;
   always_ff @(posedge in_clk) begin
-    // $display("(MASTER rs) FU ID: %s, alu ready", in_rob_fu_id.name);
+    // `DEBUG(("(MASTER rs) FU ID: %s, alu ready", in_rob_fu_id.name))
     alu_ready <= (in_rob_fu_id == FU_ALU) & in_fu_alu_ready;
     ls_ready  <= (in_rob_fu_id == FU_LS) & in_fu_ls_ready;
-    // $display("(MASTER rs) Alu start: %0d", out_fu_alu_start);
+    // `DEBUG(("(MASTER rs) Alu start: %0d", out_fu_alu_start))
   end
 
   reservation_station_module ls (
@@ -185,7 +185,7 @@ module reservation_station_module #(
   logic [RS_IDX_SIZE:0] ready_station_index;
   // always_comb begin
   for (genvar i = 0; i < RS_SIZE; i += 1) begin
-    // $display(
+    // `DEBUG(
     //     "rs[%0d].entry_valid: %b, rs[%0d].op1.valid: %b, rs[%0d].op2.valid: %b, rs[%0d].set_nzcv: %b, rs[%0d].nzcv_valid: %b",
     //     i, rs[i].entry_valid, i, rs[i].op1.valid, i, rs[i].op2.valid, i, rs[i].set_nzcv, i,
     //     rs[i].nzcv_valid);
@@ -212,9 +212,7 @@ module reservation_station_module #(
 
   always_ff @(posedge in_clk) begin : rs_on_clk
     if (in_rst) begin
-`ifdef DEBUG_PRINT
-      $display("(RS) Resetting both reservation stations");
-`endif
+      `DEBUG(("(RS) Resetting both reservation stations"))
       // Reset root control signal
       rob_done <= 0;
       // Reset internal state
@@ -223,17 +221,13 @@ module reservation_station_module #(
       end
     end else begin : rs_not_reset
       if (  /*in_rob_is_mispred*/ 0) begin
-`ifdef DEBUG_PRINT
-        $display("(RS) Deleting mispredicted instructions");
-`endif
+        `DEBUG(("(RS) Deleting mispredicted instructions"))
         // todo handle mispred
       end else begin : rs_not_mispred
         if (fu_alu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
-`ifdef DEBUG_PRINT
-          $display("(RS) Remove entry RS[%0d]. FU consumed entry at start of this cycle.",
-                   ready_station_index);
-          $display("(RS) \tOut start: %0d", out_fu_start);
-`endif
+          `DEBUG(("(RS) Remove entry RS[%0d]. FU consumed entry at start of this cycle.",
+                   ready_station_index))
+          `DEBUG(("(RS) \tOut start: %0d", out_fu_start))
           rs[ready_station_index].entry_valid <= ~fu_alu_ready;
         end : fu_consume_entry
       end
@@ -268,20 +262,16 @@ module reservation_station_module #(
   always_ff @(posedge in_clk) begin
     #2
     if (rob_broadcast_done) begin : rs_broadcast
-`ifdef DEBUG_PRINT
-      $display("(RS) Received a broadcast for ROB[%0d] -> %0d", rob_broadcast_index,
-               $signed(rob_broadcast_value));
-`endif
+      `DEBUG(("(RS) Received a broadcast for ROB[%0d] -> %0d", rob_broadcast_index,
+               $signed(rob_broadcast_value)))
       // Update reservation stations with values from the ROB
       for (int i = 0; i < RS_SIZE; i += 1) begin
         if (rs[i].entry_valid) begin
           if (rs[i].op1.rob_index == rob_broadcast_index) begin
-`ifdef DEBUG_PRINT
-            $display("(RS) \tUpdating RS[%0d] op1 -> %0d", i, $signed(rob_broadcast_value));
-`endif
+            `DEBUG(("(RS) \tUpdating RS[%0d] op1 -> %0d", i, $signed(rob_broadcast_value)))
             if (rs[i].op == FU_OP_LDUR | rs[i].op == FU_OP_STUR) begin
-              $display("op1.value: %0d, rob_broadcast_value: %0d", rs[i].op1.value,
-                       rob_broadcast_value);
+              `DEBUG(("op1.value: %0d, rob_broadcast_value: %0d", rs[i].op1.value,
+                       rob_broadcast_value))
               rs[i].op1.value <= rs[i].op1.value + rob_broadcast_value;
             end else begin
               rs[i].op1.value <= rob_broadcast_value;
@@ -289,10 +279,7 @@ module reservation_station_module #(
             rs[i].op1.valid <= 1;
           end
           if (rs[i].op2.rob_index == rob_broadcast_index) begin
-`ifdef DEBUG_PRINT
-            $display("(RS) \tUpdating RS[%0d] op2 -> %0d", i, $signed(rob_broadcast_value));
-`endif
-
+            `DEBUG(("(RS) \tUpdating RS[%0d] op2 -> %0d", i, $signed(rob_broadcast_value)))
             rs[i].op2.value <= rob_broadcast_value;
             rs[i].op2.valid <= 1;
           end
@@ -322,18 +309,16 @@ module reservation_station_module #(
       rs[free_station_index].op <= rob_fu_op;
       rs[free_station_index].entry_valid <= 1;
 
-`ifdef DEBUG_PRINT
-      $display("(RS) Adding new entry to RS[%0d] for ROB[%0d]", free_station_index,
-               rob_dst_rob_index);
-      $display("(RS) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %0d", rob_set_nzcv,
-               rob_instr_uses_nzcv, rob_fu_op);
-      $display("(RS) \top1: [valid: %0d, value: %0d, rob_index: %0d],", rob_val_a_valid,
-               rob_val_a_value, rob_val_a_rob_index);
-      $display("(RS) \top2: [valid: %0d, value: %0d, rob_index: %0d],", rob_val_b_valid,
-               rob_val_b_value, rob_val_b_rob_index);
-      $display("(RS) \tnzcv: [uses: %0d, valid: %0d, value: %0d, rob_index: %0d],",
-               rob_instr_uses_nzcv, rob_nzcv_valid, rob_nzcv, rob_nzcv_rob_index);
-`endif
+      `DEBUG(("(RS) Adding new entry to RS[%0d] for ROB[%0d]", free_station_index,
+               rob_dst_rob_index))
+      `DEBUG(("(RS) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %0d", rob_set_nzcv,
+               rob_instr_uses_nzcv, rob_fu_op))
+      `DEBUG(("(RS) \top1: [valid: %0d, value: %0d, rob_index: %0d],", rob_val_a_valid,
+               rob_val_a_value, rob_val_a_rob_index))
+      `DEBUG(("(RS) \top2: [valid: %0d, value: %0d, rob_index: %0d],", rob_val_b_valid,
+               rob_val_b_value, rob_val_b_rob_index))
+      `DEBUG(("(RS) \tnzcv: [uses: %0d, valid: %0d, value: %0d, rob_index: %0d],",
+               rob_instr_uses_nzcv, rob_nzcv_valid, rob_nzcv, rob_nzcv_rob_index))
     end : rs_add_entry
   end
 
@@ -357,19 +342,19 @@ module reservation_station_module #(
     // Mispred broadcast
     // for (int i = 0; i < RS_SIZE; i+=1) begin
     //     `ifdef DEBUG_PRINT
-    //         $display("(RS) Mispred");
+    //         `DEBUG(("(RS) Mispred"))
     //     `endif
     //     if (rs[i].entry_valid) begin // Unnecessary check, but will help energy
     //         if (rs[i].op1.rob_index == in_rob_broadcast_index) begin
     //             `ifdef DEBUG_PRINT
-    //                 $display("(RS) mispred Updating RS[%0d] op1", i);
+    //                 `DEBUG(("(RS) mispred Updating RS[%0d] op1", i))
     //             `endif
     //             rs[i].op1.value <= in_rob_broadcast_value;
     //             rs[i].op1.valid <= 1;
     //         end
     //         if (rs[i].op2.rob_index == in_rob_broadcast_index) begin
     //             `ifdef DEBUG_PRINT
-    //                 $display("(RS) mispred Updating RS[%0d] op2", i);
+    //                 `DEBUG(("(RS) mispred Updating RS[%0d] op2", i))
     //             `endif
     //             rs[i].op2.value <= in_rob_broadcast_value;
     //             rs[i].op1.valid <= 1;

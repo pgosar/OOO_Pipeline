@@ -98,9 +98,7 @@ module rob_module (
   // Update from FU and copy signals
   always_ff @(posedge in_clk) begin
     if (in_rst) begin
-`ifdef DEBUG_PRINT
-      $display("(rob) Resetting");
-`endif
+      `DEBUG(("(rob) Resetting"))
       fu_done <= 0;
       commit_ptr <= 0;
       next_ptr <= 0;
@@ -111,10 +109,8 @@ module rob_module (
     end else begin : not_reset
       // Update state from FU
       if (in_fu_done) begin
-`ifdef DEBUG_PRINT
-        $display("(rob) Received result from FU. ROB[%0d] -> %0d + valid", in_fu_dst_rob_index,
-                 $signed(in_fu_value));
-`endif
+        `DEBUG(("(rob) Received result from FU. ROB[%0d] -> %0d + valid", in_fu_dst_rob_index,
+                 $signed(in_fu_value)))
         // Validate the line which the FU has updated
         rob[in_fu_dst_rob_index].value <= in_fu_value;
         rob[in_fu_dst_rob_index].valid <= 1;
@@ -124,11 +120,9 @@ module rob_module (
       end
       // Update regfile
       if (in_reg_done) begin
-`ifdef DEBUG_PRINT
-        $display("(rob) Inserting new entry @ ROB[%0d] for dst GPR[%0d]", next_ptr, in_reg_dst);
-        $display("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_instr_uses_nzcv, next_ptr,
-                 (next_ptr + 1) % `ROB_SIZE);
-`endif
+        `DEBUG(("(rob) Inserting new entry @ ROB[%0d] for dst GPR[%0d]", next_ptr, in_reg_dst))
+        `DEBUG(("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_instr_uses_nzcv, next_ptr,
+                 (next_ptr + 1) % `ROB_SIZE))
         // Add a new entry to the ROB and update the regfile
         rob[next_ptr].gpr_index <= in_reg_dst;
         rob[next_ptr].set_nzcv <= in_reg_set_nzcv;
@@ -138,14 +132,12 @@ module rob_module (
       end
       if (rob[commit_ptr].valid) begin : remove_commit
         commit_ptr <= (commit_ptr + 1) % `ROB_SIZE;
-`ifdef DEBUG_PRINT
-        $display("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d",
-                 (commit_ptr + 1) % `ROB_SIZE);
-        $display(
+        `DEBUG(("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d",
+                 (commit_ptr + 1) % `ROB_SIZE))
+        `DEBUG((
             "(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b",
             commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value),
-            rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv);
-`endif
+            rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv))
       end : remove_commit
       // Buffer the incoming state
       reg_done <= in_reg_done;
@@ -198,7 +190,7 @@ module rob_module (
     out_rs_broadcast_value = rob[fu_dst].value;
     out_rs_broadcast_set_nzcv = rob[fu_dst].set_nzcv;
     out_rs_broadcast_nzcv = rob[fu_dst].nzcv;
-    // $display("FU DONE: %0d", fu_done);
+    // `DEBUG(("FU DONE: %0d", fu_done))
 
     // Commits
     out_reg_commit_done = rob[commit_ptr].valid;
@@ -214,7 +206,7 @@ module rob_module (
   //   always_ff @(negedge in_clk) begin
   //     if (in_fu_is_mispred) begin
   // `ifdef DEBUG_PRINT
-  //       $display("(rob) NOT IMPLEMENTED: Deleting mispredicted instructions");
+  //       `DEBUG(("(rob) NOT IMPLEMENTED: Deleting mispredicted instructions"))
   // `endif
   //       // remove last 3 indexes (fetch, decode, execute)
   //       // to fix wraparound, add rob_size and mod by rob_size
