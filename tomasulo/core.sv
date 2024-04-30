@@ -12,15 +12,18 @@ module core (
     //input logic in_clk
 );
   initial begin
-`ifdef DEBUG_PRINT
+
     $dumpfile("core.vcd");  // Dump waveform to VCD file
     $dumpvars(0, core);  // Dump all signals
-`endif
   end
 
   logic in_rst;
   logic in_clk;
 
+  // FETCH
+
+  logic [`INSNBITS_SIZE-1:0] fetch_insnbits;
+  logic fetch_done;
 
   // DISPATCH
   logic in_stall;
@@ -199,7 +202,7 @@ module core (
   initial begin
     in_clk = 0;
     for (i = 1; i <= 25; i += 1) begin
-      $display("\n>>>>> CYCLE COUNT: %0d <<<<<", i);
+      `DEBUG(("\n>>>>> CYCLE COUNT: %0d <<<<<", i));
       #1 in_clk = ~in_clk;  // 100 MHz clock
       #5 in_clk = ~in_clk;
       #4;
@@ -210,10 +213,10 @@ module core (
     in_rst = 1;
     #10;
     in_rst = 0;
-    $display("RESET DONE === BEGIN TEST");
+    `DEBUG(("RESET DONE === BEGIN TEST"));
     while (in_fetch_insnbits != 0) begin
-      $display("itr");
-      $display("*******insnbits: %b", in_fetch_insnbits);
+      `DEBUG(("itr"));
+      `DEBUG(("*******insnbits: %b", in_fetch_insnbits));
       #10;
     end
   end
@@ -312,12 +315,21 @@ module core (
 
 
   // modules
-  fetch f (.*);
+  fetch f (
+    .in_clk,
+    .in_rst,
+    .out_d_insnbits(fetch_insnbits),
+    .out_d_done(fetch_done)
+  );
 
   dispatch dp (
+    .in_rst,
       .*,
+      .in_fetch_insnbits(fetch_insnbits),
+      .in_fetch_done(fetch_done),
       .out_reg_set_nzcv(d_out_reg_set_nzcv)
   );
+
   reg_module regfile (
       .*,
       .in_rob_nzcv(reg_in_rob_nzcv),
@@ -326,16 +338,20 @@ module core (
       .out_rob_set_nzcv(reg_out_rob_set_nzcv),
       .out_rob_nzcv(reg_out_rob_nzcv)
   );
+
   rob_module rob (
       .*,
       .out_reg_set_nzcv(rob_out_reg_set_nzcv)
   );
+
   reservation_stations rs (
+    .in_rst,
       .*,
       .in_rob_alu_cond_codes(rs_in_rob_alu_cond_codes),
       .in_rob_set_nzcv(rs_in_rob_set_nzcv),
       .in_rob_nzcv(rs_in_rob_nzcv)
   );
+
   func_units fu (
       .*,
       .out_rob_done(fu_out_rob_done),
