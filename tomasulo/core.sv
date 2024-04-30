@@ -25,6 +25,10 @@ module core (
   // Inputs from fetch
   logic [31:0] in_fetch_insnbits;
   logic in_fetch_done;
+
+  // input to decode and fetch: correction
+  logic in_reg_correction;
+
   // Outputs to regfile
   logic out_reg_done;
   logic dispatch_out_reg_set_nzcv;
@@ -79,6 +83,8 @@ module core (
   cond_t out_rob_cond_codes;
   fu_t out_rob_fu_id;
   logic out_rob_instr_uses_nzcv;
+  // Output for correction
+  logic out_f_correction;
 
   // ROB
 
@@ -270,6 +276,8 @@ module core (
   assign in_reg_fu_op = out_rob_fu_op;
   assign in_reg_cond_codes = out_rob_cond_codes;
   assign in_reg_instr_uses_nzcv = out_rob_instr_uses_nzcv;
+  // REGFILE TO FETCH AND DECODE correct BL
+  assign in_reg_correction = out_f_correction;
 
   // ROB TO RS rs inputs = rob outputs
   assign in_rob_done = out_rs_done;

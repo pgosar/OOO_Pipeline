@@ -42,7 +42,9 @@ module reg_module (
     output logic out_rob_set_nzcv,  // AF
     output fu_t out_rob_fu_id,  // AG
     // Outputs for FU (rob)
-    output fu_op_t out_rob_fu_op  // AH
+    output fu_op_t out_rob_fu_op,  // AH
+    // outputs for Fetch
+    output logic out_f_correction
 
 );
 
@@ -200,6 +202,14 @@ module reg_module (
     out_rob_set_nzcv = d_set_nzcv;
     // Dst
     out_rob_dst = d_dst;
+    // output possible correction for fetch
+    if (d_opcode == OP_BR || d_opcode == OP_BLR) begin
+      out_f_correction = 1;
+`ifdef DEBUG_PRINT
+      $display("(regfile) detected BR. sending correction signal");
+`endif
+    end
+    else out_f_correction = 0;
   end
 
 endmodule

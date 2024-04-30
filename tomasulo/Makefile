@@ -31,7 +31,7 @@ LSCRIPT = mem/ooo.ld
 
 
 verilator-debug:
-	verilator --binary --build --cc --trace --trace-structs --timing -j 0 -DDEBUG_PRINT ${SV_FILES} --top-module ${MODULE} -o ${MODULE}_tb
+	verilator -Wno-MODDUP --binary --build --cc --trace --trace-structs --timing -j 0 -DDEBUG_PRINT ${SV_FILES} --top-module ${MODULE} -o ${MODULE}_tb
 
 verilator:
 	verilator --binary --build --timing -j 0 ${SV_FILES} --top-module ${MODULE} -o ${MODULE}_tb

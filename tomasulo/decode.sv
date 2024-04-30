@@ -301,6 +301,7 @@ module dispatch (
     // Inputs from fetch
     input logic [`INSNBITS_SIZE-1:0] in_fetch_insnbits,
     input logic in_fetch_done,
+    input logic in_reg_correction,
     // Outputs to regfile. This will (asynchronously) cause the regfile to send
     // signals to the ROB. We assume that this will occur within the same
     // cycle.
@@ -353,7 +354,12 @@ module dispatch (
   sets_nzcv nzcv_setter (.*);
 
   always_ff @(posedge in_clk) begin
-    out_reg_done <= in_fetch_done;
+    if (in_reg_correction) begin
+`ifdef DEBUG_PRINT
+      $display("(dec) detected regfile correction.");
+`endif
+      out_reg_done <= 0;
+    end else out_reg_done <= in_fetch_done;
     if (in_fetch_done) begin
       insnbits <= in_fetch_insnbits;
     end
