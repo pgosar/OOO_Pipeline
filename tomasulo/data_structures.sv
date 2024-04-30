@@ -182,4 +182,26 @@ typedef enum logic {
   STORE
 } ls_op_t;
 
+interface fetch_interface();
+  logic [31:0] insnbits;
+  logic done;
+
+  // modport ins (output insnbits, output done);
+  // modport outs (input insnbits, input done);
+endinterface
+
+interface decode_interface();
+  logic done;
+  logic set_nzcv;
+  logic use_imm;
+  logic [`IMMEDIATE_SIZE-1:0] imm;
+  logic [`GPR_IDX_SIZE-1:0] src1;
+  logic [`GPR_IDX_SIZE-1:0] src2;
+  fu_t fu_id;
+  fu_op_t fu_op;
+  logic [`GPR_IDX_SIZE-1:0] dst;
+  cond_t cond_codes;
+  logic instr_uses_nzcv;
+endinterface
+
 `endif  // data_structures

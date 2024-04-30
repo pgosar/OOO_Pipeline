@@ -1,4 +1,5 @@
-`include "func_units.sv"
+// `include "func_units.sv"
+`include "data_structures.sv"
 
 // NOTE(Namish): Various conditions to think about
 // fix instruction alias?
@@ -23,9 +24,9 @@ module fetch #(
 (
     input wire in_clk,
     input wire in_rst,
-    output logic [31:0] out_d_insnbits,
-    output logic out_d_done
+    input fetch_interface out_d_sigs
 );
+
 
   // steps:
   // 1. select PC (?) assuming no mispredictions for now
@@ -51,12 +52,12 @@ module fetch #(
 
   imem #(PAGESIZE) mem (
       .in_addr(PC),
-      .out_data(out_d_insnbits)
+      .out_data(out_d_sigs.insnbits)
   );
 
   always_comb begin
-    no_instruction = out_d_insnbits == 0;
-    out_d_done = ~rst & ~no_instruction;
+    no_instruction = out_d_sigs.insnbits == 0;
+    out_d_sigs.done = ~rst & ~no_instruction;
   end
 
   always_ff @(posedge in_clk) begin : fetch_logic
@@ -77,3 +78,30 @@ module fetch #(
   end : fetch_logic
 
 endmodule : fetch
+
+
+// Note: the imem is combinational to make accessing memory super easy.
+//
+module imem #(
+    parameter int PAGESIZE = 4096
+) (
+  input  logic  [63:0] in_addr,
+  output logic [31:0] out_data
+);
+  // read-only instruction memory module.
+  localparam bits_amt = PAGESIZE;
+  localparam fname = "mem/imem.txt";
+  logic [7:0] mem[bits_amt];
+  logic [$clog2(PAGESIZE) - 1:0] addr;
+
+  // Load initial contents of memory into array
+  initial begin
+    $readmemb(fname, mem);
+  end 
+
+  always_comb begin : mem_access
+    addr = in_addr[$clog2(PAGESIZE)-1:0];
+    out_data = {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]};
+  end : mem_access
+
+endmodule

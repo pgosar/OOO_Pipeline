@@ -5,17 +5,7 @@ module reg_module (
     input logic in_clk,
     input logic in_rst,
     // Inputs from decode (consumed in decode)
-    input logic in_d_done,
-    // Inputs from decode (passed through or used)
-    input logic in_d_set_nzcv,
-    input logic in_d_use_imm,
-    input logic [`IMMEDIATE_SIZE-1:0] in_d_imm,
-    input logic [`GPR_IDX_SIZE-1:0] in_d_src1,
-    input logic [`GPR_IDX_SIZE-1:0] in_d_src2,
-    input fu_t in_d_fu_id,
-    input fu_op_t in_d_fu_op,
-    input logic [`GPR_IDX_SIZE-1:0] in_d_dst,
-    input logic in_d_instr_uses_nzcv,
+    input decode_interface in_d_sigs,
     // Inputs from ROB (for a commit)
     input logic in_rob_should_commit,
     input logic in_rob_set_nzcv,
@@ -81,26 +71,26 @@ module reg_module (
         gprs[i].valid <= 1;
       end
     end else begin
-      d_done <= in_d_done;
-      if (in_d_done) begin
+      d_done <= in_d_sigs.done;
+      if (in_d_sigs.done) begin
         // Buffer inputs
-        d_fu_op <= in_d_fu_op;
-        d_src1 <= in_d_src1;
-        d_src2 <= in_d_src2;
-        d_dst <= in_d_dst;
-        d_set_nzcv <= in_d_set_nzcv;
-        d_imm <= in_d_imm;
-        d_use_imm <= in_d_use_imm;
+        d_fu_op <= in_d_sigs.fu_op;
+        d_src1 <= in_d_sigs.src1;
+        d_src2 <= in_d_sigs.src2;
+        d_dst <= in_d_sigs.dst;
+        d_set_nzcv <= in_d_sigs.set_nzcv;
+        d_imm <= in_d_sigs.imm;
+        d_use_imm <= in_d_sigs.use_imm;
         rob_next_rob_index <= in_rob_next_rob_index;
         // Copy unused signals
-        out_rob_fu_op <= in_d_fu_op;
-        out_rob_fu_id <= in_d_fu_id;
-        out_rob_instr_uses_nzcv <= in_d_instr_uses_nzcv;
+        out_rob_fu_op <= in_d_sigs.fu_op;
+        out_rob_fu_id <= in_d_sigs.fu_id;
+        out_rob_instr_uses_nzcv <= in_d_sigs.instr_uses_nzcv;
       end
       if (d_done) begin
         // Buffer old rob indices first....
-        // src1_rob_index <= in_d_dst == in_d_src1 ? in_rob_next_rob_index : gprs[in_d_src1].rob_index;
-        // src2_rob_index <= in_d_dst == in_d_src2 ? in_rob_next_rob_index : gprs[in_d_src2].rob_index;
+        // src1_rob_index <= in_d_sigs.dst == in_d_sigs.src1 ? in_rob_next_rob_index : gprs[in_d_sigs.src1].rob_index;
+        // src2_rob_index <= in_d_sigs.dst == in_d_sigs.src2 ? in_rob_next_rob_index : gprs[in_d_sigs.src2].rob_index;
         // ... then update validity of previous cycle's dst.
         gprs[d_dst].valid <= 0;
         gprs[d_dst].rob_index <= in_rob_next_rob_index;

@@ -337,26 +337,28 @@ module core (
   fetch f (
     .in_clk,
     .in_rst,
-    .out_d_insnbits(fetch_insnbits),
-    .out_d_done(fetch_done)
+    .out_d_sigs(fetch_sigs)
   );
 
-  logic [`INSNBITS_SIZE-1:0] fetch_insnbits;
-  logic fetch_done;
+  fetch_interface fetch_sigs();
 
   dispatch dp (
+      .in_clk,
       .in_rst,
-      .*,
-      .in_fetch_insnbits(fetch_insnbits),
-      .in_fetch_done(fetch_done),
-      .out_reg_set_nzcv(dispatch_out_reg_set_nzcv)
+      .in_fetch_sigs(fetch_sigs),
+      .out_reg_sigs(d_sigs)
   );
+
+  decode_interface d_sigs();
+
   reg_module regfile (
       .*,
+      .in_d_sigs(d_sigs),
       .in_rob_nzcv(reg_in_rob_nzcv),
       .in_rob_set_nzcv(reg_in_rob_set_nzcv),
       .out_rob_done(reg_out_rob_done)
   );
+
   rob_module rob (
       .*,
       .out_reg_set_nzcv(rob_out_reg_set_nzcv)
