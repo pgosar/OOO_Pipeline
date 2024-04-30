@@ -1,4 +1,8 @@
 `include "func_units.sv"
+`include "data_structures.sv"
+`include "decode.sv" // TODO a cleaner solution is separating useful
+                     // modules out into their own files. This will do for now
+
 module fetch #(
     parameter int PAGESIZE = 4096
 )  // note: this should always be 4096
@@ -20,14 +24,19 @@ module fetch #(
   // access IMEM
   logic [31:0] data;
   // PC is an internal register to fetch.
-  logic [63:0] PC_load[0:0];  // to make verilog see it as a memory
+  logic [63:0] PC_load[1];  // to make verilog see it as a memory
   logic [63:0] PC;
   logic e;
+  opcode_t opcode;
+  logic [`GPR_SIZE-1:0] imm;
 
   imem #(PAGESIZE) mem (
       PC,
       data
   );
+  
+  decode_instruction decoder (.in_insnbits(data), .opcode(opcode));
+  extract_immval extractor(.in_insnbits(data),  .opcode(opcode), .out_reg_imm(imm));
 
   always_ff @(posedge in_clk) begin : fetch_logic
     // fix instruction alias?
@@ -59,9 +68,19 @@ module fetch #(
         in_fetch_insnbits <= data;
         in_fetch_done <= 0;
       end else begin
+`ifdef DEBUG_PRINT 
+        $display("(fetch) opcode is %s", opcode.name);
+`endif
         in_fetch_insnbits <= data;
         in_fetch_done <= 1;
-        PC <= PC + 4;
+        if (opcode == OP_B || opcode == OP_BL) begin
+          PC <= PC + imm;
+`ifdef DEBUG_PRINT 
+          $display("(fetch) detected branch. changing PC");
+`endif
+        end else begin
+          PC <= PC + 4;
+        end
       end
     end
   end : fetch_logic
