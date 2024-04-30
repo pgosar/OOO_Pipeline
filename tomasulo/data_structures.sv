@@ -190,7 +190,7 @@ interface fetch_interface();
   // modport outs (input insnbits, input done);
 endinterface
 
-interface decode_interface();
+interface d_interface();
   logic done;
   logic set_nzcv;
   logic use_imm;
@@ -202,6 +202,34 @@ interface decode_interface();
   logic [`GPR_IDX_SIZE-1:0] dst;
   cond_t cond_codes;
   logic instr_uses_nzcv;
+endinterface
+
+interface rob_commit_interface();
+  logic commit_done;
+  logic set_nzcv;
+  nzcv_t nzcv;
+  logic [`GPR_SIZE-1:0] commit_value;
+  logic [`GPR_IDX_SIZE-1:0] reg_index;
+  logic [`ROB_IDX_SIZE-1:0] commit_rob_index;
+endinterface
+
+interface reg_interface();
+  logic done;
+  logic src1_valid;
+  logic src2_valid;
+  logic nzcv_valid;
+  logic [`GPR_IDX_SIZE-1:0] dst;
+  logic [`ROB_IDX_SIZE-1:0] src1_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] src2_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] nzcv_rob_index;
+  logic [`GPR_SIZE-1:0] src1_value;
+  logic [`GPR_SIZE-1:0] src2_value;
+  logic instr_uses_nzcv;
+  cond_t cond_codes;
+  nzcv_t nzcv;
+  logic set_nzcv;
+  fu_t fu_id;
+  fu_op_t fu_op;
 endinterface
 
 `endif  // data_structures

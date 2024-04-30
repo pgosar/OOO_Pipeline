@@ -13,23 +13,7 @@ module rob_module (
     input nzcv_t in_fu_nzcv,
     // input logic in_fu_is_mispred,
     // Inputs from regfile (to forward to rs)
-    input logic in_reg_done,  // NOTE(Nate): Is this stall?
-    input logic in_reg_src1_valid,
-    input logic in_reg_src2_valid,
-    input logic in_reg_nzcv_valid,
-    input logic [`GPR_IDX_SIZE-1:0] in_reg_dst,
-    input logic [`ROB_IDX_SIZE-1:0] in_reg_src1_rob_index,
-    input logic [`ROB_IDX_SIZE-1:0] in_reg_src2_rob_index,
-    input logic [`ROB_IDX_SIZE-1:0] in_reg_nzcv_rob_index,
-    input logic [`GPR_SIZE-1:0] in_reg_src1_value,
-    input logic [`GPR_SIZE-1:0] in_reg_src2_value,
-    input logic in_reg_set_nzcv,
-    input nzcv_t in_reg_nzcv,
-    input fu_t in_reg_fu_id,
-    input fu_op_t in_reg_fu_op,
-    input cond_t in_reg_cond_codes,
-    input logic in_reg_instr_uses_nzcv,
-
+    input reg_interface in_reg_sigs,
     // Outputs for RS
     output logic out_rs_done,  // A
     output fu_t out_rs_fu_id,  // AA
@@ -48,6 +32,7 @@ module rob_module (
     output logic [`ROB_IDX_SIZE-1:0] out_rs_nzcv_rob_index,  // AH
     output cond_t out_rs_cond_codes,  // CE ???
     // Output for regfile (for the next ROB insertion)
+    // TODO: Save this
     output logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index,  // D
     // Outputs for RS (on broadcast... resultant from FU)
     output logic out_rs_broadcast_done,  // B
@@ -57,12 +42,7 @@ module rob_module (
     output logic out_rs_broadcast_set_nzcv,  // BC
     output nzcv_t out_rs_broadcast_nzcv,  // BCA
     // Outputs for regfile (for commits)
-    output logic out_reg_commit_done,  // C
-    output logic out_reg_set_nzcv,  // CA
-    output nzcv_t out_reg_nzcv,  // CAA
-    output logic [`GPR_SIZE-1:0] out_reg_commit_value,  // CB
-    output logic [`GPR_IDX_SIZE-1:0] out_reg_index,  // CC
-    output logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index  // CD
+    output rob_commit_interface out_reg_commit
     // // Outputs for dispatch
     // output logic [`ROB_IDX_SIZE-1:0] out_next_rob_index,
     // output logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_index[`MISSPRED_SIZE]
@@ -119,14 +99,14 @@ module rob_module (
         end
       end
       // Update regfile
-      if (in_reg_done) begin
-        `DEBUG(("(rob) Inserting new entry @ ROB[%0d] for dst GPR[%0d]", next_ptr, in_reg_dst))
-        `DEBUG(("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_instr_uses_nzcv, next_ptr,
+      if (in_reg_sigs.done) begin
+        `DEBUG(("(rob) Inserting new entry @ ROB[%0d] for dst GPR[%0d]", next_ptr, in_reg_sigs.dst))
+        `DEBUG(("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_sigs.instr_uses_nzcv, next_ptr,
                  (next_ptr + 1) % `ROB_SIZE))
         // Add a new entry to the ROB and update the regfile
-        rob[next_ptr].gpr_index <= in_reg_dst;
-        rob[next_ptr].set_nzcv <= in_reg_set_nzcv;
-        rob[next_ptr].nzcv <= in_reg_nzcv;
+        rob[next_ptr].gpr_index <= in_reg_sigs.dst;
+        rob[next_ptr].set_nzcv <= in_reg_sigs.set_nzcv;
+        rob[next_ptr].nzcv <= in_reg_sigs.nzcv;
         rob[next_ptr].valid <= 0;
         next_ptr <= (next_ptr + 1) % `ROB_SIZE;
       end
@@ -140,28 +120,28 @@ module rob_module (
             rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv))
       end : remove_commit
       // Buffer the incoming state
-      reg_done <= in_reg_done;
-      reg_src1_value <= in_reg_src1_value;
-      reg_src1_valid <= in_reg_src1_valid;
-      reg_nzcv <= in_reg_nzcv;
-      reg_src2_value <= in_reg_src2_value;
-      reg_src2_valid <= in_reg_src2_valid;
-      reg_nzcv_valid <= in_reg_nzcv_valid;
-      reg_src1_rob_index <= in_reg_src1_rob_index;
-      reg_src2_rob_index <= in_reg_src2_rob_index;
-      reg_nzcv_rob_index <= in_reg_nzcv_rob_index;
-      reg_instr_uses_nzcv <= in_reg_instr_uses_nzcv;
+      reg_done <= in_reg_sigs.done;
+      reg_src1_value <= in_reg_sigs.src1_value;
+      reg_src1_valid <= in_reg_sigs.src1_valid;
+      reg_nzcv <= in_reg_sigs.nzcv;
+      reg_src2_value <= in_reg_sigs.src2_value;
+      reg_src2_valid <= in_reg_sigs.src2_valid;
+      reg_nzcv_valid <= in_reg_sigs.nzcv_valid;
+      reg_src1_rob_index <= in_reg_sigs.src1_rob_index;
+      reg_src2_rob_index <= in_reg_sigs.src2_rob_index;
+      reg_nzcv_rob_index <= in_reg_sigs.nzcv_rob_index;
+      reg_instr_uses_nzcv <= in_reg_sigs.instr_uses_nzcv;
       fu_dst <= in_fu_dst_rob_index;
       fu_done <= in_fu_done;
       // Copy over unused signals for RS
-      out_rs_fu_op <= in_reg_fu_op;
-      out_rs_fu_id <= in_reg_fu_id;
-      out_rs_set_nzcv <= in_reg_set_nzcv;
-      out_rs_cond_codes <= in_reg_cond_codes;
-      out_rs_instr_uses_nzcv <= in_reg_instr_uses_nzcv;
-      out_rs_val_a_rob_index <= in_reg_src1_rob_index;
-      out_rs_val_b_rob_index <= in_reg_src2_rob_index;
-      out_rs_nzcv_rob_index <= in_reg_nzcv_rob_index;
+      out_rs_fu_op <= in_reg_sigs.fu_op;
+      out_rs_fu_id <= in_reg_sigs.fu_id;
+      out_rs_set_nzcv <= in_reg_sigs.set_nzcv;
+      out_rs_cond_codes <= in_reg_sigs.cond_codes;
+      out_rs_instr_uses_nzcv <= in_reg_sigs.instr_uses_nzcv;
+      out_rs_val_a_rob_index <= in_reg_sigs.src1_rob_index;
+      out_rs_val_b_rob_index <= in_reg_sigs.src2_rob_index;
+      out_rs_nzcv_rob_index <= in_reg_sigs.nzcv_rob_index;
       // Set dst
       out_rs_dst_rob_index = next_ptr;
     end : not_reset
@@ -193,13 +173,13 @@ module rob_module (
     // `DEBUG(("FU DONE: %0d", fu_done))
 
     // Commits
-    out_reg_commit_done = rob[commit_ptr].valid;
-    out_reg_commit_value = rob[commit_ptr].value;
-    out_reg_set_nzcv = rob[commit_ptr].set_nzcv;
-    out_reg_nzcv = rob[commit_ptr].nzcv;
-    out_reg_commit_value = rob[commit_ptr].value;
-    out_reg_index = rob[commit_ptr].gpr_index;
-    out_reg_commit_rob_index = commit_ptr;
+    out_reg_commit.commit_done = rob[commit_ptr].valid;
+    out_reg_commit.commit_value = rob[commit_ptr].value;
+    out_reg_commit.set_nzcv = rob[commit_ptr].set_nzcv;
+    out_reg_commit.nzcv = rob[commit_ptr].nzcv;
+    out_reg_commit.commit_value = rob[commit_ptr].value;
+    out_reg_commit.reg_index = rob[commit_ptr].gpr_index;
+    out_reg_commit.commit_rob_index = commit_ptr;
   end
 
   // TODO branch misprediction

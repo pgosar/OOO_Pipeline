@@ -5,34 +5,13 @@ module reg_module (
     input logic in_clk,
     input logic in_rst,
     // Inputs from decode (consumed in decode)
-    input decode_interface in_d_sigs,
+    input d_interface in_d_sigs,
     // Inputs from ROB (for a commit)
-    input logic in_rob_should_commit,
-    input logic in_rob_set_nzcv,
-    input nzcv_t in_rob_nzcv,
-    input logic [`GPR_SIZE-1:0] in_rob_commit_value,
-    input logic [`GPR_IDX_SIZE-1:0] in_rob_reg_index,
-    input logic [`ROB_IDX_SIZE-1:0] in_rob_commit_rob_index,
+    input rob_commit_interface in_rob_commit,
     // Inputs from ROB (to show which ROB entry an invalid GPR is in)
     input logic [`ROB_IDX_SIZE-1:0] in_rob_next_rob_index,
     // Outputs for ROB
-    output logic out_rob_done,  // A
-    output logic out_rob_src1_valid,  // AA
-    output logic out_rob_src2_valid,  // AB
-    output logic out_rob_nzcv_valid,  // AC
-    output logic [`GPR_IDX_SIZE-1:0] out_rob_dst,  // AD
-    output logic [`ROB_IDX_SIZE-1:0] out_rob_src1_rob_index,  // AAA
-    output logic [`ROB_IDX_SIZE-1:0] out_rob_src2_rob_index,  // ABA
-    output logic [`ROB_IDX_SIZE-1:0] out_rob_nzcv_rob_index,  // ACA
-    output logic [`GPR_SIZE-1:0] out_rob_src1_value,  // AAB
-    output logic [`GPR_SIZE-1:0] out_rob_src2_value,  // ABB
-    output logic out_rob_instr_uses_nzcv,  // AE
-    output nzcv_t out_rob_nzcv,  // AEA
-    output logic out_rob_set_nzcv,  // AF
-    output fu_t out_rob_fu_id,  // AG
-    // Outputs for FU (rob)
-    output fu_op_t out_rob_fu_op  // AH
-
+    output reg_interface out_rob_sigs
 );
 
   // TODO(Nate): Add support for setting the output of immediate values or the
@@ -83,9 +62,9 @@ module reg_module (
         d_use_imm <= in_d_sigs.use_imm;
         rob_next_rob_index <= in_rob_next_rob_index;
         // Copy unused signals
-        out_rob_fu_op <= in_d_sigs.fu_op;
-        out_rob_fu_id <= in_d_sigs.fu_id;
-        out_rob_instr_uses_nzcv <= in_d_sigs.instr_uses_nzcv;
+        out_rob_sigs.fu_op <= in_d_sigs.fu_op;
+        out_rob_sigs.fu_id <= in_d_sigs.fu_id;
+        out_rob_sigs.instr_uses_nzcv <= in_d_sigs.instr_uses_nzcv;
       end
       if (d_done) begin
         // Buffer old rob indices first....
@@ -100,21 +79,21 @@ module reg_module (
         end
       end
       // Commit
-      // `DEBUG(("in_rob_should_commit: %0d, in_rob_commit_rob_index: %0d, gprs[%0d].rob_index: %0d",
-      //          in_rob_should_commit, in_rob_commit_rob_index, in_rob_reg_index,
-      //          gprs[in_rob_reg_index].rob_index))
-      if (in_rob_should_commit & (in_rob_commit_rob_index == gprs[in_rob_reg_index].rob_index)) begin : rob_commit
-        gprs[in_rob_reg_index].value <= in_rob_commit_value;
-        gprs[in_rob_reg_index].valid <= 1;
-        if (in_rob_set_nzcv) begin
-          `DEBUG(("Setting nzcv %4b", in_rob_nzcv))
-          nzcv <= in_rob_nzcv;
+      // `DEBUG(("in_rob_commit.should_commit: %0d, in_rob_commit.commit_rob_index: %0d, gprs[%0d].rob_index: %0d",
+      //          in_rob_commit.should_commit, in_rob_commit.commit_rob_index, in_rob_commit.reg_index,
+      //          gprs[in_rob_commit.reg_index].rob_index))
+      if (in_rob_commit.commit_done & (in_rob_commit.commit_rob_index == gprs[in_rob_commit.reg_index].rob_index)) begin : rob_commit
+        gprs[in_rob_commit.reg_index].value <= in_rob_commit.commit_value;
+        gprs[in_rob_commit.reg_index].valid <= 1;
+        if (in_rob_commit.set_nzcv) begin
+          `DEBUG(("Setting nzcv %4b", in_rob_commit.nzcv))
+          nzcv <= in_rob_commit.nzcv;
           nzcv_valid <= 1;
         end
         `DEBUG(("(regfile) Request to commit to GPR[%0d] -> %0d", 
-            in_rob_reg_index, $signed(in_rob_commit_value)));
-        `DEBUG(("(regfile) \tGPR ROB: %0d, Sending ROB: %0d", in_rob_commit_rob_index,
-                 gprs[in_rob_reg_index].rob_index));
+            in_rob_commit.reg_index, $signed(in_rob_commit.commit_value)));
+        `DEBUG(("(regfile) \tGPR ROB: %0d, Sending ROB: %0d", in_rob_commit.commit_rob_index,
+                 gprs[in_rob_commit.reg_index].rob_index));
       end : rob_commit
     end
   end
@@ -139,7 +118,7 @@ module reg_module (
       // end
 
       `DEBUG(("(regfile) src1 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src1,
-               out_rob_src1_value, out_rob_src1_valid, out_rob_src1_rob_index));
+               out_rob_sigs.src1_value, out_rob_sigs.src1_valid, out_rob_sigs.src1_rob_index));
       if (d_use_imm) begin
         `DEBUG(("(regfile) src2 using immediate: %0d", d_imm))
       end else begin
@@ -154,38 +133,38 @@ module reg_module (
 
   // Set outputs
   always_comb begin
-    out_rob_done = d_done;
+    out_rob_sigs.done = d_done;
     // Src 1 - With LDUR/STUR, src1 contains base address. If src1 is not
     // available
-    out_rob_src1_valid = gprs[d_src1].valid;
-    out_rob_src1_rob_index = (d_dst == d_src1) ? src1_rob_index : gprs[d_src1].rob_index;
+    out_rob_sigs.src1_valid = gprs[d_src1].valid;
+    out_rob_sigs.src1_rob_index = (d_dst == d_src1) ? src1_rob_index : gprs[d_src1].rob_index;
     if (d_fu_op == FU_OP_STUR | d_fu_op == FU_OP_STUR) begin
-      if (out_rob_src1_valid) begin
-        out_rob_src1_value = gprs[d_src1].value + d_imm;
+      if (out_rob_sigs.src1_valid) begin
+        out_rob_sigs.src1_value = gprs[d_src1].value + d_imm;
       end else begin
-        out_rob_src1_value = d_imm;
+        out_rob_sigs.src1_value = d_imm;
       end
     end else begin
-      out_rob_src1_value = gprs[d_src1].value;
+      out_rob_sigs.src1_value = gprs[d_src1].value;
     end
     // Src2 - With LDUR, the immediate is the offset.
     //      - With STUR, src2 contains value to store. immediate contains the offset
     if (d_use_imm) begin
-      out_rob_src2_value = d_imm;
-      out_rob_src2_valid = 1;
+      out_rob_sigs.src2_value = d_imm;
+      out_rob_sigs.src2_valid = 1;
     end else begin
-      out_rob_src2_valid = gprs[d_src2].valid;
-      out_rob_src2_value = gprs[d_src2].value;
+      out_rob_sigs.src2_valid = gprs[d_src2].valid;
+      out_rob_sigs.src2_value = gprs[d_src2].value;
     end
-    out_rob_src2_rob_index = (d_dst == d_src2) ? src2_rob_index : gprs[d_src2].rob_index;
+    out_rob_sigs.src2_rob_index = (d_dst == d_src2) ? src2_rob_index : gprs[d_src2].rob_index;
     // NZCV
-    out_rob_nzcv_valid = nzcv_valid;
-    // out_rob_src2_rob_index = d_dst == d_src2 ? dst_rob_index : gprs[d_src2].rob_index;
-    out_rob_nzcv_rob_index = nzcv_rob_index;
-    out_rob_nzcv = nzcv;
-    out_rob_set_nzcv = d_set_nzcv;
+    out_rob_sigs.nzcv_valid = nzcv_valid;
+    // out_rob_sigs.src2_rob_index = d_dst == d_src2 ? dst_rob_index : gprs[d_src2].rob_index;
+    out_rob_sigs.nzcv_rob_index = nzcv_rob_index;
+    out_rob_sigs.nzcv = nzcv;
+    out_rob_sigs.set_nzcv = d_set_nzcv;
     // Dst
-    out_rob_dst = d_dst;
+    out_rob_sigs.dst = d_dst;
   end
 
 endmodule

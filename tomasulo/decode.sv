@@ -301,7 +301,7 @@ module dispatch (
     // Outputs to regfile. This will (asynchronously) cause the regfile to send
     // signals to the ROB. We assume that this will occur within the same
     // cycle.
-    output decode_interface out_reg_sigs
+    output d_interface out_reg_sigs
     // Outputs to be broadcasted.
     // output logic out_stalled
 );

@@ -349,19 +349,26 @@ module core (
       .out_reg_sigs(d_sigs)
   );
 
-  decode_interface d_sigs();
+  d_interface d_sigs();
 
   reg_module regfile (
-      .*,
+      .in_clk,
+      .in_rst,
       .in_d_sigs(d_sigs),
-      .in_rob_nzcv(reg_in_rob_nzcv),
-      .in_rob_set_nzcv(reg_in_rob_set_nzcv),
-      .out_rob_done(reg_out_rob_done)
+      .in_rob_commit(rob_commit_sigs),
+      .in_rob_next_rob_index(next_rob_index),
+      .out_rob_sigs(reg_sigs)
   );
+
+  logic [`ROB_IDX_SIZE-1:0] next_rob_index;
+  reg_interface reg_sigs();
+  rob_commit_interface rob_commit_sigs();
 
   rob_module rob (
       .*,
-      .out_reg_set_nzcv(rob_out_reg_set_nzcv)
+      .in_reg_sigs(reg_sigs),
+      .out_reg_commit(rob_commit_sigs),
+      .out_reg_next_rob_index(next_rob_index)
   );
   reservation_stations rs (.*);
   func_units fu (
