@@ -6,7 +6,7 @@
 start:
     add x1, x1, #0xfff // 4095
     adds x2, x1, x1 // 8190
-    adds x2, x2, x1 // 12285
+    adds x2, x1, x1 // 12285
     subs x3, x1, x1 // 0
     subs x3, x3, x1 // -4095
     subs x3, x3, x1 // -8190
