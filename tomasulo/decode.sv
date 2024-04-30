@@ -157,8 +157,9 @@ module decide_alu (
   // TODO op_cmp, op_tst def commented out in opcode_t
   always_comb begin
     casez (opcode)
-      OP_LDUR, OP_LDP, OP_STUR, OP_STP, OP_ADD, OP_ADDS, OP_ADR, OP_ADRP:
-      out_reg_fu_op = FU_OP_PLUS;
+      OP_LDP, OP_STP, OP_ADD, OP_ADDS, OP_ADR, OP_ADRP: out_reg_fu_op = FU_OP_PLUS;
+      OP_LDUR: out_reg_fu_op = FU_OP_LDUR;
+      OP_STUR: out_reg_fu_op = FU_OP_STUR;
       OP_SUB, OP_SUBS: out_reg_fu_op = FU_OP_MINUS;
       OP_ORN: out_reg_fu_op = FU_OP_ORN;
       OP_ORR: out_reg_fu_op = FU_OP_OR;
@@ -314,15 +315,13 @@ module dispatch (
     output fu_op_t out_reg_fu_op,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_dst,
     output cond_t out_reg_cond_codes,
-    output logic out_reg_instr_uses_nzcv,
-    output opcode_t out_reg_opcode
+    output logic out_reg_instr_uses_nzcv
     // Outputs to be broadcasted.
     // output logic out_stalled
 );
 
   opcode_t opcode;
   logic [`INSNBITS_SIZE-1:0] insnbits;
-  assign out_reg_opcode = opcode;
 
   decode_instruction op_decoder (
       .*,

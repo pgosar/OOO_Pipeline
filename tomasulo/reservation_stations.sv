@@ -1,11 +1,10 @@
 `include "data_structures.sv"
 
-
 module reservation_stations (
     input logic in_rst,
     input logic in_clk,
     // Inputs From ROB (sourced from either regfile or ROB)
-    input cond_t in_rob_cond_codes,
+    input cond_t in_rob_alu_cond_codes,
     input logic in_rob_done,
     input fu_t in_rob_fu_id,
     input fu_op_t in_rob_fu_op,
@@ -20,6 +19,7 @@ module reservation_stations (
     input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_b_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
+    // inputs from ROB for broadcast
     input logic in_rob_broadcast_done,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
     input logic [`GPR_SIZE-1:0] in_rob_broadcast_value,
@@ -33,26 +33,47 @@ module reservation_stations (
     input logic in_fu_alu_ready,
     // Outputs for FU (ALU)
     output logic out_fu_alu_start,
-    output logic out_fu_ls_start,
-    output fu_op_t out_fu_fu_op,
+    output fu_op_t out_fu_op,
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
     output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,
     output logic out_fu_alu_set_nzcv,
     output nzcv_t out_fu_alu_nzcv,
-    output cond_t out_fu_cond_codes
+    output cond_t out_fu_cond_codes,
+    // outputs for FU (LS)
+    output logic out_fu_ls_start,
+    output fu_op_t out_fu_ls_op,
+    output logic [`GPR_SIZE-1:0] out_fu_ls_val_a,
+    output logic [`GPR_SIZE-1:0] out_fu_ls_val_b,
+    output logic [`ROB_IDX_SIZE-1:0] out_fu_ls_dst_rob_index
 );
 
   logic ls_ready, alu_ready;
-  // assign alu_ready = in_rob_fu_id == FU_ALU & in_fu_alu_ready;
-  // assign ls_ready  = in_rob_fu_id == FU_LS & in_fu_ls_ready;
-  // reservation_station_module ls (
-  //     .*,
-  //     .in_fu_alu_ready(alu_ready)
-  // );
+  always_ff @(posedge in_clk) begin
+    // $display("(MASTER rs) FU ID: %s, alu ready", in_rob_fu_id.name);
+    alu_ready <= (in_rob_fu_id == FU_ALU) & in_fu_alu_ready;
+    ls_ready  <= (in_rob_fu_id == FU_LS) & in_fu_ls_ready;
+    // $display("(MASTER rs) Alu start: %0d", out_fu_alu_start);
+  end
+
+  reservation_station_module ls (
+      .*,
+      .in_rob_done (in_rob_done & (in_rob_fu_id == FU_LS)),
+      .in_fu_ready (ls_ready),
+      .out_fu_start(out_fu_ls_start),
+      .out_fu_val_a(out_fu_ls_val_a),
+      .out_fu_val_b(out_fu_ls_val_b)
+      // .out_fu_dst_rob_index(out_fu_ls_dst_rob_index)
+  );
+
   reservation_station_module alu (
-      .*
-      // .in_fu_alu_ready(ls_ready)
+      .*,
+      .in_rob_done (in_rob_done & (in_rob_fu_id == FU_ALU)),
+      .in_fu_ready (alu_ready),
+      .out_fu_start(out_fu_alu_start),
+      .out_fu_val_a(out_fu_alu_val_a),
+      .out_fu_val_b(out_fu_alu_val_b)
+      // .out_fu_dst_rob_index(out_fu_alu_dst_rob_index)
   );
 
 endmodule
@@ -64,22 +85,25 @@ module reservation_station_module #(
     // Timing & Reset
     input logic in_rst,
     input logic in_clk,
-    // Inputs From ROB
-    input cond_t in_rob_cond_codes,
+    // Inputs From ROB (general)
     input logic in_rob_done,
+    input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
     input fu_op_t in_rob_fu_op,
-    input logic in_rob_alu_val_a_valid,
-    input logic in_rob_alu_val_b_valid,
+    // Inputs from ROB (ALU)
+    input cond_t in_rob_alu_cond_codes,
     input logic in_rob_nzcv_valid,
-    input logic [`GPR_SIZE-1:0] in_rob_alu_val_a_value,
-    input logic [`GPR_SIZE-1:0] in_rob_alu_val_b_value,
     input nzcv_t in_rob_nzcv,
     input logic in_rob_set_nzcv,
-    input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_a_rob_index,
-    input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_b_rob_index,
-    input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
     input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
     input logic in_rob_instr_uses_nzcv,
+
+    // Inputs from ROB (unique)
+    input logic in_rob_alu_val_a_valid,
+    input logic in_rob_alu_val_b_valid,
+    input logic [`GPR_SIZE-1:0] in_rob_alu_val_a_value,
+    input logic [`GPR_SIZE-1:0] in_rob_alu_val_b_value,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_a_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_b_rob_index,
 
     // Inputs from ROB (for broadcast)
     input logic in_rob_broadcast_done,
@@ -89,21 +113,22 @@ module reservation_station_module #(
     input nzcv_t in_rob_broadcast_nzcv,
     input logic in_rob_is_mispred,
 
-    // Inputs from FU (LS)
-    input logic in_fu_ls_ready,
-    // Inputs from FU (ALU)
-    input logic in_fu_alu_ready,
+    input logic in_fu_ready,
 
     // Outputs for FU (ALU)
-    output logic out_fu_alu_start,  // A
-    output logic out_fu_ls_start,  // B
-    output fu_op_t out_fu_fu_op,  // AA
-    output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,  // AB
-    output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,  // AC
+    output logic out_fu_start,  // A
+    output fu_op_t out_fu_op,  // AA
+    output logic [`GPR_SIZE-1:0] out_fu_val_a,  // AB
+    output logic [`GPR_SIZE-1:0] out_fu_val_b,  // AC
     output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,  // AD
     output logic out_fu_alu_set_nzcv,  // AE
     output nzcv_t out_fu_alu_nzcv,  // AF
-    output cond_t out_fu_cond_codes
+    output cond_t out_fu_cond_codes,
+
+    // Outputs for FU (LS)
+    output logic out_fu_ls_start,  // B
+    output fu_op_t out_fu_ls_op,
+    output logic [`ROB_IDX_SIZE-1:0] out_fu_ls_dst_rob_index
 );
 
   // In RS, we create two bitmaps. One shows entries which are READY to
@@ -132,7 +157,7 @@ module reservation_station_module #(
   logic [`ROB_IDX_SIZE-1:0] rob_nzcv_rob_index;
   fu_op_t rob_fu_op;
   logic rob_done;
-  logic fu_alu_ready;
+  logic fu_ready;
   logic rob_instr_uses_nzcv;
   // For broadcasts
   logic [`ROB_IDX_SIZE-1:0] rob_broadcast_index;
@@ -204,12 +229,12 @@ module reservation_station_module #(
 `endif
         // todo handle mispred
       end else begin : rs_not_mispred
-        if (fu_alu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
+        if (fu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
 `ifdef DEBUG_PRINT
           $display("(RS) Remove entry RS[%0d]. FU consumed entry at start of this cycle.",
                    ready_station_index);
 `endif
-          rs[ready_station_index].entry_valid <= ~fu_alu_ready;
+          rs[ready_station_index].entry_valid <= ~fu_ready;
         end : fu_consume_entry
       end : rs_not_mispred
       // Buffer state
@@ -226,7 +251,7 @@ module reservation_station_module #(
       rob_nzcv_rob_index <= in_rob_nzcv_rob_index;
       rob_fu_op <= in_rob_fu_op;
       rob_done <= in_rob_done;
-      fu_alu_ready <= in_fu_alu_ready;
+      fu_ready <= in_fu_ready;
       rob_instr_uses_nzcv <= in_rob_instr_uses_nzcv;
       // For broadcast
       rob_broadcast_index <= in_rob_broadcast_index;
@@ -236,7 +261,7 @@ module reservation_station_module #(
       rob_broadcast_done <= in_rob_broadcast_done;
 
       // Unused state
-      out_fu_cond_codes <= in_rob_cond_codes;
+      out_fu_cond_codes <= in_rob_alu_cond_codes;
     end : rs_not_reset
   end : rs_on_clk
 
@@ -254,7 +279,15 @@ module reservation_station_module #(
 `ifdef DEBUG_PRINT
             $display("(RS) \tUpdating RS[%0d] op1 -> %0d", i, $signed(rob_broadcast_value));
 `endif
-            rs[i].op1.value <= rob_broadcast_value;
+            if (rs[i].op == FU_OP_LDUR | rs[i].op == FU_OP_STUR) begin
+`ifdef DEBUG_PRINT
+              $display("op1.value: %0d, rob_broadcast_value: %0d", rs[i].op1.value,
+                       rob_broadcast_value);
+`endif
+              rs[i].op1.value <= rs[i].op1.value + rob_broadcast_value;
+            end else begin
+              rs[i].op1.value <= rob_broadcast_value;
+            end
             rs[i].op1.valid <= 1;
           end
           if (rs[i].op2.rob_index == rob_broadcast_index) begin
@@ -308,10 +341,10 @@ module reservation_station_module #(
 
   always_comb begin
     // Allow the ALU to consume the value when ready
-    out_fu_alu_start = fu_alu_ready & ready_station_index != INVALID_INDEX;
-    out_fu_fu_op = rs[ready_station_index].op;
-    out_fu_alu_val_a = rs[ready_station_index].op1.value;
-    out_fu_alu_val_b = rs[ready_station_index].op2.value;
+    out_fu_start = fu_ready & ready_station_index != INVALID_INDEX;
+    out_fu_op = rs[ready_station_index].op;
+    out_fu_val_a = rs[ready_station_index].op1.value;
+    out_fu_val_b = rs[ready_station_index].op2.value;
     out_fu_dst_rob_index = rs[ready_station_index].dst_rob_index;
     out_fu_alu_nzcv = rs[ready_station_index].nzcv;
     out_fu_alu_set_nzcv = rs[ready_station_index].set_nzcv;

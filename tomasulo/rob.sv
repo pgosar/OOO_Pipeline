@@ -31,6 +31,7 @@ module rob_module (
     input logic in_reg_instr_uses_nzcv,
 
     // Outputs for RS
+    output cond_t out_rs_cond_codes,  // CE ???
     output logic out_rs_done,  // A
     output fu_t out_rs_fu_id,  // AA
     output fu_op_t out_rs_fu_op,  // AB
@@ -46,14 +47,13 @@ module rob_module (
     output logic [`ROB_IDX_SIZE-1:0] out_rs_alu_val_b_rob_index,  // ADB
     output logic [`ROB_IDX_SIZE-1:0] out_rs_alu_dst_rob_index,  // AG
     output logic [`ROB_IDX_SIZE-1:0] out_rs_nzcv_rob_index,  // AH
-    // Output for regfile (for the next ROB insertion)
-    output logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index,  // D
     // Outputs for RS (on broadcast... resultant from FU)
     output logic out_rs_broadcast_done,  // B
     output logic [`ROB_IDX_SIZE-1:0] out_rs_broadcast_index,  // BA
     output logic [`GPR_SIZE-1:0] out_rs_broadcast_value,  // BB
     output logic out_rs_broadcast_set_nzcv,  // BC
     output nzcv_t out_rs_broadcast_nzcv,  // BCA
+    output logic out_rs_is_mispred,
     // Outputs for regfile (for commits)
     output logic out_reg_commit_done,  // C
     output logic out_reg_set_nzcv,  // CA
@@ -61,7 +61,8 @@ module rob_module (
     output logic [`GPR_SIZE-1:0] out_reg_commit_value,  // CB
     output logic [`GPR_IDX_SIZE-1:0] out_reg_index,  // CC
     output logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index,  // CD
-    output cond_t out_rs_cond_codes  // CE ???
+    // Output for regfile (for the next ROB insertion)
+    output logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index  // D
     // // Outputs for dispatch
     // output logic [`ROB_IDX_SIZE-1:0] out_next_rob_index,
     // output logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_index[`MISSPRED_SIZE]
@@ -96,6 +97,7 @@ module rob_module (
 
   // Update from FU and copy signals
   always_ff @(posedge in_clk) begin
+    $display("cond: %0d", in_reg_cond_codes);
     if (in_rst) begin
 `ifdef DEBUG_PRINT
       $display("(rob) Resetting");

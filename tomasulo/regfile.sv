@@ -7,16 +7,16 @@ module reg_module (
     // Inputs from decode (consumed in decode)
     input logic in_d_done,
     // Inputs from decode (passed through or used)
-    input opcode_t in_d_opcode,
     input logic in_d_set_nzcv,
     input logic in_d_use_imm,
     input logic [`IMMEDIATE_SIZE-1:0] in_d_imm,
     input logic [`GPR_IDX_SIZE-1:0] in_d_src1,
     input logic [`GPR_IDX_SIZE-1:0] in_d_src2,
+    input logic [`GPR_IDX_SIZE-1:0] in_d_dst,
     input fu_t in_d_fu_id,
     input fu_op_t in_d_fu_op,
-    input logic [`GPR_IDX_SIZE-1:0] in_d_dst,
     input logic in_d_instr_uses_nzcv,
+    input cond_t in_d_cond_codes,
     // Inputs from ROB (for a commit)
     input logic in_rob_should_commit,
     input logic in_rob_set_nzcv,
@@ -42,7 +42,8 @@ module reg_module (
     output logic out_rob_set_nzcv,  // AF
     output fu_t out_rob_fu_id,  // AG
     // Outputs for FU (rob)
-    output fu_op_t out_rob_fu_op  // AH
+    output fu_op_t out_rob_fu_op,  // AH
+    output cond_t out_rob_cond_codes
 
 );
 
@@ -68,10 +69,11 @@ module reg_module (
   logic d_use_imm;
   logic [`GPR_IDX_SIZE-1:0] src1_rob_index;
   logic [`GPR_IDX_SIZE-1:0] src2_rob_index;
-  opcode_t d_opcode;
+  fu_op_t d_fu_op;
 
   // Commit & buffer inputs
   always_ff @(posedge in_clk) begin
+
     if (in_rst) begin
 `ifdef DEBUG_PRINT
       $display("(regfile) Resetting");
@@ -93,12 +95,13 @@ module reg_module (
         d_set_nzcv <= in_d_set_nzcv;
         d_imm <= in_d_imm;
         d_use_imm <= in_d_use_imm;
-        d_opcode <= in_d_opcode;
+        d_fu_op <= in_d_fu_op;
         rob_next_rob_index <= in_rob_next_rob_index;
         // Copy unused signals
         out_rob_fu_op <= in_d_fu_op;
         out_rob_fu_id <= in_d_fu_id;
         out_rob_instr_uses_nzcv <= in_d_instr_uses_nzcv;
+        out_rob_cond_codes <= in_d_cond_codes;
       end
       if (d_done) begin
         // Buffer old rob indices first....
@@ -172,24 +175,27 @@ module reg_module (
   // Set outputs
   always_comb begin
     out_rob_done = d_done;
-    // Src 1 - With LDUR/STUR, src1 contains base address.
+    // Src 1 - With LDUR/STUR, src1 contains base address. If src1 is not
+    // available
     out_rob_src1_valid = gprs[d_src1].valid;
-    out_rob_src1_value = gprs[d_src1].value;
     out_rob_src1_rob_index = (d_dst == d_src1) ? src1_rob_index : gprs[d_src1].rob_index;
+    if (d_fu_op == FU_OP_STUR | d_fu_op == FU_OP_STUR) begin
+      if (out_rob_src1_valid) begin
+        out_rob_src1_value = gprs[d_src1].value + d_imm;
+      end else begin
+        out_rob_src1_value = d_imm;
+      end
+    end else begin
+      out_rob_src1_value = gprs[d_src1].value;
+    end
     // Src2 - With LDUR, the immediate is the offset.
     //      - With STUR, src2 contains value to store. immediate contains the offset
-    if (d_opcode == OP_STUR) begin
-      // out_rob_v
-      // out_rob
-    end else if (d_opcode == OP_LDUR) begin
-    end begin
-      if (d_use_imm) begin
-        out_rob_src2_value = d_imm;
-        out_rob_src2_valid = 1;
-      end else begin
-        out_rob_src2_valid = gprs[d_src2].valid;
-        out_rob_src2_value = gprs[d_src2].value;
-      end
+    if (d_use_imm) begin
+      out_rob_src2_value = d_imm;
+      out_rob_src2_valid = 1;
+    end else begin
+      out_rob_src2_valid = gprs[d_src2].valid;
+      out_rob_src2_value = gprs[d_src2].value;
     end
     out_rob_src2_rob_index = (d_dst == d_src2) ? src2_rob_index : gprs[d_src2].rob_index;
     // NZCV
