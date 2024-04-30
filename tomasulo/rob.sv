@@ -109,8 +109,9 @@ module rob_module (
     end else begin : not_reset
       // Update state from FU
       if (in_fu_done) begin
-        `DEBUG(("(rob) Received result from FU. ROB[%0d] -> %0d + valid", in_fu_dst_rob_index,
-               $signed(in_fu_value)));
+        `DEBUG(
+            ("(rob) Received result from FU. ROB[%0d] -> %0d + valid", in_fu_dst_rob_index, $signed(
+            in_fu_value)));
         // Validate the line which the FU has updated
         rob[in_fu_dst_rob_index].value <= in_fu_value;
         rob[in_fu_dst_rob_index].valid <= 1;
@@ -121,7 +122,8 @@ module rob_module (
       // Update regfile
       if (in_reg_done) begin
         `DEBUG(("(rob) Inserting new entry @ ROB[%0d] for dst GPR[%0d]", next_ptr, in_reg_dst));
-        `DEBUG(("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_instr_uses_nzcv, next_ptr,
+        `DEBUG(
+            ("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_instr_uses_nzcv, next_ptr,
                (next_ptr + 1) % `ROB_SIZE));
         // Add a new entry to the ROB and update the regfile
         rob[next_ptr].gpr_index <= in_reg_dst;
@@ -132,12 +134,14 @@ module rob_module (
       end
       if (rob[commit_ptr].valid) begin : remove_commit
         commit_ptr <= (commit_ptr + 1) % `ROB_SIZE;
-        `DEBUG(("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d",
+        `DEBUG(
+            ("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d",
                (commit_ptr + 1) % `ROB_SIZE));
-        `DEBUG((
+        `DEBUG(
+            (
             "(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b",
-            commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value),
-            rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv));
+            commit_ptr, rob[commit_ptr].gpr_index, $signed(
+            rob[commit_ptr].value), rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv));
       end : remove_commit
       // Buffer the incoming state
       reg_done <= in_reg_done;
@@ -163,7 +167,7 @@ module rob_module (
       out_rs_alu_val_b_rob_index <= in_reg_src2_rob_index;
       out_rs_nzcv_rob_index <= in_reg_nzcv_rob_index;
       // Set dst
-      out_rs_alu_dst_rob_index = next_ptr;
+      out_rs_alu_dst_rob_index <= next_ptr;
     end : not_reset
   end
 

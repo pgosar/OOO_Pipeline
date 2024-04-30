@@ -1,6 +1,8 @@
 `ifndef FUNC_UNITS
 `define FUNC_UNITS
 
+`include "data_structures.sv"
+
 module func_units (
     // Timing
     input logic in_clk,
@@ -48,8 +50,8 @@ module func_units (
 
   // Decide on whether LS or ALU should run
   assign out_rob_value = out_value;
-  assign out_rs_alu_ready = 1;
-  assign out_rob_dst_rob_index = rs_alu_dst_rob_index;
+  // assign out_rs_alu_ready = 1;
+  // assign out_rob_dst_rob_index = rs_alu_dst_rob_index;
   // always_comb begin
   //   out_rob_value = out_value;
   //   if (in_rs_ls_start) begin
@@ -65,7 +67,15 @@ module func_units (
 
   // Buffer inputs
   always_ff @(posedge in_clk) begin
-    out_rob_done <= in_rs_alu_start;
+    out_rob_done <= in_rs_alu_start | in_rs_ls_start;
+    if (out_rob_done) begin
+      out_rs_alu_ready <= 0;
+      out_rs_ls_ready  <= 0;
+    end
+    out_rs_alu_ready <= !in_rs_alu_start;
+    out_rs_ls_ready <= !in_rs_ls_start;
+    out_rob_dst_rob_index <= in_rs_alu_start ? rs_alu_dst_rob_index : rs_ls_dst_rob_index;
+    `DEBUG(("ALU start: %0d, LS start: %0d", in_rs_alu_start, in_rs_ls_start));
     if (in_rs_alu_start) begin
       // buffered state (so that it is clocked)
       fu_op <= in_rs_alu_fu_op;
@@ -89,14 +99,10 @@ module func_units (
       val_a <= in_rs_alu_val_a;
       val_b <= in_rs_alu_val_b;
       rs_ls_dst_rob_index <= in_rs_ls_dst_rob_index;
-      #2
+      //#2
       `DEBUG(
           ( "(LS) %s executed: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b", fu_op.name, $signed(
-              out_value
-          ), rs_ls_dst_rob_index, $signed(
-              val_a
-          ), $signed(
-              val_b), out_rob_nzcv));
+          out_value), rs_ls_dst_rob_index, $signed(val_a), $signed(val_b), out_rob_nzcv));
     end
   end
 

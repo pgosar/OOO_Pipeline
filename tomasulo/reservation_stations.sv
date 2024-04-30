@@ -52,7 +52,8 @@ module reservation_stations (
   always_ff @(posedge in_clk) begin
     alu_ready <= (in_rob_fu_id == FU_ALU) & in_fu_alu_ready;
     ls_ready  <= (in_rob_fu_id == FU_LS) & in_fu_ls_ready;
-    `DEBUG(("(RS) ALU Ready: %0d, LS Ready: %0d", alu_ready, ls_ready));
+    `DEBUG(
+        ("(RS) ALU Ready: %0d, LS Ready: %0d FU ID: %s", alu_ready, ls_ready, in_rob_fu_id.name));
   end
 
   reservation_station_module ls (
@@ -62,7 +63,6 @@ module reservation_stations (
       .out_fu_start(out_fu_ls_start),
       .out_fu_val_a(out_fu_ls_val_a),
       .out_fu_val_b(out_fu_ls_val_b)
-      // .out_fu_dst_rob_index(out_fu_ls_dst_rob_index)
   );
 
   reservation_station_module alu (
@@ -72,8 +72,13 @@ module reservation_stations (
       .out_fu_start(out_fu_alu_start),
       .out_fu_val_a(out_fu_alu_val_a),
       .out_fu_val_b(out_fu_alu_val_b)
-      // .out_fu_dst_rob_index(out_fu_alu_dst_rob_index)
   );
+  always_comb begin
+    $display("out fu alu start: %0d", out_fu_alu_start);
+  end
+  always_comb begin
+    $display("out fu ls start: %0d", out_fu_ls_start);
+  end
 
 endmodule
 
@@ -81,6 +86,7 @@ module reservation_station_module #(
     parameter RS_SIZE = 8,
     parameter RS_IDX_SIZE = 3
 ) (
+    input fu_t in_rob_fu_id,
     // Timing & Reset
     input logic in_rst,
     input logic in_clk,
@@ -332,6 +338,10 @@ module reservation_station_module #(
     out_fu_dst_rob_index = rs[ready_station_index].dst_rob_index;
     out_fu_alu_nzcv = rs[ready_station_index].nzcv;
     out_fu_alu_set_nzcv = rs[ready_station_index].set_nzcv;
+    if (in_rob_fu_id == FU_LS) begin
+      $display("wtf fu ready %0d fu start %0d ready_station_index %0d", fu_ready, out_fu_start,
+               ready_station_index);
+    end
   end
 
   always_ff @(posedge delayed_clk) begin

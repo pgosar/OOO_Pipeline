@@ -171,6 +171,7 @@ module decide_alu (
       OP_CSEL: out_reg_fu_op = FU_OP_CSEL;
       OP_CSINC: out_reg_fu_op = FU_OP_CSINC;
       OP_CSINV: out_reg_fu_op = FU_OP_CSINV;
+      OP_NOP: out_reg_fu_op = FU_OP_NOP;
       default: out_reg_fu_op = FU_OP_PLUS;  //plus for now i will add an error op later
     endcase
   end
@@ -326,7 +327,7 @@ module dispatch (
 
   decode_instruction op_decoder (
       .*,
-      .out_opcode(opcode),
+      .out_opcode (opcode),
       .in_insnbits(insnbits)
   );
   extract_immval imm_extractor (

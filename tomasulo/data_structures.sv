@@ -59,7 +59,8 @@ typedef enum logic [5:0] {
   FU_OP_CBZ,     // EC: used for cbz
   FU_OP_CBNZ,    // EC: used for cbnz
   FU_OP_LDUR,
-  FU_OP_STUR
+  FU_OP_STUR,
+  FU_OP_NOP
 } fu_op_t;
 
 typedef enum logic [`OPCODE_SIZE-1:0] {

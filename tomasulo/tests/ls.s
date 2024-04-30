@@ -4,6 +4,7 @@
 	.p2align 3,,7
     .global start
 start:
+    mov x0, #4100
     stur x1, [x0]
     ldur x10, [x0]
     nop
