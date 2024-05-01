@@ -22,6 +22,7 @@ module func_units (
     input nzcv_t in_rs_alu_nzcv,
     input cond_t in_rob_alu_cond_codes,
     // Inputs from RS (LS)
+    input logic in_rs_commit_done,
     input logic in_rs_ls_start,
     input fu_op_t in_rs_ls_fu_op,
     input logic [`GPR_SIZE-1:0] in_rs_ls_val_a,
@@ -111,7 +112,7 @@ module func_units (
   dmem dmem_module (
       .clk(in_clk),
       .in_addr(val_a),
-      .w_enable(fu_op == FU_OP_STUR),
+      .w_enable(fu_op == FU_OP_STUR & in_rs_commit_done),
       .wval(val_b),
       .data(ls_value)
   );
@@ -174,6 +175,7 @@ module alu_module (
 
   logic result_negative;
   always_comb begin
+    // $display("ALU_OP: %s", in_op.name);
     casez (in_op)
       FU_OP_ADRX, FU_OP_PLUS: result = val_a + val_b;
       FU_OP_MINUS: result = val_a - val_b;
@@ -185,7 +187,7 @@ module alu_module (
       FU_OP_CSINC: result = out_alu_condition == 0 ? val_b + 1 : val_a;
       FU_OP_CSINV: result = out_alu_condition == 0 ? ~val_b : val_a;
       FU_OP_CSEL: result = out_alu_condition == 0 ? val_b : val_a;
-      FU_OP_MOV: result = val_a | val_b;  // TODO pass through val_hw
+      FU_OP_MOV: result = val_a | val_b;
       FU_OP_PASS_A: result = val_a;
       default: result = 0;
     endcase

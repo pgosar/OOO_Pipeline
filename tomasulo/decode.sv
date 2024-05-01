@@ -3,6 +3,7 @@
 
 `include "data_structures.sv"
 
+
 module decode_instruction (
     input logic [`INSNBITS_SIZE-1:0] in_insnbits,
     output opcode_t out_opcode
@@ -11,7 +12,6 @@ module decode_instruction (
     casez (in_insnbits)
       // All references in this decode are made to the Arm Architecture
       // Reference Manual version K.a released 2024-03-20
-      // // C6.2.221 - 64-bit unscaled load.
       // C6.2.389 - 64-bit unscaled store.
       32'b1111_1000_000?_????_????_00??_????_????: out_opcode = OP_STUR;
       // C6.2.388 - 64-bit unscaled load.
@@ -113,40 +113,53 @@ module extract_reg (
     input logic [`INSNBITS_SIZE-1:0] in_insnbits,
     input opcode_t opcode,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src1,
+    output logic out_reg_src1_used,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
+    output logic out_reg_src2_used,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_dst
 );
   always_comb begin
     //out_reg_dst
-    if (opcode != OP_B & opcode != OP_BR & opcode != OP_B_COND &  //branch dont need out_reg_dst
-        opcode != OP_BL & opcode != OP_BLR & opcode != OP_RET &  //branch dont need out_reg_dst
-        opcode != OP_NOP & opcode != OP_HLT &  //S format
-        opcode != OP_CBZ & opcode != OP_CBNZ) begin  //i something format
-      out_reg_dst = in_insnbits[4:0];
-    end else if (opcode == OP_BL) begin
-      out_reg_dst = 5'd30;
-    end else begin
-      out_reg_dst = 0;
-    end
+    casez (opcode)
+      OP_B, OP_BR, OP_B_COND, OP_CBZ, OP_CBNZ, OP_RET, OP_NOP, OP_HLT, OP_ERR: begin
+        out_reg_dst = REG_ZR;
+      end
+      OP_BL, OP_BLR: begin
+        out_reg_dst = 30;
+      end
+      OP_STUR: begin
+        out_reg_dst = REG_STUR;
+      end
+      default: begin
+        out_reg_dst = in_insnbits[4:0];
+      end
+    endcase
 
     //out_reg_src1
     if (opcode != OP_MOVK & opcode != OP_MOVZ & opcode != OP_ADR & opcode != OP_ADRP &
             opcode != OP_B & opcode != OP_B_COND & opcode != OP_BL & opcode != OP_NOP & opcode != OP_HLT
             & opcode != OP_CBZ & opcode != OP_CBNZ) begin
       out_reg_src1 = in_insnbits[9:5];
+      out_reg_src1_used = 1;
     end else if (opcode == OP_CBZ | opcode == OP_CBNZ) begin
       out_reg_src1 = in_insnbits[4:0];
+      out_reg_src1_used = 1;
     end else begin
-      out_reg_src1 = 0;
+      out_reg_src1 = REG_ZR;
+      out_reg_src1_used = 0;
     end
+
 
     //out_reg_src2
     if (opcode == OP_STUR) begin
       out_reg_src2 = in_insnbits[4:0];
+      out_reg_src2_used = 1;
     end else if (opcode == OP_ADDS | opcode == OP_SUBS | opcode == OP_ORN | opcode == OP_ORR | opcode == OP_EOR | opcode == OP_ANDS | opcode == OP_CSEL | opcode == OP_CSINV | opcode == OP_CSINC | opcode == OP_CSNEG) begin
       out_reg_src2 = in_insnbits[20:16];
+      out_reg_src2_used = 1;
     end else begin
-      out_reg_src2 = 0;
+      out_reg_src2 = REG_ZR;
+      out_reg_src2_used = 0;
     end
   end
 endmodule
@@ -154,8 +167,8 @@ endmodule
 module decide_alu (
     input opcode_t opcode,
     output fu_op_t out_reg_fu_op,
-    output logic out_reg_mispredict,
-    output logic out_reg_bcond
+    output logic out_reg_mispredict  // TODO(Nate): This could be done with just the opcode.
+    // output logic out_reg_bcond
 );
   // TODO op_cmp, op_tst def commented out in opcode_t
   always_comb begin
@@ -177,21 +190,21 @@ module decide_alu (
       OP_BR, OP_BLR: out_reg_fu_op = FU_OP_PASS_A;
       OP_B_COND: out_reg_fu_op = FU_OP_B_COND;
       OP_ADR, OP_ADRP: out_reg_fu_op = FU_OP_ADRX;
-      default: out_reg_fu_op = FU_OP_PLUS;  //plus for now i will add an error op later
+      default: out_reg_fu_op = FU_OP_PASS_A;  //plus for now i will add an error op later
     endcase
 
     casez (opcode)
-      OP_BR, OP_BLR: begin
+      OP_BR, OP_BLR, OP_RET: begin
         out_reg_mispredict = 1;
-        out_reg_bcond = 0;
+        // out_reg_bcond = 0;
       end
       OP_B_COND: begin
         out_reg_mispredict = 0;
-        out_reg_bcond = 1;
+        // out_reg_bcond = 1;
       end
       default: begin
         out_reg_mispredict = 0;
-        out_reg_bcond = 0;
+        // out_reg_bcond = 0;
       end
     endcase
   end
@@ -303,15 +316,14 @@ endmodule
 
 module uses_nzcv (
     input opcode_t in_opcode,
-    output logic op_uses_nzcv
+    output logic out_op_uses_nzcv
 );
 
   always_comb begin
-    if (in_opcode == OP_B_COND | in_opcode == OP_CSINV | in_opcode == OP_CSINV | in_opcode == OP_CSNEG |
-        in_opcode == OP_CSEL) begin
-      op_uses_nzcv = 1;
+    if (in_opcode == OP_B_COND | in_opcode == OP_CSINV | in_opcode == OP_CSINV | in_opcode == OP_CSNEG | in_opcode == OP_CSEL) begin
+      out_op_uses_nzcv = 1;
     end else begin
-      op_uses_nzcv = 0;
+      out_op_uses_nzcv = 0;
     end
   end
 endmodule
@@ -320,89 +332,100 @@ module dispatch (
     // Inputs from core
     input logic in_rst,
     input logic in_clk,
-    input logic in_stall,
+    // input logic in_stall,
     // Inputs from fetch
-    input logic [`INSNBITS_SIZE-1:0] in_fetch_insnbits,
-    input logic in_fetch_done,
-    input logic [`GPR_SIZE-1:0] in_fetch_branch_PC,
+    input fetch_interface in_fetch_sigs,
     // Outputs to regfile. This will (asynchronously) cause the regfile to send
     // signals to the ROB. We assume that this will occur within the same
     // cycle.
-    output logic out_reg_done,
-    output logic out_reg_set_nzcv,
-    output logic out_reg_use_imm,
-    output logic [`IMMEDIATE_SIZE-1:0] out_reg_imm,
-    output logic [`GPR_IDX_SIZE-1:0] out_reg_src1,
-    output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
-    output fu_t out_reg_fu_id,
-    output fu_op_t out_reg_fu_op,
-    output logic [`GPR_IDX_SIZE-1:0] out_reg_dst,
-    output cond_t out_reg_cond_codes,
-    output logic out_reg_instr_uses_nzcv,
-    output logic out_reg_mispredict,
-    output logic out_reg_bcond,
-    output logic [`GPR_SIZE-1:0] out_reg_branch_PC
+    output decode_interface out_reg_sigs
     // Outputs to be broadcasted.
     // output logic out_stalled
 );
+
 
   opcode_t opcode;
   logic [`INSNBITS_SIZE-1:0] insnbits;
 
   decode_instruction op_decoder (
-      .*,
-      .out_opcode (opcode),
-      .in_insnbits(insnbits)
+      .in_insnbits(insnbits),
+      .out_opcode (opcode)
   );
   extract_immval imm_extractor (
-      .*,
-      .in_insnbits(insnbits)
+      .opcode,
+      .in_insnbits(insnbits),
+      .out_reg_imm(out_reg_sigs.imm)
   );
   extract_reg reg_extractor (
-      .*,
-      .in_insnbits(insnbits)
+      .opcode,
+      .in_insnbits(insnbits),
+      .out_reg_src1(out_reg_sigs.src1),
+      .out_reg_src2(out_reg_sigs.src2),
+      .out_reg_src1_used(out_reg_sigs.src1_used),
+      .out_reg_src1_used(out_reg_sigs.src2_used),
+      .out_reg_dst(out_reg_sigs.dst)
   );
 
   find_cond_code cond_holds (
-      .*,
-      .in_opcode  (opcode),
-      .in_insnbits(insnbits)
+      .in_opcode(opcode),
+      .in_insnbits(insnbits),
+      .out_reg_cond_codes(out_reg_sigs.cond_codes)
   );
 
   uses_nzcv instr_uses_nzcv (
       .in_opcode(opcode),
-      .op_uses_nzcv(out_reg_instr_uses_nzcv)
+      .out_op_uses_nzcv(out_reg_sigs.instr_uses_nzcv)
   );
-  use_out_reg_imm imm_selector (.*);
-  decide_alu alu_decider (.*);  // decides alu op
-  fu_decider fu (.*);
-  sets_nzcv nzcv_setter (.*);
+  use_out_reg_imm imm_selector (
+      .opcode,
+      .out_reg_use_imm(out_reg_sigs.use_imm)
+  );
+  decide_alu alu_decider (
+      .opcode,
+      .out_reg_fu_op(out_reg_sigs.fu_op),
+      .out_reg_mispredict(out_reg_sigs.mispredict)
+      // .out_reg_bcond(out_reg_sigs.bcond)
+  );
+  fu_decider fu (
+      .opcode,
+      .out_reg_fu_id(out_reg_sigs.fu_id)
+  );
+  sets_nzcv nzcv_setter (
+      .opcode,
+      .out_reg_set_nzcv(out_reg_sigs.set_nzcv)
+  );
+  sets_nzcv nzcv_setter (
+      .opcode,
+      .out_reg_set_nzcv(out_reg_sigs.set_nzcv)
+  );
+
 
   always_ff @(posedge in_clk) begin
     if (in_rst) begin
       `DEBUG(("(dec) Resetting"));
-      out_reg_done <= 0;
+      out_reg_sigs.done <= 0;
     end else begin
-      out_reg_done <= ~in_rst & in_fetch_done;
-      if (in_fetch_done) begin
-        insnbits <= in_fetch_insnbits;
-        out_reg_branch_PC <= in_fetch_branch_PC;
+      out_reg_sigs.done <= ~in_rst & in_fetch_sigs.done;
+      if (in_fetch_sigs.done) begin
+        insnbits <= in_fetch_sigs.insnbits;
+        out_reg_sigs.pc <= in_fetch_sigs.pc;
       end
     end
   end
 
   // Print statements only in here
   always_ff @(posedge in_clk) begin
-    if (in_fetch_done & ~in_rst) begin
+    if (in_fetch_sigs.done & ~in_rst) begin
       #1 `DEBUG(("(dec) Decoding: %b", insnbits))
       `DEBUG(
-          ("(dec)\tfu_id: %s, opcode: %s, fu_op: %s", out_reg_fu_id.name, opcode.name,
-               out_reg_fu_op.name));
+          ("(dec)\tfu_id: %s, opcode: %s, fu_op: %s", out_reg_sigs.fu_id.name, opcode.name,
+               out_reg_sigs.fu_op.name));
       `DEBUG(
-          ("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_dst,
-               out_reg_src1, out_reg_src2, out_reg_imm, out_reg_use_imm));
-      `DEBUG(("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_set_nzcv, out_reg_instr_uses_nzcv))
-      `DEBUG(("(dec) cond codes %0b", out_reg_cond_codes))
+          ("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_sigs.dst,
+               out_reg_sigs.src1, out_reg_sigs.src2, out_reg_sigs.imm, out_reg_sigs.use_imm));
+      `DEBUG(
+          ("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_sigs.set_nzcv, out_reg_sigs.instr_uses_nzcv))
+      `DEBUG(("(dec) cond codes %0b", out_reg_sigs.cond_codes))
     end
   end
 

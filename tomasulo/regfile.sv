@@ -4,22 +4,9 @@ module reg_module (
     // Timing
     input logic in_clk,
     input logic in_rst,
+    input logic in_validate,
     // Inputs from decode (consumed in decode)
-    input logic in_d_done,
-    // Inputs from decode (passed through or used)
-    input logic in_d_set_nzcv,
-    input logic in_d_use_imm,
-    input logic [`IMMEDIATE_SIZE-1:0] in_d_imm,
-    input logic [`GPR_IDX_SIZE-1:0] in_d_src1,
-    input logic [`GPR_IDX_SIZE-1:0] in_d_src2,
-    input logic [`GPR_IDX_SIZE-1:0] in_d_dst,
-    input fu_t in_d_fu_id,
-    input fu_op_t in_d_fu_op,
-    input logic in_d_instr_uses_nzcv,
-    input cond_t in_d_cond_codes,
-    input logic in_d_mispredict,
-    input logic in_d_bcond,
-    input logic [`GPR_SIZE-1:0] in_d_branch_PC,
+    input decode_interface in_d_sigs,
     // Inputs from ROB (for a commit)
     input logic in_rob_should_commit,
     input logic in_rob_set_nzcv,
@@ -55,6 +42,7 @@ module reg_module (
   // TODO(Nate): Add support for setting the output of immediate values or the
   //             zero register. These should always result in a valid value.
 
+
   // Commit updates state. Must happen before processing outputs.
   // Must buffer input values.
 
@@ -68,18 +56,18 @@ module reg_module (
   logic [`GPR_IDX_SIZE-1:0] d_src1;
   logic [`GPR_IDX_SIZE-1:0] d_src2;
   logic [`GPR_IDX_SIZE-1:0] d_dst;
-  logic [`GPR_IDX_SIZE-1:0] rob_next_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] rob_next_rob_index;
   logic d_set_nzcv;
   logic [`GPR_SIZE-1:0] d_imm;
   logic d_use_imm;
-  logic [`GPR_IDX_SIZE-1:0] src1_rob_index;
-  logic [`GPR_IDX_SIZE-1:0] src2_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] src1_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] src2_rob_index;
   fu_op_t d_fu_op;
   logic d_mispredict;
 
   // Commit & buffer inputs
   always_ff @(posedge in_clk) begin
-    if (in_rst) begin
+    if (in_rst | in_validate) begin
       `DEBUG(("(regfile) Resetting"));
       // Reset root control signal
       d_done <= 0;
@@ -89,25 +77,25 @@ module reg_module (
         gprs[i].valid <= 1;
       end
     end else begin
-      d_done <= in_d_done;
-      `DEBUG(("(regfile) d_done %0d", in_d_done));
-      if (in_d_done) begin
+      d_done <= in_d_sigs.done;
+      `DEBUG(("(regfile) d_done %0d", in_d_sigs.done));
+      if (in_d_sigs.done) begin
         // Buffer inputs
-        d_src1 <= in_d_src1;
-        d_src2 <= in_d_src2;
-        d_dst <= in_d_dst;
-        d_set_nzcv <= in_d_set_nzcv;
-        d_imm <= in_d_imm;
-        d_use_imm <= in_d_use_imm;
-        d_fu_op <= in_d_fu_op;
+        d_src1 <= in_d_sigs.src1;
+        d_src2 <= in_d_sigs.src2;
+        d_dst <= in_d_sigs.dst;
+        d_set_nzcv <= in_d_sigs.set_nzcv;
+        d_imm <= in_d_sigs.imm;
+        d_use_imm <= in_d_sigs.use_imm;
+        d_fu_op <= in_d_sigs.fu_op;
         rob_next_rob_index <= in_rob_next_rob_index;
         // Copy unused signals
-        out_rob_fu_op <= in_d_fu_op;
-        out_rob_fu_id <= in_d_fu_id;
-        out_rob_instr_uses_nzcv <= in_d_instr_uses_nzcv;
-        out_rob_cond_codes <= in_d_cond_codes;
-        out_rob_mispredict <= in_d_mispredict;
-        out_rob_bcond <= in_d_bcond;
+        out_rob_fu_op <= in_d_sigs.fu_op;
+        out_rob_fu_id <= in_d_sigs.fu_id;
+        out_rob_instr_uses_nzcv <= in_d_sigs.instr_uses_nzcv;
+        out_rob_cond_codes <= in_d_sigs.cond_codes;
+        out_rob_mispredict <= in_d_sigs.mispredict;
+        // out_rob_bcond <= in_d_sigs.bcond;
       end
       if (d_done) begin
         // update validity of previous cycle's dst.
@@ -157,8 +145,6 @@ module reg_module (
       //   nzcv_valid <= 0;
       //   nzcv_rob_index <= in_rob_next_rob_index;
       // end
-
-
       `DEBUG(
           ("(regfile) src1 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src1,
              out_rob_src1_value, out_rob_src1_valid, out_rob_src1_rob_index));
@@ -190,11 +176,11 @@ module reg_module (
         out_rob_src1_value = d_imm;
       end
     end else if (d_fu_op == FU_OP_B_COND) begin
-      out_rob_src1_value = in_d_branch_PC;
+      out_rob_src1_value = in_d_sigs.pc;
       out_rob_src1_valid = 1;
     end else if (d_fu_op == FU_OP_ADRX) begin
       out_rob_src1_valid = 1;
-      out_rob_src1_value = in_d_branch_PC;
+      out_rob_src1_value = in_d_sigs.pc;
     end else begin
       out_rob_src1_value = gprs[d_src1].value;
     end

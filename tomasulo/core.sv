@@ -119,6 +119,7 @@ module core (
   cond_t out_rs_cond_codes;
   logic out_rs_done;
   fu_t out_rs_fu_id;
+  integer out_rs_stur_counter;
   fu_op_t out_rs_fu_op;
   logic out_rs_alu_val_a_valid;
   logic out_rs_alu_val_b_valid;
@@ -139,6 +140,7 @@ module core (
   logic out_rs_broadcast_set_nzcv;
   nzcv_t out_rs_broadcast_nzcv;
   logic out_rs_is_mispred;
+  logic out_rs_commit_done;
   logic out_reg_commit_done;
   logic rob_out_reg_set_nzcv;
   nzcv_t out_reg_nzcv;
@@ -149,9 +151,11 @@ module core (
   // RESERVATION STATIONS
 
   cond_t rs_in_rob_alu_cond_codes;
+  logic in_rob_commit_done;
   logic in_rob_done;
   fu_t in_rob_fu_id;
   fu_op_t in_rob_fu_op;
+  integer in_rob_stur_counter;
   logic in_rob_alu_val_a_valid;
   logic in_rob_alu_val_b_valid;
   logic in_rob_nzcv_valid;
@@ -161,8 +165,8 @@ module core (
   logic rs_in_rob_set_nzcv;
   logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_a_rob_index;
   logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_b_rob_index;
-  logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index;
-  logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] in_rob_dst_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] in_rob_nzcv_rob_index;
   logic in_rob_broadcast_done;
   logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index;
   logic [`GPR_SIZE-1:0] in_rob_broadcast_value;
@@ -187,6 +191,7 @@ module core (
   logic [`ROB_IDX_SIZE-1:0] out_fu_ls_dst_rob_index;
   logic [`GPR_SIZE-1:0] out_fetch_new_PC;
   logic out_fetch_mispredict;
+  logic out_fu_commit_done;
 
   // FUNC UNITS
 
@@ -200,6 +205,7 @@ module core (
   cond_t fu_in_rob_alu_cond_codes;
   logic in_rs_ls_start;
   fu_op_t in_rs_ls_fu_op;
+  logic in_rs_commit_done;
   logic [`GPR_SIZE-1:0] in_rs_ls_val_a;
   logic [`GPR_SIZE-1:0] in_rs_ls_val_b;
   logic [`ROB_IDX_SIZE-1:0] in_rs_ls_dst_rob_index;
@@ -286,10 +292,12 @@ module core (
   assign in_reg_bcond = out_rob_bcond;
 
   // ROB to RS rs inputs = rob outputs
+  assign in_rob_stur_counter = out_rs_stur_counter;
   assign rs_in_rob_alu_cond_codes = out_rs_cond_codes;
   assign in_rob_done = out_rs_done;
   assign in_rob_fu_id = out_rs_fu_id;
   assign in_rob_fu_op = out_rs_fu_op;
+  assign in_rob_commit_done = out_rs_commit_done;
   assign in_rob_alu_val_a_valid = out_rs_alu_val_a_valid;
   assign in_rob_alu_val_b_valid = out_rs_alu_val_b_valid;
   assign in_rob_nzcv_valid = out_rs_nzcv_valid;
@@ -321,6 +329,7 @@ module core (
   assign fu_in_rob_alu_cond_codes = out_fu_cond_codes;
 
   assign in_rs_ls_start = out_fu_ls_start;
+  assign in_rs_commit_done = out_fu_commit_done;
   assign in_rs_ls_fu_op = out_fu_ls_op;
   assign in_rs_ls_val_a = out_fu_ls_val_a;
   assign in_rs_ls_val_b = out_fu_ls_val_b;
@@ -340,27 +349,35 @@ module core (
   assign in_rob_new_PC = out_fetch_new_PC;
   assign in_rob_mispredict = out_fetch_mispredict;
 
+  logic reset_for_mispred;
+  always_ff @(negedge in_clk) begin
+    reset_for_mispred = out_fetch_mispredict;
+  end
+
   // modules
   fetch f (
-    .in_clk,
-    .in_rst,
-    .in_rob_mispredict(in_rob_mispredict),
-    .in_rob_new_PC(in_rob_new_PC),
-    .out_d_insnbits(fetch_insnbits),
-    .out_d_done(fetch_done),
-    .out_d_branch_PC(out_d_branch_PC)
+      .in_clk,
+      .in_rst,
+      .in_rob_mispredict(in_rob_mispredict),
+      .in_rob_new_PC(in_rob_new_PC),
+      .out_d_sigs(fetch_sigs)
   );
 
+  fetch_interface fetch_sigs ();
+
   dispatch dp (
+      .in_clk,
       .in_rst,
-      .*,
-      .in_fetch_insnbits(fetch_insnbits),
-      .in_fetch_done(fetch_done),
-      .out_reg_set_nzcv(d_out_reg_set_nzcv)
+      .in_fetch_sigs(fetch_sigs),
+      .out_reg_sigs(d_sigs)
   );
+
+  decode_interface d_sigs ();
 
   reg_module regfile (
       .*,
+      .in_d_sigs(d_sigs),
+      .in_validate(reset_for_mispred),
       .in_rob_nzcv(reg_in_rob_nzcv),
       .in_rob_set_nzcv(reg_in_rob_set_nzcv),
       .out_rob_done(reg_out_rob_done),
@@ -374,7 +391,7 @@ module core (
   );
 
   reservation_stations rs (
-      .in_rst,
+      .in_rst(in_rst | reset_for_mispred),
       .*,
       .in_rob_alu_cond_codes(rs_in_rob_alu_cond_codes),
       .in_rob_set_nzcv(rs_in_rob_set_nzcv),

@@ -4,9 +4,11 @@ module reservation_stations (
     input logic in_rst,
     input logic in_clk,
     // Inputs From ROB (sourced from either regfile or ROB)
+    input logic in_rob_commit_done,
     input cond_t in_rob_alu_cond_codes,
     input logic in_rob_done,
     input fu_t in_rob_fu_id,
+    input integer in_rob_stur_counter,
     input fu_op_t in_rob_fu_op,
     input logic in_rob_alu_val_a_valid,
     input logic in_rob_alu_val_b_valid,
@@ -17,8 +19,8 @@ module reservation_stations (
     input logic in_rob_set_nzcv,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_a_rob_index,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_b_rob_index,
-    input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
-    input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_dst_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
     // inputs from ROB for broadcast
     input logic in_rob_broadcast_done,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_broadcast_index,
@@ -41,6 +43,7 @@ module reservation_stations (
     output nzcv_t out_fu_alu_nzcv,
     output cond_t out_fu_cond_codes,
     // outputs for FU (LS)
+    output logic out_fu_commit_done,
     output logic out_fu_ls_start,
     output fu_op_t out_fu_ls_op,
     output logic [`GPR_SIZE-1:0] out_fu_ls_val_a,
@@ -88,15 +91,17 @@ module reservation_station_module #(
     input logic in_rst,
     input logic in_clk,
     // Inputs From ROB (general)
+    input logic in_rob_commit_done,
+    input integer in_rob_stur_counter,
     input logic in_rob_done,
-    input logic [`GPR_IDX_SIZE-1:0] in_rob_dst_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_dst_rob_index,
     input fu_op_t in_rob_fu_op,
     // Inputs from ROB (ALU)
     input cond_t in_rob_alu_cond_codes,
     input logic in_rob_nzcv_valid,
     input nzcv_t in_rob_nzcv,
     input logic in_rob_set_nzcv,
-    input logic [`GPR_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
+    input logic [`ROB_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
     input logic in_rob_instr_uses_nzcv,
 
     // Inputs from ROB (unique)
@@ -129,6 +134,7 @@ module reservation_station_module #(
 
     // Outputs for FU (LS)
     output logic out_fu_ls_start,  // B
+    output logic out_fu_commit_done,
     // output fu_op_t out_fu_ls_op,
     output logic [`ROB_IDX_SIZE-1:0] out_fu_ls_dst_rob_index
 );
@@ -161,6 +167,7 @@ module reservation_station_module #(
   logic rob_done;
   logic fu_ready;
   logic rob_instr_uses_nzcv;
+  integer stur_counter;
   // For broadcasts
   logic [`ROB_IDX_SIZE-1:0] rob_broadcast_index;
   logic [`GPR_SIZE-1:0] rob_broadcast_value;
@@ -231,6 +238,7 @@ module reservation_station_module #(
       rob_nzcv_valid <= in_rob_nzcv_valid;
       rob_alu_val_a_value <= in_rob_alu_val_a_value;
       rob_alu_val_b_value <= in_rob_alu_val_b_value;
+      stur_counter <= in_rob_stur_counter;
       `DEBUG(
           ("(RS) received rob val a %0d and val b %0d", in_rob_alu_val_a_value, in_rob_alu_val_b_value));
       rob_set_nzcv <= in_rob_set_nzcv;
@@ -252,6 +260,8 @@ module reservation_station_module #(
 
       // Unused state
       out_fu_cond_codes <= in_rob_alu_cond_codes;
+      out_fu_commit_done <= in_rob_commit_done;
+
     end : rs_not_reset
   end : rs_on_clk
 
@@ -264,7 +274,9 @@ module reservation_station_module #(
       for (int i = 0; i < RS_SIZE; i += 1) begin
         if (rs[i].entry_valid) begin
           // src1
-          if (~rs[i].op1.valid & rs[i].op1.rob_index == rob_broadcast_index) begin
+          // checks whether to update the value in the RS. All loads must only be updated if there
+          // are no pending sturs
+          if (~rs[i].op1.valid & rs[i].op1.rob_index == rob_broadcast_index & (stur_counter != 0 & in_rob_fu_op == OP_LDUR)) begin
             `DEBUG(("(RS) \tUpdating RS[%0d] op1 -> %0d (op: %s)", i, $signed(rob_broadcast_value
                    ), rs[i].op.name));
             if (rs[i].op == FU_OP_LDUR | rs[i].op == FU_OP_STUR) begin
@@ -278,7 +290,7 @@ module reservation_station_module #(
           end
 
           // src2
-          if (~rs[i].op2.valid & rs[i].op2.rob_index == rob_broadcast_index) begin
+          if (~rs[i].op2.valid & rs[i].op2.rob_index == rob_broadcast_index & (stur_counter != 0 & in_rob_fu_op == OP_LDUR)) begin
             `DEBUG(("(RS) \tUpdating RS[%0d] op2 -> %0d", i, $signed(rob_broadcast_value)));
             rs[i].op2.value <= rob_broadcast_value;
             rs[i].op2.valid <= 1;
