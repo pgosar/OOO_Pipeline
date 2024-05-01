@@ -73,6 +73,8 @@ module rob_module (
           rob[i].valid <= 0;
         end
       end else begin : not_reset
+        `DEBUG(
+            ("(ROB TEST) src valid: %0d src2 rob index: %0d src2 value: %0d", in_reg_sigs.src2_valid, in_reg_sigs.src2_rob_index, in_reg_sigs.src2_value));
         // Update state from FU
         if (in_fu_sigs.done) begin
           if (rob[in_fu_sigs.dst_rob_index].bcond) begin
@@ -95,7 +97,8 @@ module rob_module (
             if (in_alu_sigs.set_nzcv) begin
               rob[in_fu_sigs.dst_rob_index].nzcv <= in_alu_sigs.nzcv;
             end
-          end*/ if(0) begin end else begin
+          end*/ if (0) begin
+          end else begin
             `DEBUG(("(rob) !! not updating rob for previous result. control flow invalid !!"));
           end
         end

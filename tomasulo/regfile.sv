@@ -48,6 +48,8 @@ module reg_module (
   logic d_mispredict;
   logic [`GPR_SIZE-1:0] d_pc;
 
+  decode_interface d_sigs ();
+
 
   // Commit & buffer inputs
   always_ff @(posedge in_clk) begin
@@ -61,7 +63,7 @@ module reg_module (
         gprs[i].valid <= 1;
       end
     end else begin
-      d_sigs.done <= in_d_sigs.done;
+      d_done <= in_d_sigs.done;
       // Buffer inputs
       if (in_d_sigs.done) begin
         // Buffered inputs (from d)
@@ -161,8 +163,7 @@ module reg_module (
     if (d_src1_status == REG_IS_XZR) begin
       out_rob_sigs.src1_valid = 1;
       out_rob_sigs.src1_value = 0;
-    end
-    if (d_fu_op == FU_OP_STUR | d_fu_op == FU_OP_STUR) begin
+    end else if (d_fu_op == FU_OP_STUR | d_fu_op == FU_OP_STUR) begin
       if (gprs[d_src1].valid) begin
         out_rob_sigs.src1_value = gprs[d_src1].value + d_imm;
       end else begin
@@ -184,10 +185,9 @@ module reg_module (
     //      - With STUR, src2 contains value to st    ore. immediate contains the offset
 
     if (d_src2_status == REG_IS_XZR) begin
-      out_rob_sigs.src1_valid = 1;
+      out_rob_sigs.src2_valid = 1;
       out_rob_sigs.src2_value = 0;
-    end
-    if (d_use_imm) begin  // TODO(Nate): This imm is messed up with STUR??
+    end else if (d_use_imm) begin  // TODO(Nate): This imm is messed up with STUR??
       out_rob_sigs.src2_value = d_imm;
       out_rob_sigs.src2_valid = 1;
     end else begin

@@ -48,7 +48,7 @@ module fetch #(
   always_comb begin
     ret_from_main   = PC == 0;
     no_instruction  = data == 0;
-    out_d_sigs.done = ~rst & ~no_instruction;
+    out_d_sigs.done = ~in_rst & ~no_instruction;
     out_d_sigs.pc   = PC;
     if (no_instruction) begin
       out_d_sigs.insnbits = 0;
@@ -62,6 +62,7 @@ module fetch #(
   always_ff @(posedge in_clk) begin : fetch_logic
     rst <= in_rst;
     is_mispred <= in_rob_mispredict;
+    `DEBUG(("(fetch) is f_done: %0d", out_d_sigs.done))
     if (in_rst) begin
       `DEBUG(("(fetch) Resetting. PC: %16x -> %16x (entry point)", PC, entry_addr[0]));
       PC <= entry_addr[0];

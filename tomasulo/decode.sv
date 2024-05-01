@@ -413,12 +413,13 @@ module dispatch (
         out_reg_sigs.pc <= in_fetch_sigs.pc;
       end
     end
+    #1 `DEBUG(("(dec) Decoding: %b, done: %0b, rst: %0b", insnbits, out_reg_sigs.done, in_rst))
   end
 
   // Print statements only in here
   always_ff @(posedge in_clk) begin
     if (in_fetch_sigs.done & ~in_rst) begin
-      #1 `DEBUG(("(dec) Decoding: %b", insnbits))
+      #1 `DEBUG(("(dec) Decoding: %b, done: %0b, rst: %0b", insnbits, out_reg_sigs.done, in_rst))
       `DEBUG(
           ("(dec)\tfu_id: %s, opcode: %s, fu_op: %s", out_reg_sigs.fu_id.name, opcode.name,
                out_reg_sigs.fu_op.name));

@@ -235,9 +235,10 @@ module reservation_station_module #(
   rob_interface rob_sigs ();
 
   always_ff @(posedge in_clk) begin
+    $display( "op2 valid: %0d, op2 value: %0d", rs[free_station_index].op2.valid, rs[free_station_index].op2.value);
     rob_sigs <= in_rob_sigs;
     #1
-    if (in_rob_sigs.done & has_free) begin : in_rs_add_entry
+    if (rob_done & has_free) begin : in_rs_add_entry
       rs[free_station_index].op1.valid <= rob_sigs.val_a_valid;
       rs[free_station_index].op2.valid <= rob_sigs.val_b_valid;
       rs[free_station_index].op1.value <= rob_sigs.val_a_value;

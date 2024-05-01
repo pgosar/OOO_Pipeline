@@ -300,7 +300,7 @@ interface rob_broadcast_interface ();
 endinterface
 
 interface rob_interface ();
-integer stur_counter;
+  integer stur_counter;
   cond_t cond_codes;
   logic done;
   fu_t fu_id;

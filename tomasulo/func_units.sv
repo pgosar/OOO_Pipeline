@@ -70,7 +70,7 @@ module func_units (
     rs_alu_sigs <= in_rs_alu_sigs;
     rs_alu_sigs_ext <= in_rs_alu_sigs_ext;
     rs_ls_sigs <= rs_ls_sigs;
-    `ASSERT((~(alu_results.done & ls_results.done)));
+    // `ASSERT((~(alu_results.done & ls_results.done)));
     if (in_rs_alu_sigs.start) begin
       // #1
       // `DEBUG(

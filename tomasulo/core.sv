@@ -30,18 +30,20 @@ module core (
       #5 in_clk = ~in_clk;
       #4;
     end
+    $stop();
+    $finish();
   end
 
   initial begin
     in_rst = 1;
-    #10;
+    #5;
     in_rst = 0;
     `DEBUG(("RESET DONE === BEGIN TEST"));
-    while (fetch_sigs.pc != 0) begin
-      // `DEBUG(("itr"));
-      // `DEBUG(("*******insnbits: %b", in_fetch_insnbits));
-      #10;
-    end
+    // while (fetch_sigs.pc != 0) begin
+    //   // `DEBUG(("itr"));
+    //   // `DEBUG(("*******insnbits: %b", in_fetch_insnbits));
+    //   #10;
+    // end
   end
 
   // TODO(Nate): Do this on posedge
