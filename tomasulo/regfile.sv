@@ -17,6 +17,9 @@ module reg_module (
     input fu_op_t in_d_fu_op,
     input logic in_d_instr_uses_nzcv,
     input cond_t in_d_cond_codes,
+    input logic in_d_mispredict,
+    input logic in_d_bcond,
+    input logic [`GPR_SIZE-1:0] in_d_branch_PC,
     // Inputs from ROB (for a commit)
     input logic in_rob_should_commit,
     input logic in_rob_set_nzcv,
@@ -41,6 +44,8 @@ module reg_module (
     output nzcv_t out_rob_nzcv,  // AEA
     output logic out_rob_set_nzcv,  // AF
     output fu_t out_rob_fu_id,  // AG
+    output logic out_rob_mispredict,
+    output logic out_rob_bcond,
     // Outputs for FU (rob)
     output fu_op_t out_rob_fu_op,  // AH
     output cond_t out_rob_cond_codes
@@ -70,6 +75,7 @@ module reg_module (
   logic [`GPR_IDX_SIZE-1:0] src1_rob_index;
   logic [`GPR_IDX_SIZE-1:0] src2_rob_index;
   fu_op_t d_fu_op;
+  logic d_mispredict;
 
   // Commit & buffer inputs
   always_ff @(posedge in_clk) begin
@@ -99,6 +105,8 @@ module reg_module (
         out_rob_fu_id <= in_d_fu_id;
         out_rob_instr_uses_nzcv <= in_d_instr_uses_nzcv;
         out_rob_cond_codes <= in_d_cond_codes;
+        out_rob_mispredict <= in_d_mispredict;
+        out_rob_bcond <= in_d_bcond;
       end
       if (d_done) begin
         // update validity of previous cycle's dst.
@@ -173,6 +181,9 @@ module reg_module (
       end else begin
         out_rob_src1_value = d_imm;
       end
+    end else if (d_fu_op == FU_OP_B_COND) begin
+      out_rob_src1_value = in_d_branch_PC;
+      out_rob_src1_valid = 1;
     end else begin
       out_rob_src1_value = gprs[d_src1].value;
     end

@@ -25,8 +25,11 @@ module fetch #(
 (
     input wire in_clk,
     input wire in_rst,
+    input wire in_rob_mispredict,
+    input wire [`GPR_SIZE-1:0] in_rob_new_PC,
     output logic [31:0] out_d_insnbits,
-    output logic out_d_done
+    output logic out_d_done,
+    output logic [`GPR_SIZE-1:0] out_d_branch_PC
 );
   // steps:
   // 1. select PC (?) assuming no mispredictions for now
@@ -47,6 +50,7 @@ module fetch #(
   logic [`GPR_SIZE-1:0] imm;
   logic rst;
   logic no_instruction;
+  logic mispredict;
 
   initial begin
     $readmemb("mem/entry.txt", entry_addr);
@@ -70,25 +74,27 @@ module fetch #(
   always_ff @(posedge in_clk) begin : fetch_logic
     if (in_rst) begin
       `DEBUG(("(fetch) resetting"));
-      PC = entry_addr[0];
+      PC <= entry_addr[0];
       out_d_insnbits <= 0;
       out_d_done <= 0;
     end else begin
-      #1  // There is a data dependency on 'data' from imem
-      if (data == 0) begin
-        out_d_insnbits <= data;
+      #1;  // There is a data dependency on 'data' from imem
+      `DEBUG(("(fetch) opcode is %s", opcode.name));
+      `DEBUG(("(fetch) mispredict: %0d", in_rob_mispredict));
+      out_d_insnbits <= data;
+      out_d_done <= 1;
+      if (in_rob_mispredict) begin
+        `DEBUG(("(fetch) received rob mispredict directive. setting PC to %0d", in_rob_new_PC));
         out_d_done <= 0;
+        PC <= in_rob_new_PC;
+      end else if (opcode == OP_B_COND) begin
+        PC <= PC + imm;
+      end else if (opcode == OP_B || opcode == OP_BL) begin
+        `DEBUG(("(fetch) detected branch. changing PC: %16x -> %16x", PC, PC + imm));
+        PC <= PC + imm;
       end else begin
-        `DEBUG(("(fetch) opcode is %s", opcode.name));
-        out_d_insnbits <= data;
-        out_d_done <= 1;
-        if (opcode == OP_B || opcode == OP_BL) begin
-          `DEBUG(("(fetch) detected branch. changing PC: %16x -> %16x", PC, PC + imm));
-          PC <= PC + imm;
-        end else begin
-          `DEBUG(("(fetch) no branch. PC: %16x -> %16x", PC, PC + 4));
-          PC <= PC + 4;
-        end
+        `DEBUG(("(fetch) no branch. PC: %16x -> %16x", PC, PC + 4));
+        PC <= PC + 4;
       end
     end
   end : fetch_logic

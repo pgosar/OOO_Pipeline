@@ -271,7 +271,7 @@ module reservation_station_module #(
                   ("op1.value: %0d, rob_broadcast_value: %0d", rs[i].op1.value,
                      rob_broadcast_value));
               rs[i].op1.value <= rs[i].op1.value + rob_broadcast_value;
-            end else begin
+            end else if (rs[i].op != FU_OP_PASS_A) begin
               rs[i].op1.value <= rob_broadcast_value;
             end
             rs[i].op1.valid <= 1;

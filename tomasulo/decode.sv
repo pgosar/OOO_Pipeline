@@ -1,3 +1,6 @@
+`ifndef DECODE
+`define DECODE
+
 `include "data_structures.sv"
 
 module decode_instruction (
@@ -115,6 +118,7 @@ module extract_reg (
     output logic [`GPR_IDX_SIZE-1:0] out_reg_dst
 );
   always_comb begin
+    `DEBUG(("(EXTRACT REG) opcode is %s\n", opcode.name));
     //out_reg_dst
     if (opcode != OP_B & opcode != OP_BR & opcode != OP_B_COND &  //branch dont need out_reg_dst
         opcode != OP_BL & opcode != OP_BLR & opcode != OP_RET &  //branch dont need out_reg_dst
@@ -128,10 +132,10 @@ module extract_reg (
     end
 
     //out_reg_src1
-    if (opcode != OP_MOVK & opcode != OP_MOVZ & opcode != OP_ADR | opcode != OP_ADRP |
-            opcode != OP_B & opcode != OP_BR & opcode != OP_B_COND & opcode != OP_BL & opcode
-            != OP_BLR & opcode != OP_NOP & opcode != OP_HLT
+    if (opcode != OP_MOVK & opcode != OP_MOVZ & opcode != OP_ADR & opcode != OP_ADRP &
+            opcode != OP_B & opcode != OP_B_COND & opcode != OP_BL & opcode != OP_NOP & opcode != OP_HLT
             & opcode != OP_CBZ & opcode != OP_CBNZ) begin
+      `DEBUG(("(DECODE) opcode is %s", opcode.name));
       out_reg_src1 = in_insnbits[9:5];
     end else if (opcode == OP_CBZ | opcode == OP_CBNZ) begin
       out_reg_src1 = in_insnbits[4:0];
@@ -152,7 +156,9 @@ endmodule
 
 module decide_alu (
     input  opcode_t opcode,
-    output fu_op_t  out_reg_fu_op
+    output fu_op_t  out_reg_fu_op,
+    output logic out_reg_mispredict,
+    output logic out_reg_bcond
 );
   // TODO op_cmp, op_tst def commented out in opcode_t
   always_comb begin
@@ -171,7 +177,24 @@ module decide_alu (
       OP_CSEL: out_reg_fu_op = FU_OP_CSEL;
       OP_CSINC: out_reg_fu_op = FU_OP_CSINC;
       OP_CSINV: out_reg_fu_op = FU_OP_CSINV;
+      OP_BR, OP_BLR: out_reg_fu_op = FU_OP_PASS_A;
+      OP_B_COND: out_reg_fu_op = FU_OP_B_COND;
       default: out_reg_fu_op = FU_OP_PLUS;  //plus for now i will add an error op later
+    endcase
+
+    casez (opcode)
+      OP_BR, OP_BLR: begin
+        out_reg_mispredict = 1;
+        out_reg_bcond = 0;
+      end
+      OP_B_COND: begin
+        out_reg_mispredict = 0;
+        out_reg_bcond = 1;
+      end
+      default: begin
+        out_reg_mispredict = 0;
+        out_reg_bcond = 0;
+      end
     endcase
   end
 
@@ -303,6 +326,7 @@ module dispatch (
     // Inputs from fetch
     input logic [`INSNBITS_SIZE-1:0] in_fetch_insnbits,
     input logic in_fetch_done,
+    input logic [`GPR_SIZE-1:0] in_fetch_branch_PC,
     // Outputs to regfile. This will (asynchronously) cause the regfile to send
     // signals to the ROB. We assume that this will occur within the same
     // cycle.
@@ -316,7 +340,10 @@ module dispatch (
     output fu_op_t out_reg_fu_op,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_dst,
     output cond_t out_reg_cond_codes,
-    output logic out_reg_instr_uses_nzcv
+    output logic out_reg_instr_uses_nzcv,
+    output logic out_reg_mispredict,
+    output logic out_reg_bcond,
+    output logic [`GPR_SIZE-1:0] out_reg_branch_PC
     // Outputs to be broadcasted.
     // output logic out_stalled
 );
@@ -361,6 +388,7 @@ module dispatch (
       out_reg_done <= ~in_rst & in_fetch_done;
       if (in_fetch_done) begin
         insnbits <= in_fetch_insnbits;
+        out_reg_branch_PC <= in_fetch_branch_PC;
       end
     end
   end
@@ -381,3 +409,4 @@ module dispatch (
   end
 
 endmodule : dispatch
+`endif // decode

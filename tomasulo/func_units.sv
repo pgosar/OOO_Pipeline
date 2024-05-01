@@ -1,3 +1,4 @@
+`include "data_structures.sv"
 `ifndef FUNC_UNITS
 `define FUNC_UNITS
 
@@ -179,7 +180,10 @@ module alu_module (
       FU_OP_CSINV: result = out_alu_condition == 0 ? ~val_b : val_a;
       FU_OP_CSEL: result = out_alu_condition == 0 ? val_b : val_a;
       FU_OP_MOV: result = val_a | (val_b <<  /*in_alu_val_hw*/ 0);  // TODO pass through val_hw
-      // FU_OP_PASS_A: result = val_a; // NOTE(Nate): No longer required
+      FU_OP_PASS_A, FU_OP_B_COND: begin
+        `DEBUG(("(ALU) reached pass_a_op. value is %0d", val_a));
+        result = val_a; // NOTE(Nate): No longer required
+      end
       default: result = 0;
     endcase
 
