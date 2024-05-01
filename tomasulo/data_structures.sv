@@ -62,6 +62,7 @@ typedef enum logic [5:0] {
   FU_OP_CBNZ,    // EC: used for cbnz
   FU_OP_LDUR,
   FU_OP_STUR,
+  FU_OP_B_COND,
   FU_OP_NOP
 } fu_op_t;
 
@@ -175,6 +176,9 @@ typedef struct packed {
   logic [`GPR_SIZE-1:0] value;
   logic set_nzcv;
   nzcv_t nzcv;
+  logic mispredict;
+  logic controlflow_valid;
+  logic bcond;
 } rob_entry_t;
 
 typedef struct packed {

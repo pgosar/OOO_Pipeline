@@ -29,6 +29,8 @@ module rob_module (
     input fu_op_t in_reg_fu_op,
     input cond_t in_reg_cond_codes,
     input logic in_reg_instr_uses_nzcv,
+    input logic in_reg_mispredict,
+    input logic in_reg_bcond,
 
     // Outputs for RS
     output cond_t out_rs_cond_codes,  // CE ???
@@ -62,10 +64,13 @@ module rob_module (
     output logic [`GPR_IDX_SIZE-1:0] out_reg_index,  // CC
     output logic [`ROB_IDX_SIZE-1:0] out_reg_commit_rob_index,  // CD
     // Output for regfile (for the next ROB insertion)
-    output logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index  // D
+    output logic [`ROB_IDX_SIZE-1:0] out_reg_next_rob_index,  // D
     // // Outputs for dispatch
     // output logic [`ROB_IDX_SIZE-1:0] out_next_rob_index,
     // output logic [`ROB_IDX_SIZE-1:0] out_delete_mispred_index[`MISSPRED_SIZE]
+    // Outputs for Fetch
+    output logic out_fetch_mispredict,
+    output logic [`GPR_SIZE-1:0] out_fetch_new_PC
 );
   // Internal state
   rob_entry_t [`ROB_SIZE-1:0] rob;
@@ -90,6 +95,8 @@ module rob_module (
   // Timing
   logic delayed_clk;
   logic delayed_clk_2;
+  logic last_commit_was_mispredict;
+  logic [`GPR_SIZE-1:0] mispredict_new_PC;
 
   always_ff @(posedge in_clk, negedge in_clk) begin
     delayed_clk   <= #1 in_clk;
@@ -97,7 +104,8 @@ module rob_module (
   end
 
   // Update from FU and copy signals
-  always_ff @(posedge in_clk) begin
+  always_ff @(posedge in_clk or negedge in_clk) begin
+  if (in_clk) begin: on_posedge
     if (in_rst) begin
       `DEBUG(("(rob) Resetting"));
       fu_done <= 0;
@@ -110,15 +118,21 @@ module rob_module (
     end else begin : not_reset
       // Update state from FU
       if (in_fu_done) begin
-        `DEBUG(
-            ("(rob) Received result from FU. ROB[%0d] -> %0d + valid", in_fu_dst_rob_index, $signed(
-            in_fu_value)));
-        // Validate the line which the FU has updated
-        rob[in_fu_dst_rob_index].value <= fu_op == OP_STUR ? 0 : in_fu_value;
-        rob[in_fu_dst_rob_index].valid <= 1;
-        if (in_fu_set_nzcv) begin
-          rob[in_fu_dst_rob_index].nzcv <= in_fu_nzcv;
+        if (rob[in_fu_dst_rob_index].bcond) begin
+          `DEBUG(("(rob) !!! DETECTED BCOND !!!"));
+          // if alu condition is true, mark mispredict as true and set PC. DO
+          // NOT broadcast state.
         end
+        `DEBUG(("(rob) Received result from FU. ROB[%0d] -> %0d + valid", in_fu_dst_rob_index,
+               $signed(in_fu_value)));
+        // Validate the line which the FU has updated
+        if (rob[in_fu_dst_rob_index].controlflow_valid) begin
+          rob[in_fu_dst_rob_index].value <= in_fu_value;
+          rob[in_fu_dst_rob_index].valid <= 1;
+          if (in_fu_set_nzcv) begin
+            rob[in_fu_dst_rob_index].nzcv <= in_fu_nzcv;
+          end
+        end else `DEBUG(("(rob) !! not updating rob for previous result. control flow invalid !!"));
       end
       // Update ROB
       if (in_reg_done) begin
@@ -131,12 +145,17 @@ module rob_module (
         rob[next_ptr].set_nzcv <= in_reg_set_nzcv;
         rob[next_ptr].nzcv <= in_reg_nzcv;
         rob[next_ptr].valid <= 0;
+        rob[next_ptr].mispredict <= in_reg_mispredict;
+        rob[next_ptr].bcond <= in_reg_bcond;
+        rob[next_ptr].controlflow_valid <= 1;
         next_ptr <= (next_ptr + 1) % `ROB_SIZE;
       end
       if (rob[commit_ptr].valid) begin : remove_commit
         commit_ptr <= (commit_ptr + 1) % `ROB_SIZE;
-        `DEBUG(
-            ("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d",
+        last_commit_was_mispredict <= rob[commit_ptr].mispredict;
+        mispredict_new_PC <= rob[commit_ptr].value;
+        `DEBUG(("(rob) Detected branch mispredict. About to commit branch instruction."));
+        `DEBUG(("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d",
                (commit_ptr + 1) % `ROB_SIZE));
         `DEBUG(
             (
@@ -171,7 +190,17 @@ module rob_module (
       // Set dst
       out_rs_alu_dst_rob_index <= next_ptr;
     end : not_reset
-  end
+  end: on_posedge
+  else begin: on_negedge
+    if (last_commit_was_mispredict) begin
+      `DEBUG(("(rob) emitting mispredict directive."));
+      rob <= 0;
+      out_fetch_new_PC <= 252;
+      out_fetch_mispredict <= 1;
+      last_commit_was_mispredict <= 0;
+    end else out_fetch_mispredict <= 0;
+  end: on_negedge
+end
 
   // Some printout or sumn
   // always_ff @(posedge delayed_clk) begin
@@ -206,21 +235,4 @@ module rob_module (
     out_reg_index = rob[commit_ptr].gpr_index;
     out_reg_commit_rob_index = commit_ptr;
   end
-
-  // TODO branch misprediction
-  always_ff @(negedge in_clk) begin
-    if (in_fu_is_mispred) begin
-      `DEBUG(("(rob) NOT IMPLEMENTED: Deleting mispredicted instructions"));
-      // remove last 3 indexes (fetch, decode, execute)
-      // to fix wraparound, add rob_size and mod by rob_size
-      // commit_ptr <= (commit_ptr + `ROB_SIZE - 3) % `ROB_SIZE;
-      // rob[in_fu_dst_rob_index] <= 0;
-      // rob[in_fu_dst_rob_index - 1] <= 0;
-      // rob[in_fu_dst_rob_index - 2] <= 0;
-      // out_delete_mispred_index[0] <= (in_fu_dst_rob_index + `ROB_SIZE) % `ROB_SIZE;
-      // out_delete_mispred_index[1] <= (in_fu_dst_rob_index - 1 + `ROB_SIZE) % `ROB_SIZE;
-      // out_delete_mispred_index[2] <= (in_fu_dst_rob_index - 2 + `ROB_SIZE) % `ROB_SIZE;
-    end
-  end
-
 endmodule

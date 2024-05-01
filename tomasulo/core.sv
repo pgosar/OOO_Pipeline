@@ -22,13 +22,17 @@ module core (
 
   // FETCH
 
+  logic in_rob_mispredict;
+  logic [`GPR_SIZE-1:0] in_rob_new_PC;
   logic [`INSNBITS_SIZE-1:0] fetch_insnbits;
   logic fetch_done;
+  logic [`GPR_SIZE-1:0] out_d_branch_PC;
 
   // DISPATCH
   logic in_stall;
   logic [`INSNBITS_SIZE-1:0] in_fetch_insnbits;
   logic in_fetch_done;
+  logic [`GPR_SIZE-1:0] in_fetch_branch_PC;
   logic out_reg_done;
   logic d_out_reg_set_nzcv;
   logic out_reg_use_imm;
@@ -40,6 +44,9 @@ module core (
   logic [`GPR_IDX_SIZE-1:0] out_reg_dst;
   cond_t out_reg_cond_codes;
   logic out_reg_instr_uses_nzcv;
+  logic out_reg_mispredict;
+  logic out_reg_bcond;
+  logic [`GPR_SIZE-1:0] out_reg_branch_PC;
 
   // REGFILE
 
@@ -53,7 +60,10 @@ module core (
   fu_t in_d_fu_id;
   fu_op_t in_d_fu_op;
   logic in_d_instr_uses_nzcv;
+  logic in_d_mispredict;
+  logic in_d_bcond;
   cond_t in_d_cond_codes;
+  logic [`GPR_SIZE-1:0] in_d_branch_PC;
   logic in_rob_should_commit;
   logic reg_in_rob_set_nzcv;
   nzcv_t reg_in_rob_nzcv;
@@ -77,6 +87,8 @@ module core (
   fu_t out_rob_fu_id;
   fu_op_t out_rob_fu_op;
   cond_t out_rob_cond_codes;
+  logic out_rob_mispredict;
+  logic out_rob_bcond;
 
   // ROB
 
@@ -90,6 +102,8 @@ module core (
   logic in_reg_src1_valid;
   logic in_reg_src2_valid;
   logic in_reg_nzcv_valid;
+  logic in_reg_mispredict;
+  logic in_reg_bcond;
   logic [`GPR_IDX_SIZE-1:0] in_reg_dst;
   logic [`ROB_IDX_SIZE-1:0] in_reg_src1_rob_index;
   logic [`ROB_IDX_SIZE-1:0] in_reg_src2_rob_index;
@@ -171,6 +185,8 @@ module core (
   logic [`GPR_SIZE-1:0] out_fu_ls_val_a;
   logic [`GPR_SIZE-1:0] out_fu_ls_val_b;
   logic [`ROB_IDX_SIZE-1:0] out_fu_ls_dst_rob_index;
+  logic [`GPR_SIZE-1:0] out_fetch_new_PC;
+  logic out_fetch_mispredict;
 
   // FUNC UNITS
 
@@ -221,6 +237,8 @@ module core (
     end
   end
 
+  // FETCH to DISPATCH
+  assign in_fetch_branch_PC = out_d_branch_PC;
 
   // DISPATCH to REG reg inputs = dispatch outputs
   assign in_d_done = out_reg_done;
@@ -234,6 +252,9 @@ module core (
   assign in_d_fu_op = out_reg_fu_op;
   assign in_d_instr_uses_nzcv = out_reg_instr_uses_nzcv;
   assign in_d_cond_codes = out_reg_cond_codes;
+  assign in_d_mispredict = out_reg_mispredict;
+  assign in_d_bcond = out_reg_bcond;
+  assign in_d_branch_PC = out_reg_branch_PC;
 
   // ROB to REG reg inputs = rob outputs
   assign in_rob_should_commit = out_reg_commit_done;
@@ -261,6 +282,8 @@ module core (
   assign in_reg_fu_op = out_rob_fu_op;
   assign in_reg_cond_codes = out_rob_cond_codes;
   assign in_reg_instr_uses_nzcv = out_rob_instr_uses_nzcv;
+  assign in_reg_mispredict = out_rob_mispredict;
+  assign in_reg_bcond = out_rob_bcond;
 
   // ROB to RS rs inputs = rob outputs
   assign rs_in_rob_alu_cond_codes = out_rs_cond_codes;
@@ -272,6 +295,7 @@ module core (
   assign in_rob_nzcv_valid = out_rs_nzcv_valid;
   assign in_rob_alu_val_a_value = out_rs_alu_val_a_value;
   assign in_rob_alu_val_b_value = out_rs_alu_val_b_value;
+  // `DEBUG(("(RS) received rob val a %0d and val b %0d", out_rs_alu_val_a_value, out_rs_alu_val_b_value));
   assign rs_in_rob_nzcv = out_rs_nzcv;
   assign rs_in_rob_set_nzcv = out_rs_set_nzcv;
   assign in_rob_alu_val_a_rob_index = out_rs_alu_val_a_rob_index;
@@ -313,13 +337,18 @@ module core (
   assign in_fu_set_nzcv = fu_out_rob_set_nzcv;
   assign in_fu_nzcv = fu_out_rob_nzcv;
 
+  assign in_rob_new_PC = out_fetch_new_PC;
+  assign in_rob_mispredict = out_fetch_mispredict;
 
   // modules
   fetch f (
-      .in_clk,
-      .in_rst,
-      .out_d_insnbits(fetch_insnbits),
-      .out_d_done(fetch_done)
+    .in_clk,
+    .in_rst,
+    .in_rob_mispredict(in_rob_mispredict),
+    .in_rob_new_PC(in_rob_new_PC),
+    .out_d_insnbits(fetch_insnbits),
+    .out_d_done(fetch_done),
+    .out_d_branch_PC(out_d_branch_PC)
   );
 
   dispatch dp (
