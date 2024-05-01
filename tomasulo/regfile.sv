@@ -172,7 +172,7 @@ module reg_module (
     out_rob_src1_valid = gprs[d_src1].valid;
     out_rob_src1_rob_index = (d_dst == d_src1) ? src1_rob_index : gprs[d_src1].rob_index;
     if (d_fu_op == FU_OP_STUR | d_fu_op == FU_OP_STUR) begin
-      if (out_rob_src1_valid) begin
+      if (gprs[d_src1].valid) begin
         out_rob_src1_value = gprs[d_src1].value + d_imm;
       end else begin
         out_rob_src1_value = d_imm;

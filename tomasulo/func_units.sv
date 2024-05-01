@@ -41,6 +41,7 @@ module func_units (
   logic [`GPR_SIZE-1:0] val_b;
   logic [`GPR_SIZE-1:0] alu_value;
   logic [`GPR_SIZE-1:0] ls_value;
+  cond_t cond_codes;
   // Buffered state (for clocking ALU)
   logic rs_alu_set_nzcv;
   nzcv_t rs_alu_nzcv;
@@ -48,78 +49,72 @@ module func_units (
   logic [`ROB_IDX_SIZE-1:0] rs_ls_dst_rob_index;
   // ALU specific buffers
   logic alu_out_set_nzcv;
+  logic alu_start;
 
-  // Decide on whether LS or ALU should run
-  //assign out_rob_value = out_value;
-  // assign out_rs_alu_ready = 1;
-  // assign out_rob_dst_rob_index = rs_alu_dst_rob_index;
-  // always_comb begin
-  //   out_rob_value = out_value;
-  //   if (in_rs_ls_start) begin
-  //     out_rs_alu_ready = 0;
-  //     out_rs_ls_ready = 1;
-  //     out_rob_dst_rob_index = rs_alu_dst_rob_index;
-  //   end else begin
-  //     out_rs_alu_ready = 1;
-  //     out_rs_ls_ready = 0;
-  //     out_rob_dst_rob_index = rs_ls_dst_rob_index;
-  //   end
-  // end
+  always_comb begin : select_output
+    out_rob_value = alu_start ? alu_value : ls_value;
 
-  always_comb begin
-  end
+  end : select_output
+
   // Buffer inputs
   always_ff @(posedge in_clk) begin
     $display("wtf alu op: %s", in_rs_alu_fu_op.name);
     $display("wtf ls op: %s", in_rs_ls_fu_op.name);
-    out_rs_alu_ready <= !in_rs_ls_start | out_rs_alu_ready;
-    out_rs_ls_ready <= !in_rs_alu_start | out_rs_ls_ready;
-    val_a <= 0;
-    val_b <= 0;
     out_rob_done <= in_rs_alu_start | in_rs_ls_start;
     out_rob_dst_rob_index <= in_rs_alu_start ? rs_alu_dst_rob_index : rs_ls_dst_rob_index;
+    out_rs_alu_ready <= !in_rs_alu_start;
+    out_rs_ls_ready <= !in_rs_ls_start;
+    alu_start <= in_rs_alu_start;
     `DEBUG(("ALU start: %0d, LS start: %0d", in_rs_alu_start, in_rs_ls_start));
     if (in_rs_alu_start) begin
-      out_rob_value <= alu_value;
       // buffered state (so that it is clocked)
-      //val_a <= in_rs_alu_val_a;
-      //val_b <= in_rs_alu_val_b;
-      //rs_alu_dst_rob_index <= in_rs_alu_dst_rob_index;
-      //out_rob_value <= alu_value;
-      //rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
-      //rs_alu_nzcv <= in_rs_alu_nzcv;
+      val_a <= in_rs_alu_val_a;
+      val_b <= in_rs_alu_val_b;
+      rs_alu_dst_rob_index <= in_rs_alu_dst_rob_index;
+      rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
+      rs_alu_nzcv <= in_rs_alu_nzcv;
+      fu_op <= in_rs_alu_fu_op;
+      cond_codes <= in_rob_alu_cond_codes;
+      #1
       `DEBUG(
           ( "(ALU) %s calculated: %0d for dst ROB[%0d] val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d",
-      in_rs_alu_fu_op.name, $signed(
-          alu_value), rs_alu_dst_rob_index, $signed(in_rs_alu_val_a), $signed(in_rs_alu_val_b
-          ), out_rob_nzcv, out_alu_condition));
+      fu_op.name, $signed(
+              alu_value
+          ), rs_alu_dst_rob_index, $signed(
+              val_a
+          ), $signed(
+              val_b), out_rob_nzcv, out_alu_condition));
     end else if (in_rs_ls_start) begin
       // buffered state (so that it is clocked)
       val_a <= in_rs_ls_val_a;
       val_b <= in_rs_ls_val_b;
-      out_rob_value <= ls_value;
       rs_ls_dst_rob_index <= in_rs_ls_dst_rob_index;
-      //#2
+      fu_op <= in_rs_ls_fu_op;
+      #1
       `DEBUG(
-          ( "(LS) %s executed: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b", in_rs_ls_fu_op.name, $signed(
-          ls_value), rs_ls_dst_rob_index, $signed(val_a), $signed(val_b), out_rob_nzcv));
+          ( "(LS) %s executed: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b", fu_op.name, $signed(
+              ls_value
+          ), rs_ls_dst_rob_index, $signed(
+              val_a
+          ), $signed(
+              val_b), out_rob_nzcv));
     end
   end
 
   // logic dmem_clk = in_clk & in_rs_ls_start;
   dmem dmem_module (
       .clk(in_clk),
-      .in_addr(in_rs_ls_val_a),
-      .w_enable(in_rs_ls_fu_op == FU_OP_STUR),
-      .wval(in_rs_ls_val_b),
+      .in_addr(val_a),
+      .w_enable(fu_op == FU_OP_STUR),
+      .wval(val_b),
       .data(ls_value)
   );
 
   alu_module alu (
-      .in_cond(in_rob_alu_cond_codes),
-      .in_op(in_rs_alu_fu_op),
-      .in_alu_val_a(in_rs_alu_val_a),
-      .in_alu_val_b(in_rs_alu_val_b),
+      .in_cond(cond_codes),
+      .in_op(fu_op),
+      .in_alu_val_a(val_a),
+      .in_alu_val_b(val_b),
       .in_set_nzcv(rs_alu_set_nzcv),
       .in_nzcv(rs_alu_nzcv),
       .out_alu_condition(out_alu_condition),
@@ -171,6 +166,7 @@ module alu_module (
   );
 
 
+  // TODO Kavya add val_hw can do it in extract immval too
   logic result_negative;
   always_comb begin
     casez (in_op)
@@ -184,7 +180,7 @@ module alu_module (
       FU_OP_CSINC: result = out_alu_condition == 0 ? val_b + 1 : val_a;
       FU_OP_CSINV: result = out_alu_condition == 0 ? ~val_b : val_a;
       FU_OP_CSEL: result = out_alu_condition == 0 ? val_b : val_a;
-      FU_OP_MOV: result = val_a | (val_b <<  /*in_alu_val_hw*/ 0);  // TODO pass through val_hw
+      FU_OP_MOV: result = val_a | val_b;  // TODO pass through val_hw
       // FU_OP_PASS_A: result = val_a; // NOTE(Nate): No longer required
       default: result = 0;
     endcase

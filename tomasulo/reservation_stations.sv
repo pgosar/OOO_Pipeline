@@ -50,8 +50,10 @@ module reservation_stations (
 
   logic ls_ready, alu_ready;
   always_ff @(posedge in_clk) begin
-    alu_ready <= (in_rob_fu_id == FU_ALU) & in_fu_alu_ready;
-    ls_ready  <= (in_rob_fu_id == FU_LS) & in_fu_ls_ready;
+    // alu_ready <= (in_rob_fu_id == FU_ALU) & in_fu_alu_ready;
+    // ls_ready  <= (in_rob_fu_id == FU_LS) & in_fu_ls_ready;
+    alu_ready <= in_fu_alu_ready;
+    ls_ready  <= in_fu_ls_ready;
     `DEBUG(
         ("(RS) ALU Ready: %0d, LS Ready: %0d FU ID: %s", alu_ready, ls_ready, in_rob_fu_id.name));
   end
@@ -127,7 +129,7 @@ module reservation_station_module #(
 
     // Outputs for FU (LS)
     output logic out_fu_ls_start,  // B
-    //output fu_op_t out_fu_ls_op,
+    // output fu_op_t out_fu_ls_op,
     output logic [`ROB_IDX_SIZE-1:0] out_fu_ls_dst_rob_index
 );
 
@@ -225,8 +227,8 @@ module reservation_station_module #(
         if (fu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
 
           `DEBUG(
-              ("(RS) Remove entry RS[%0d]. FU consumed entry at start of this cycle.",
-                 ready_station_index));
+              ("(RS) Remove entry RS[%0d] = op: %s. FU consumed entry at start of this cycle.",
+                 ready_station_index, rob_fu_op.name));
           rs[ready_station_index].entry_valid <= ~fu_ready;
         end : fu_consume_entry
       end : rs_not_mispred
@@ -267,7 +269,8 @@ module reservation_station_module #(
       for (int i = 0; i < RS_SIZE; i += 1) begin
         if (rs[i].entry_valid) begin
           if (rs[i].op1.rob_index == rob_broadcast_index) begin
-            `DEBUG(("(RS) \tUpdating RS[%0d] op1 -> %0d", i, $signed(rob_broadcast_value)));
+            `DEBUG(("(RS) \tUpdating RS[%0d] op1 -> %0d (op: %s)", i, $signed(rob_broadcast_value
+                   ), rs[i].op.name));
             if (rs[i].op == FU_OP_LDUR | rs[i].op == FU_OP_STUR) begin
               `DEBUG(
                   ("op1.value: %0d, rob_broadcast_value: %0d", rs[i].op1.value,

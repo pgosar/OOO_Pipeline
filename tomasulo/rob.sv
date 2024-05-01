@@ -86,6 +86,7 @@ module rob_module (
   logic reg_instr_uses_nzcv;
   logic [`ROB_IDX_SIZE-1:0] fu_dst;
   logic fu_done;
+  fu_op_t fu_op;
   // Timing
   logic delayed_clk;
   logic delayed_clk_2;
@@ -113,13 +114,13 @@ module rob_module (
             ("(rob) Received result from FU. ROB[%0d] -> %0d + valid", in_fu_dst_rob_index, $signed(
             in_fu_value)));
         // Validate the line which the FU has updated
-        rob[in_fu_dst_rob_index].value <= in_fu_value;
+        rob[in_fu_dst_rob_index].value <= fu_op == OP_STUR ? 0 : in_fu_value;
         rob[in_fu_dst_rob_index].valid <= 1;
         if (in_fu_set_nzcv) begin
           rob[in_fu_dst_rob_index].nzcv <= in_fu_nzcv;
         end
       end
-      // Update regfile
+      // Update ROB
       if (in_reg_done) begin
         `DEBUG(("(rob) Inserting new entry @ ROB[%0d] for dst GPR[%0d]", next_ptr, in_reg_dst));
         `DEBUG(
@@ -144,6 +145,7 @@ module rob_module (
             rob[commit_ptr].value), rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv));
       end : remove_commit
       // Buffer the incoming state
+      fu_op <= in_reg_fu_op;
       reg_done <= in_reg_done;
       reg_src1_value <= in_reg_src1_value;
       reg_src1_valid <= in_reg_src1_valid;
@@ -197,10 +199,10 @@ module rob_module (
 
     // Commits
     out_reg_commit_done = rob[commit_ptr].valid;
-    out_reg_commit_value = rob[commit_ptr].value;
     out_reg_set_nzcv = rob[commit_ptr].set_nzcv;
     out_reg_nzcv = rob[commit_ptr].nzcv;
-    out_reg_commit_value = rob[commit_ptr].value;
+    out_reg_commit_value = fu_op == OP_STUR ? 0 : rob[commit_ptr].value;
+    // out_reg_commit_value = rob[commit_ptr].value;
     out_reg_index = rob[commit_ptr].gpr_index;
     out_reg_commit_rob_index = commit_ptr;
   end
