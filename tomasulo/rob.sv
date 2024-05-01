@@ -89,13 +89,13 @@ module rob_module (
                $signed(
               in_fu_sigs.value)));
           // Validate the line which the FU has updated
-          if (rob[in_fu_sigs.dst_rob_index].controlflow_valid) begin
+          /*if (rob[in_fu_sigs.dst_rob_index].controlflow_valid) begin
             rob[in_fu_sigs.dst_rob_index].value <= in_fu_sigs.value;
             rob[in_fu_sigs.dst_rob_index].valid <= 1;
             if (in_alu_sigs.set_nzcv) begin
               rob[in_fu_sigs.dst_rob_index].nzcv <= in_alu_sigs.nzcv;
             end
-          end else begin
+          end*/ if(0) begin end else begin
             `DEBUG(("(rob) !! not updating rob for previous result. control flow invalid !!"));
           end
         end
@@ -201,7 +201,7 @@ module rob_module (
     out_reg_commit_sigs.set_nzcv = rob[commit_ptr].set_nzcv;
     out_reg_commit_sigs.nzcv = rob[commit_ptr].nzcv;
     out_reg_commit_sigs.value = rob[commit_ptr].value;
-    out_reg_commit_sigs.index = rob[commit_ptr].gpr_index;
+    out_reg_commit_sigs.reg_index = rob[commit_ptr].gpr_index;
     out_reg_commit_sigs.rob_index = commit_ptr;
 
     // Tells the L/S to writeback during this commit

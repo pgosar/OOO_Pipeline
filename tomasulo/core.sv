@@ -37,26 +37,27 @@ module core (
     #10;
     in_rst = 0;
     `DEBUG(("RESET DONE === BEGIN TEST"));
-    while (in_fetch_insnbits != 0) begin
-      `DEBUG(("itr"));
-      `DEBUG(("*******insnbits: %b", in_fetch_insnbits));
+    while (fetch_sigs.pc != 0) begin
+      // `DEBUG(("itr"));
+      // `DEBUG(("*******insnbits: %b", in_fetch_insnbits));
       #10;
     end
   end
 
-  logic reset_for_mispred;
-  always_ff @(negedge in_clk) begin
-    reset_for_mispred = out_fetch_mispredict;
-  end
+  // TODO(Nate): Do this on posedge
+  // logic reset_for_mispred;
+  // always_ff @(negedge in_clk) begin
+  //   reset_for_mispred = out_fetch_mispredict;
+  // end
 
-  logic is_mispred_branch;
+  logic is_mispred;
   logic [`GPR_SIZE-1:0] mispred_new_pc;
 
   // modules
   fetch f (
       .in_clk,
       .in_rst,
-      .in_rob_mispredict(is_mispred_branch),
+      .in_rob_mispredict(is_mispred),
       .in_rob_new_PC(mispred_new_pc),
       .out_d_sigs(fetch_sigs)
   );
@@ -72,19 +73,17 @@ module core (
 
   decode_interface d_sigs ();
 
-  rob_interface_ext_alu rob_alu_sigs ();
 
   reg_module regfile (
       .in_clk,
       .in_rst,
       .in_d_sigs(d_sigs),
-      .in_validate(reset_for_mispred),
       .in_rob_commit_sigs(commit_sigs),
       .in_rob_next_rob_index(next_rob_index),
       .out_rob_sigs(reg_sigs)
   );
 
-  logic next_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] next_rob_index;
   reg_interface reg_sigs ();
   rob_commit_interface commit_sigs ();
   integer pending_stur_count;
@@ -92,15 +91,14 @@ module core (
   rob_module rob (
       .in_rst,
       .in_clk,
-      .in_alu_sigs(alu_sigs),
-      .in_fu_sigs(alu_sigs_ext),
+      .in_alu_sigs(alu_sigs_ext),
+      .in_fu_sigs(alu_sigs),
       .in_reg_sigs(reg_sigs),
       .out_rs_sigs(rob_sigs),
-      .out_rs_alu_sigs(rob_alu_sigs),
       .out_rs_broadcast_sigs(rob_broadcast_sigs),
       .out_reg_commit_sigs(commit_sigs),
       .out_reg_next_rob_index(next_rob_index),
-      .out_is_mispredict(is_mispred_branch),
+      .out_is_mispredict(is_mispred),
       .out_fetch_new_PC(mispred_new_pc),
       .out_rs_pending_stur_count(pending_stur_count)
   );
@@ -110,18 +108,18 @@ module core (
 
   reservation_stations rs (
       .in_clk,
-      .in_rst(in_rst | reset_for_mispred),
+      .in_rst(in_rst | is_mispred),
       .in_fu_alu_ready(alu_ready),
       .in_fu_ls_ready(ls_ready),
       .in_rob_sigs(rob_sigs),
-      .in_rob_is_mispred(is_mispred_branch),
+      .in_rob_is_mispred(is_mispred),
       .in_rob_broadcast(rob_broadcast_sigs),
-      .out_alu_sigs(alu_sigs),
-      .out_alu_sigs_ext(alu_sigs_ext),
+      .out_alu_sigs(rs_alu_sigs),
+      .out_alu_sigs_ext(rs_alu_ext_sigs),
       .out_ls_sigs(rs_ls_sigs)
   );
 
-  rs_interface rs_fu_sigs ();
+  rs_interface rs_alu_sigs ();
   rs_interface_alu_ext rs_alu_ext_sigs ();
   rs_interface rs_ls_sigs ();
   logic  ls_ready;
@@ -135,17 +133,12 @@ module core (
   func_units fu (
       .in_clk,
       .in_rst,
-      .in_rs_alu_sigs(rs_alu_sig),
+      .in_rs_alu_sigs(rs_alu_sigs),
       .in_rs_alu_sigs_ext(rs_alu_ext_sigs),
       .in_rs_ls_sigs(rs_ls_sigs),
-      .in_rob_alu_cond_codes(fu_rob_alu_cond_codes),
       .in_rob_commit_done(fu_rob_commit_done),
-
-      .out_rob_done(fu_rob_done),
-      .out_rob_set_nzcv(fu_rob_set_nzcv),
-      .out_rob_nzcv(fu_rob_nzcv),
-      .out_rob_sigs(rob_sigs),
-      .out_rob_alu_sigs(alu_sigs),
+      .out_rob_sigs(alu_sigs),
+      .out_rob_alu_sigs(alu_sigs_ext),
       .out_rs_alu_ready(alu_ready),
       .out_rs_ls_ready(ls_ready)
   );

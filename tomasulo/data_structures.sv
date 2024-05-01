@@ -300,6 +300,7 @@ interface rob_broadcast_interface ();
 endinterface
 
 interface rob_interface ();
+integer stur_counter;
   cond_t cond_codes;
   logic done;
   fu_t fu_id;
@@ -337,6 +338,7 @@ interface fu_interface ();
   logic done;
   logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
   logic [`GPR_SIZE-1:0] value;
+  fu_op_t fu_op;
 endinterface
 
 interface fu_interface_alu_ext ();
