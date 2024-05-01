@@ -21,7 +21,7 @@
 
 
 // Note: the imem is combinational to make accessing memory super easy.
-//
+
 module imem #(
     parameter int PAGESIZE = 4096
 ) (

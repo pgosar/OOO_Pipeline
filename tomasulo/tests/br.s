@@ -4,7 +4,8 @@
   .p2align 3,,7
   .global start
 start:
-    add x1, x1, #0x1c
+    // add x1, x1, #0x1c
+    mov x1, #0x1c
     br x1
 .wrong:
     movz x2, #0xBAD

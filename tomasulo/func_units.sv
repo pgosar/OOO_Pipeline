@@ -1,8 +1,13 @@
-`include "data_structures.sv"
 `ifndef FUNC_UNITS
 `define FUNC_UNITS
 
 `include "data_structures.sv"
+
+// TODO(Nate): If a load store happens out of order, how do you undo state
+// Solution: Do not allow a stur to complete in the pipeline if the core is
+// currently in a mispredicted branch state
+// Real solution: We have a writeback buffer. Read values from the writeback
+// before dmem. Commit stuff from the writeback buffer on commit.
 
 module func_units (
     // Timing
@@ -59,10 +64,10 @@ module func_units (
 
   // Buffer inputs
   always_ff @(posedge in_clk) begin
-    $display("wtf alu op: %s", in_rs_alu_fu_op.name);
-    $display("wtf ls op: %s", in_rs_ls_fu_op.name);
+    // $display("wtf alu op: %s", in_rs_alu_fu_op.name);
+    // $display("wtf ls op: %s", in_rs_ls_fu_op.name);
     out_rob_done <= in_rs_alu_start | in_rs_ls_start;
-    out_rob_dst_rob_index <= in_rs_alu_start ? rs_alu_dst_rob_index : rs_ls_dst_rob_index;
+    out_rob_dst_rob_index <= in_rs_alu_start ? in_rs_alu_dst_rob_index : in_rs_ls_dst_rob_index;
     out_rs_alu_ready <= !in_rs_alu_start;
     out_rs_ls_ready <= !in_rs_ls_start;
     alu_start <= in_rs_alu_start;
@@ -167,7 +172,6 @@ module alu_module (
   );
 
 
-  // TODO Kavya add val_hw can do it in extract immval too
   logic result_negative;
   always_comb begin
     casez (in_op)
@@ -181,11 +185,8 @@ module alu_module (
       FU_OP_CSINC: result = out_alu_condition == 0 ? val_b + 1 : val_a;
       FU_OP_CSINV: result = out_alu_condition == 0 ? ~val_b : val_a;
       FU_OP_CSEL: result = out_alu_condition == 0 ? val_b : val_a;
-      FU_OP_MOV: result = val_a | (val_b <<  /*in_alu_val_hw*/ 0);  // TODO pass through val_hw
-      FU_OP_PASS_A, FU_OP_B_COND: begin
-        `DEBUG(("(ALU) reached pass_a_op. value is %0d", val_a));
-        result = val_a; // NOTE(Nate): No longer required
-      end
+      FU_OP_MOV: result = val_a | val_b;  // TODO pass through val_hw
+      // FU_OP_PASS_A: result = val_a; // NOTE(Nate): No longer required
       default: result = 0;
     endcase
 

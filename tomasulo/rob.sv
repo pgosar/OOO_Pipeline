@@ -154,7 +154,7 @@ module rob_module (
         commit_ptr <= (commit_ptr + 1) % `ROB_SIZE;
         last_commit_was_mispredict <= rob[commit_ptr].mispredict;
         mispredict_new_PC <= rob[commit_ptr].value;
-        `DEBUG(("(rob) Detected branch mispredict. About to commit branch instruction."));
+        if (rob[commit_ptr].mispredict) `DEBUG(("(rob) Detected branch mispredict. About to commit branch instruction."));
         `DEBUG(("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d",
                (commit_ptr + 1) % `ROB_SIZE));
         `DEBUG(

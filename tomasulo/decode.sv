@@ -153,8 +153,8 @@ module extract_reg (
 endmodule
 
 module decide_alu (
-    input  opcode_t opcode,
-    output fu_op_t  out_reg_fu_op,
+    input opcode_t opcode,
+    output fu_op_t out_reg_fu_op,
     output logic out_reg_mispredict,
     output logic out_reg_bcond
 );
@@ -351,7 +351,7 @@ module dispatch (
 
   decode_instruction op_decoder (
       .*,
-      .out_opcode(opcode),
+      .out_opcode (opcode),
       .in_insnbits(insnbits)
   );
   extract_immval imm_extractor (
@@ -407,4 +407,4 @@ module dispatch (
   end
 
 endmodule : dispatch
-`endif // decode
+`endif  // decode

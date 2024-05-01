@@ -220,25 +220,19 @@ module reservation_station_module #(
         rs[i].entry_valid <= 0;
       end
     end else begin : rs_not_reset
-      if (in_rob_is_mispred) begin
-        `DEBUG(("(RS) Deleting mispredicted instructions"));
-        // todo handle mispred
-      end else begin : rs_not_mispred
-        if (fu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
-
-          `DEBUG(
-              ("(RS) Remove entry RS[%0d] = op: %s. FU consumed entry at start of this cycle.",
-                 ready_station_index, rob_fu_op.name));
-          rs[ready_station_index].entry_valid <= ~fu_ready;
-        end : fu_consume_entry
-      end : rs_not_mispred
+      if (fu_ready & (ready_station_index != INVALID_INDEX)) begin : fu_consume_entry
+        rs[ready_station_index].entry_valid <= ~fu_ready;
+        `DEBUG(
+            ("(RS) Remove entry RS[%0d] = op: %s. FU consumed entry at start of this cycle.", ready_station_index, rob_fu_op.name));
+      end : fu_consume_entry
       // Buffer state
       rob_alu_val_a_valid <= in_rob_alu_val_a_valid;
       rob_alu_val_b_valid <= in_rob_alu_val_b_valid;
       rob_nzcv_valid <= in_rob_nzcv_valid;
       rob_alu_val_a_value <= in_rob_alu_val_a_value;
       rob_alu_val_b_value <= in_rob_alu_val_b_value;
-      `DEBUG(("(RS) received rob val a %0d and val b %0d", in_rob_alu_val_a_value, in_rob_alu_val_b_value));
+      `DEBUG(
+          ("(RS) received rob val a %0d and val b %0d", in_rob_alu_val_a_value, in_rob_alu_val_b_value));
       rob_set_nzcv <= in_rob_set_nzcv;
       rob_nzcv <= in_rob_nzcv;
       rob_alu_val_a_rob_index <= in_rob_alu_val_a_rob_index;
@@ -269,24 +263,28 @@ module reservation_station_module #(
       // Update reservation stations with values from the ROB
       for (int i = 0; i < RS_SIZE; i += 1) begin
         if (rs[i].entry_valid) begin
-          if (rs[i].op1.rob_index == rob_broadcast_index) begin
+          // src1
+          if (~rs[i].op1.valid & rs[i].op1.rob_index == rob_broadcast_index) begin
             `DEBUG(("(RS) \tUpdating RS[%0d] op1 -> %0d (op: %s)", i, $signed(rob_broadcast_value
                    ), rs[i].op.name));
             if (rs[i].op == FU_OP_LDUR | rs[i].op == FU_OP_STUR) begin
               `DEBUG(
-                  ("op1.value: %0d, rob_broadcast_value: %0d", rs[i].op1.value,
-                     rob_broadcast_value));
+                  ("op1.value: %0d, rob_broadcast_value: %0d", rs[i].op1.value, rob_broadcast_value));
               rs[i].op1.value <= rs[i].op1.value + rob_broadcast_value;
-            end else if (rs[i].op != FU_OP_PASS_A) begin
+            end else begin
               rs[i].op1.value <= rob_broadcast_value;
             end
             rs[i].op1.valid <= 1;
           end
-          if (rs[i].op2.rob_index == rob_broadcast_index) begin
+
+          // src2
+          if (~rs[i].op2.valid & rs[i].op2.rob_index == rob_broadcast_index) begin
             `DEBUG(("(RS) \tUpdating RS[%0d] op2 -> %0d", i, $signed(rob_broadcast_value)));
             rs[i].op2.value <= rob_broadcast_value;
             rs[i].op2.valid <= 1;
           end
+
+          // nzcv
           if (rob_broadcast_set_nzcv && rs[i].set_nzcv && rs[i].nzcv_rob_index == rob_broadcast_index) begin
             rs[i].nzcv <= rob_broadcast_nzcv;
             rs[i].nzcv_valid <= 1;
@@ -338,36 +336,6 @@ module reservation_station_module #(
     out_fu_dst_rob_index = rs[ready_station_index].dst_rob_index;
     out_fu_alu_nzcv = rs[ready_station_index].nzcv;
     out_fu_alu_set_nzcv = rs[ready_station_index].set_nzcv;
-  end
-
-  always_ff @(posedge delayed_clk) begin
-    #2;  // TODO(Nate): Verilator REFUSES to believe that the delayed clk is
-    // actually delayed, and throws multi-driven signal errors without
-    // this line
-
-    // TODO(Nate): Add case for updating from rob broadcast
-    // Mispred broadcast
-    // for (int i = 0; i < RS_SIZE; i+=1) begin
-    //
-    //         `DEBUG("(RS) Mispred");
-    //     `endif
-    //     if (rs[i].entry_valid) begin // Unnecessary check, but will help energy
-    //         if (rs[i].op1.rob_index == in_rob_broadcast_index) begin
-    //
-    //                 `DEBUG("(RS) mispred Updating RS[%0d] op1", i);
-    //             `endif
-    //             rs[i].op1.value <= in_rob_broadcast_value;
-    //             rs[i].op1.valid <= 1;
-    //         end
-    //         if (rs[i].op2.rob_index == in_rob_broadcast_index) begin
-    //
-    //                 `DEBUG("(RS) mispred Updating RS[%0d] op2", i);
-    //             `endif
-    //             rs[i].op2.value <= in_rob_broadcast_value;
-    //             rs[i].op1.valid <= 1;
-    //         end
-    //     end
-    // end
   end
 
 endmodule
