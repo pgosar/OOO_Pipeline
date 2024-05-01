@@ -21,7 +21,9 @@
     $display ARGS; \
 `endif
 
-
+`define ASSERT(ARGS) \
+  if(ARGS == 0) $stop; \
+  $finish;
 
 typedef struct packed {logic src2_sel;} d_ctl_sigs_t;
 

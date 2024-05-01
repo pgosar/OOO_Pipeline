@@ -121,7 +121,8 @@ module reg_module (
 
         `DEBUG(("(regfile) Request to commit to GPR[%0d] -> %0d", in_rob_reg_index, $signed(
                in_rob_commit_value)));
-        `DEBUG(("(regfile) \tGPR ROB: %0d, Sending ROB: %0d", in_rob_commit_rob_index,
+        `DEBUG(
+            ("(regfile) \tGPR ROB: %0d, Sending ROB: %0d", in_rob_commit_rob_index,
                gprs[in_rob_reg_index].rob_index));
       end : rob_commit
     end
@@ -147,16 +148,19 @@ module reg_module (
       // end
 
 
-      `DEBUG(("(regfile) src1 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src1,
+      `DEBUG(
+          ("(regfile) src1 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src1,
              out_rob_src1_value, out_rob_src1_valid, out_rob_src1_rob_index));
       if (d_use_imm) begin
         `DEBUG(("(regfile) src2 using immediate: %0d", d_imm));
       end else begin
-        `DEBUG(("(regfile) src2 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src2,
+        `DEBUG(
+            ("(regfile) src2 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_src2,
                gprs[d_src2].value, gprs[d_src2].valid,
                d_src2 == d_dst ? src2_rob_index : gprs[d_src2].rob_index));
       end
-      `DEBUG(("(regfile) Dispatch dest GPR[%0d] renamed to ROB[%0d]", d_dst, in_rob_next_rob_index));
+      `DEBUG(
+          ("(regfile) Dispatch dest GPR[%0d] renamed to ROB[%0d]", d_dst, in_rob_next_rob_index));
     end
   end
 

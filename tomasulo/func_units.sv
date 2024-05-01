@@ -39,7 +39,8 @@ module func_units (
   fu_op_t fu_op;
   logic [`GPR_SIZE-1:0] val_a;
   logic [`GPR_SIZE-1:0] val_b;
-  logic [`GPR_SIZE-1:0] out_value;
+  logic [`GPR_SIZE-1:0] alu_value;
+  logic [`GPR_SIZE-1:0] ls_value;
   // Buffered state (for clocking ALU)
   logic rs_alu_set_nzcv;
   nzcv_t rs_alu_nzcv;
@@ -49,7 +50,7 @@ module func_units (
   logic alu_out_set_nzcv;
 
   // Decide on whether LS or ALU should run
-  assign out_rob_value = out_value;
+  //assign out_rob_value = out_value;
   // assign out_rs_alu_ready = 1;
   // assign out_rob_dst_rob_index = rs_alu_dst_rob_index;
   // always_comb begin
@@ -65,65 +66,64 @@ module func_units (
   //   end
   // end
 
+  always_comb begin
+  end
   // Buffer inputs
   always_ff @(posedge in_clk) begin
+    $display("wtf alu op: %s", in_rs_alu_fu_op.name);
+    $display("wtf ls op: %s", in_rs_ls_fu_op.name);
+    out_rs_alu_ready <= !in_rs_ls_start | out_rs_alu_ready;
+    out_rs_ls_ready <= !in_rs_alu_start | out_rs_ls_ready;
+    val_a <= 0;
+    val_b <= 0;
     out_rob_done <= in_rs_alu_start | in_rs_ls_start;
-    if (out_rob_done) begin
-      out_rs_alu_ready <= 0;
-      out_rs_ls_ready  <= 0;
-    end
-    out_rs_alu_ready <= !in_rs_alu_start;
-    out_rs_ls_ready <= !in_rs_ls_start;
     out_rob_dst_rob_index <= in_rs_alu_start ? rs_alu_dst_rob_index : rs_ls_dst_rob_index;
     `DEBUG(("ALU start: %0d, LS start: %0d", in_rs_alu_start, in_rs_ls_start));
     if (in_rs_alu_start) begin
+      out_rob_value <= alu_value;
       // buffered state (so that it is clocked)
-      fu_op <= in_rs_alu_fu_op;
-      val_a <= in_rs_alu_val_a;
-      val_b <= in_rs_alu_val_b;
-      rs_alu_dst_rob_index <= in_rs_alu_dst_rob_index;
-      rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
-      rs_alu_nzcv <= in_rs_alu_nzcv;
-      #1
+      //val_a <= in_rs_alu_val_a;
+      //val_b <= in_rs_alu_val_b;
+      //rs_alu_dst_rob_index <= in_rs_alu_dst_rob_index;
+      //out_rob_value <= alu_value;
+      //rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
+      //rs_alu_nzcv <= in_rs_alu_nzcv;
       `DEBUG(
           ( "(ALU) %s calculated: %0d for dst ROB[%0d] val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d",
-      fu_op.name, $signed(
-              out_value
-          ), rs_alu_dst_rob_index, $signed(
-              val_a
-          ), $signed(
-              val_b), out_rob_nzcv, out_alu_condition));
+      in_rs_alu_fu_op.name, $signed(
+          alu_value), rs_alu_dst_rob_index, $signed(in_rs_alu_val_a), $signed(in_rs_alu_val_b
+          ), out_rob_nzcv, out_alu_condition));
     end else if (in_rs_ls_start) begin
       // buffered state (so that it is clocked)
-      fu_op <= in_rs_ls_fu_op;
-      val_a <= in_rs_alu_val_a;
-      val_b <= in_rs_alu_val_b;
+      val_a <= in_rs_ls_val_a;
+      val_b <= in_rs_ls_val_b;
+      out_rob_value <= ls_value;
       rs_ls_dst_rob_index <= in_rs_ls_dst_rob_index;
       //#2
       `DEBUG(
-          ( "(LS) %s executed: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b", fu_op.name, $signed(
-          out_value), rs_ls_dst_rob_index, $signed(val_a), $signed(val_b), out_rob_nzcv));
+          ( "(LS) %s executed: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d, nzcv = %4b", in_rs_ls_fu_op.name, $signed(
+          ls_value), rs_ls_dst_rob_index, $signed(val_a), $signed(val_b), out_rob_nzcv));
     end
   end
 
-  logic dmem_clk = in_clk & in_rs_ls_start;
+  // logic dmem_clk = in_clk & in_rs_ls_start;
   dmem dmem_module (
-      .clk(dmem_clk),
-      .in_addr(in_rs_alu_val_a),
+      .clk(in_clk),
+      .in_addr(in_rs_ls_val_a),
       .w_enable(in_rs_ls_fu_op == FU_OP_STUR),
-      .wval(in_rs_alu_val_b),
-      .data(out_value)
+      .wval(in_rs_ls_val_b),
+      .data(ls_value)
   );
 
   alu_module alu (
       .in_cond(in_rob_alu_cond_codes),
-      .in_op(fu_op),
-      .in_alu_val_a(val_a),
-      .in_alu_val_b(val_b),
+      .in_op(in_rs_alu_fu_op),
+      .in_alu_val_a(in_rs_alu_val_a),
+      .in_alu_val_b(in_rs_alu_val_b),
       .in_set_nzcv(rs_alu_set_nzcv),
       .in_nzcv(rs_alu_nzcv),
       .out_alu_condition(out_alu_condition),
-      .out_value(out_value),
+      .out_value(alu_value),
       .out_nzcv(out_rob_nzcv),
       .out_set_nzcv(alu_out_set_nzcv)
   );
@@ -201,33 +201,6 @@ module alu_module (
   end
 endmodule
 
-
-// Note: the imem is combinational to make accessing memory super easy.
-//
-module imem #(
-    parameter int PAGESIZE = 4096
-) (
-    input  logic [63:0] in_addr,
-    output logic [31:0] out_data
-);
-  // read-only instruction memory module.
-  localparam bits_amt = PAGESIZE;
-  localparam fname = "mem/imem.txt";
-  logic [7:0] mem[bits_amt];
-  logic [$clog2(PAGESIZE) - 1:0] addr;
-
-  // Load initial contents of memory into array
-  initial begin
-    $readmemb(fname, mem);
-  end
-
-  always_comb begin : mem_access
-    addr = in_addr[$clog2(PAGESIZE)-1:0];
-    out_data = {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]};
-  end : mem_access
-
-endmodule
-
 // set w_enable and w_val if writing, else just set in_addr. should be
 // really easy to integrate since addr is 64 bit
 module dmem #(
@@ -251,6 +224,8 @@ module dmem #(
 
   logic [$clog2(PAGESIZE*4)-1:0] addr;
   always_ff @(posedge clk) begin : mem_access
+    $display("w enable: %0d", w_enable);
+    $display("wval: %0d", wval);
     addr <= in_addr[$clog2(PAGESIZE*4)-1:0];
     #1
     if (w_enable) begin

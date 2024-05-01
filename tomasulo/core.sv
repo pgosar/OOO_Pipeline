@@ -201,7 +201,7 @@ module core (
   int i;
   initial begin
     in_clk = 0;
-    for (i = 1; i <= 25; i += 1) begin
+    for (i = 1; i <= 30; i += 1) begin
       `DEBUG(("\n>>>>> CYCLE COUNT: %0d <<<<<", i));
       #1 in_clk = ~in_clk;  // 100 MHz clock
       #5 in_clk = ~in_clk;
@@ -316,14 +316,14 @@ module core (
 
   // modules
   fetch f (
-    .in_clk,
-    .in_rst,
-    .out_d_insnbits(fetch_insnbits),
-    .out_d_done(fetch_done)
+      .in_clk,
+      .in_rst,
+      .out_d_insnbits(fetch_insnbits),
+      .out_d_done(fetch_done)
   );
 
   dispatch dp (
-    .in_rst,
+      .in_rst,
       .*,
       .in_fetch_insnbits(fetch_insnbits),
       .in_fetch_done(fetch_done),
@@ -345,7 +345,7 @@ module core (
   );
 
   reservation_stations rs (
-    .in_rst,
+      .in_rst,
       .*,
       .in_rob_alu_cond_codes(rs_in_rob_alu_cond_codes),
       .in_rob_set_nzcv(rs_in_rob_set_nzcv),

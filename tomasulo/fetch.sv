@@ -19,6 +19,33 @@
 // else: sequential successor
 // adrp????
 
+
+// Note: the imem is combinational to make accessing memory super easy.
+//
+module imem #(
+    parameter int PAGESIZE = 4096
+) (
+    input  logic [63:0] in_addr,
+    output logic [31:0] out_data
+);
+  // read-only instruction memory module.
+  localparam bits_amt = PAGESIZE;
+  localparam fname = "mem/imem.txt";
+  logic [7:0] mem[bits_amt];
+  logic [$clog2(PAGESIZE) - 1:0] addr;
+
+  // Load initial contents of memory into array
+  initial begin
+    $readmemb(fname, mem);
+  end
+
+  always_comb begin : mem_access
+    addr = in_addr[$clog2(PAGESIZE)-1:0];
+    out_data = {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr]};
+  end : mem_access
+
+endmodule
+
 module fetch #(
     parameter int PAGESIZE = 4096
 )  // note: this should always be 4096
@@ -59,7 +86,7 @@ module fetch #(
 
   decode_instruction decoder (
       .in_insnbits(data),
-      .out_opcode(opcode)
+      .out_opcode (opcode)
   );
   extract_immval extractor (
       .in_insnbits(data),
