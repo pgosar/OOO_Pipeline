@@ -100,10 +100,9 @@ module extract_immval (
       OP_ADD, OP_SUB, OP_UBFM, OP_SBFM: out_reg_imm = {52'd0, in_insnbits[21:10]};
       OP_MOVK, OP_MOVZ: out_reg_imm = {48'd0, in_insnbits[20:5]};
       OP_ADRP: out_reg_imm = {31'd0, in_insnbits[23:5], in_insnbits[30:29], 12'h000};
+      OP_ADR: out_reg_imm = {43'd0, in_insnbits[23:5], in_insnbits[30:29]};
       OP_B, OP_BL: out_reg_imm = ({38'd0, in_insnbits[25:0]}) * 4;
       OP_B_COND, OP_CBNZ, OP_CBZ: out_reg_imm = ({45'd0, in_insnbits[23:5]}) * 4;
-
-
       default: out_reg_imm = 0;
     endcase
   end
@@ -161,7 +160,7 @@ module decide_alu (
   // TODO op_cmp, op_tst def commented out in opcode_t
   always_comb begin
     casez (opcode)
-      OP_LDP, OP_STP, OP_ADD, OP_ADDS, OP_ADR, OP_ADRP: out_reg_fu_op = FU_OP_PLUS;
+      OP_LDP, OP_STP, OP_ADD, OP_ADDS: out_reg_fu_op = FU_OP_PLUS;
       OP_LDUR: out_reg_fu_op = FU_OP_LDUR;
       OP_STUR: out_reg_fu_op = FU_OP_STUR;
       OP_SUB, OP_SUBS: out_reg_fu_op = FU_OP_MINUS;
@@ -177,6 +176,7 @@ module decide_alu (
       OP_CSINV: out_reg_fu_op = FU_OP_CSINV;
       OP_BR, OP_BLR: out_reg_fu_op = FU_OP_PASS_A;
       OP_B_COND: out_reg_fu_op = FU_OP_B_COND;
+      OP_ADR, OP_ADRP: out_reg_fu_op = FU_OP_ADRX;
       default: out_reg_fu_op = FU_OP_PLUS;  //plus for now i will add an error op later
     endcase
 

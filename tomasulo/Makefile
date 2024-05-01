@@ -26,10 +26,10 @@ LSCRIPT = mem/ooo.ld
 	$(eval FNAME := $(basename $<))
 	$(CC) $(CFLAGS) -o $(FNAME).o $<
 	$(LD) $(LSCRIPT) $(FNAME).o -o $(FNAME)_linked.o
-	objdump $(FNAME).o --disassemble
+	llvm-objdump $(FNAME).o --disassemble
 	rm $(FNAME).o $(FNAME)_linked.o
 
-# Note: there is a better solution than just suppressing duplicate definition warnings, 
+# Note: there is a better solution than just suppressing duplicate definition warnings,
 # but this is the best one for now. (-Wno-MODDUP)
 verilator-debug:
 	verilator --binary --build --cc --trace --trace-structs --timing -j 0 -DDEBUG_PRINT ${SV_FILES} --top-module ${MODULE} -o ${MODULE}_tb

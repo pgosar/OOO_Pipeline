@@ -175,7 +175,7 @@ module alu_module (
   logic result_negative;
   always_comb begin
     casez (in_op)
-      FU_OP_PLUS: result = val_a + val_b;
+      FU_OP_ADRX, FU_OP_PLUS: result = val_a + val_b;
       FU_OP_MINUS: result = val_a - val_b;
       FU_OP_ORN: result = val_a | (~val_b);
       FU_OP_OR: result = val_a | val_b;
@@ -186,7 +186,7 @@ module alu_module (
       FU_OP_CSINV: result = out_alu_condition == 0 ? ~val_b : val_a;
       FU_OP_CSEL: result = out_alu_condition == 0 ? val_b : val_a;
       FU_OP_MOV: result = val_a | val_b;  // TODO pass through val_hw
-      // FU_OP_PASS_A: result = val_a; // NOTE(Nate): No longer required
+      FU_OP_PASS_A: result = val_a;
       default: result = 0;
     endcase
 

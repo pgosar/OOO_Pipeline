@@ -148,7 +148,8 @@ module reg_module (
   always_ff @(posedge in_clk) begin
     #5  // Ugh, Verilator doees not signals to be driven on both the posedge
         // and negedge clk. the bastard.
-    `DEBUG(("(regfile) checking d_done buffered. %0d", d_done));
+    `DEBUG(
+        ("(regfile) checking d_done buffered. %0d", d_done));
     if (d_done) begin
       // gprs[d_dst].valid <= 0;
       // gprs[d_dst].rob_index <= in_rob_next_rob_index;
@@ -177,6 +178,7 @@ module reg_module (
   // Set outputs
   always_comb begin
     out_rob_done = d_done;
+
     // Src 1 - With LDUR/STUR, src1 contains base address. If src1 is not
     // available
     out_rob_src1_valid = gprs[d_src1].valid;
@@ -190,9 +192,13 @@ module reg_module (
     end else if (d_fu_op == FU_OP_B_COND) begin
       out_rob_src1_value = in_d_branch_PC;
       out_rob_src1_valid = 1;
+    end else if (d_fu_op == FU_OP_ADRX) begin
+      out_rob_src1_valid = 1;
+      out_rob_src1_value = in_d_branch_PC;
     end else begin
       out_rob_src1_value = gprs[d_src1].value;
     end
+
     // Src2 - With LDUR, the immediate is the offset.
     //      - With STUR, src2 contains value to store. immediate contains the offset
     if (d_use_imm) begin

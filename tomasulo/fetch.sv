@@ -114,6 +114,9 @@ module fetch #(
         `DEBUG(("(fetch) received rob mispredict directive. setting PC to %0d", in_rob_new_PC));
         out_d_done <= 0;
         PC <= in_rob_new_PC;
+      end else if (opcode == OP_ADR | opcode == OP_ADRP) begin
+        out_d_branch_PC <= PC;
+        PC <= PC + 4;
       end else if (opcode == OP_B_COND) begin
         out_d_branch_PC <= PC + imm;
         PC <= PC + 4;

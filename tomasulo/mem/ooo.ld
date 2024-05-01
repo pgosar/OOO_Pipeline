@@ -12,9 +12,9 @@ PHDRS
  * It is guaranteed that the sections specified
  * will be placed in the desired memory sections.
  * Unspecified sections will be placed according
- * to permission heuristics. 
+ * to permission heuristics.
  */
-MEMORY 
+MEMORY
 {
   insn (rx) : ORIGIN = 0x0000 + SIZEOF_HEADERS, LENGTH = 4K
   rom (r) : ORIGIN = 0x1000 + SIZEOF_HEADERS, LENGTH = 4K

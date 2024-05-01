@@ -63,7 +63,8 @@ typedef enum logic [5:0] {
   FU_OP_LDUR,
   FU_OP_STUR,
   FU_OP_B_COND,
-  FU_OP_NOP
+  FU_OP_NOP,
+  FU_OP_ADRX
 } fu_op_t;
 
 typedef enum logic [`OPCODE_SIZE-1:0] {

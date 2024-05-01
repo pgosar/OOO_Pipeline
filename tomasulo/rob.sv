@@ -195,16 +195,12 @@ module rob_module (
     if (last_commit_was_mispredict) begin
       `DEBUG(("(rob) emitting mispredict directive."));
       rob <= 0;
-      out_fetch_new_PC <= 252;
+      out_fetch_new_PC <= mispredict_new_PC;
       out_fetch_mispredict <= 1;
       last_commit_was_mispredict <= 0;
     end else out_fetch_mispredict <= 0;
   end: on_negedge
 end
-
-  // Some printout or sumn
-  // always_ff @(posedge delayed_clk) begin
-  // end
 
   // Process buffered state
   always_comb begin
