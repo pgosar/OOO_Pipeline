@@ -94,12 +94,11 @@ module extract_immval (
   // TODO(Nate): Add AND, STP, LDP. Probably remove shifts to aid in synthesis.
   //             Could these assignments result in floating values because we
   //             haven't assigned every bit? idk
-  // TODO(Kavya) Add val_hw thingy inn here
   always_comb begin
     case (opcode)
       OP_LDUR, OP_STUR: out_reg_imm = {55'd0, in_insnbits[20:12]};
       OP_ADD, OP_SUB, OP_UBFM, OP_SBFM: out_reg_imm = {52'd0, in_insnbits[21:10]};
-      OP_MOVK, OP_MOVZ: out_reg_imm = {48'd0, in_insnbits[20:5]} << (in_insnbits[22:21] * 16);
+      OP_MOVK, OP_MOVZ: out_reg_imm = {48'd0, in_insnbits[20:5]};
       OP_ADRP: out_reg_imm = {31'd0, in_insnbits[23:5], in_insnbits[30:29], 12'h000};
       OP_B, OP_BL: out_reg_imm = ({38'd0, in_insnbits[25:0]}) * 4;
       OP_B_COND, OP_CBNZ, OP_CBZ: out_reg_imm = ({45'd0, in_insnbits[23:5]}) * 4;
@@ -127,20 +126,13 @@ module extract_reg (
       out_reg_dst = in_insnbits[4:0];
     end else if (opcode == OP_BL) begin
       out_reg_dst = 5'd30;
-    end else if (opcode == OP_STUR) begin
-      out_reg_dst = in_insnbits[9:5];
     end else begin
       out_reg_dst = 0;
     end
 
     //out_reg_src1
     if (opcode != OP_MOVK & opcode != OP_MOVZ & opcode != OP_ADR & opcode != OP_ADRP &
-<<<<<<< HEAD
-            opcode != OP_B & opcode != OP_BR & opcode != OP_B_COND & opcode != OP_BL & opcode
-            != OP_BLR & opcode != OP_NOP & opcode != OP_HLT
-=======
             opcode != OP_B & opcode != OP_B_COND & opcode != OP_BL & opcode != OP_NOP & opcode != OP_HLT
->>>>>>> branching_almost
             & opcode != OP_CBZ & opcode != OP_CBNZ) begin
       out_reg_src1 = in_insnbits[9:5];
     end else if (opcode == OP_CBZ | opcode == OP_CBNZ) begin
@@ -183,12 +175,8 @@ module decide_alu (
       OP_CSEL: out_reg_fu_op = FU_OP_CSEL;
       OP_CSINC: out_reg_fu_op = FU_OP_CSINC;
       OP_CSINV: out_reg_fu_op = FU_OP_CSINV;
-<<<<<<< HEAD
-      OP_NOP: out_reg_fu_op = FU_OP_NOP;
-=======
       OP_BR, OP_BLR: out_reg_fu_op = FU_OP_PASS_A;
       OP_B_COND: out_reg_fu_op = FU_OP_B_COND;
->>>>>>> branching_almost
       default: out_reg_fu_op = FU_OP_PLUS;  //plus for now i will add an error op later
     endcase
 
@@ -284,7 +272,7 @@ module use_out_reg_imm (
 );
 
   always_comb begin
-    if(/*opcode == OP_LDUR | opcode == OP_STUR |*/ opcode == OP_LDP | opcode == OP_STP | opcode == OP_MOVK | opcode == OP_MOVZ |
+    if(opcode == OP_LDUR | opcode == OP_STUR | opcode == OP_LDP | opcode == OP_STP | opcode == OP_MOVK | opcode == OP_MOVZ |
    opcode == OP_ADR | opcode == OP_ADRP | opcode == OP_SUB | opcode == OP_ADD | opcode == OP_AND | opcode == OP_UBFM |
    opcode == OP_SBFM | opcode == OP_B | opcode == OP_B_COND | opcode == OP_BL) begin
       out_reg_use_imm = 1;
@@ -363,7 +351,7 @@ module dispatch (
 
   decode_instruction op_decoder (
       .*,
-      .out_opcode (opcode),
+      .out_opcode(opcode),
       .in_insnbits(insnbits)
   );
   extract_immval imm_extractor (
