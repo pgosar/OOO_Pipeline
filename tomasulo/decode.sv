@@ -118,7 +118,6 @@ module extract_reg (
     output logic [`GPR_IDX_SIZE-1:0] out_reg_dst
 );
   always_comb begin
-    `DEBUG(("(EXTRACT REG) opcode is %s\n", opcode.name));
     //out_reg_dst
     if (opcode != OP_B & opcode != OP_BR & opcode != OP_B_COND &  //branch dont need out_reg_dst
         opcode != OP_BL & opcode != OP_BLR & opcode != OP_RET &  //branch dont need out_reg_dst
@@ -135,7 +134,6 @@ module extract_reg (
     if (opcode != OP_MOVK & opcode != OP_MOVZ & opcode != OP_ADR & opcode != OP_ADRP &
             opcode != OP_B & opcode != OP_B_COND & opcode != OP_BL & opcode != OP_NOP & opcode != OP_HLT
             & opcode != OP_CBZ & opcode != OP_CBNZ) begin
-      `DEBUG(("(DECODE) opcode is %s", opcode.name));
       out_reg_src1 = in_insnbits[9:5];
     end else if (opcode == OP_CBZ | opcode == OP_CBNZ) begin
       out_reg_src1 = in_insnbits[4:0];
@@ -276,7 +274,7 @@ module use_out_reg_imm (
   always_comb begin
     if(opcode == OP_LDUR | opcode == OP_STUR | opcode == OP_LDP | opcode == OP_STP | opcode == OP_MOVK | opcode == OP_MOVZ |
    opcode == OP_ADR | opcode == OP_ADRP | opcode == OP_SUB | opcode == OP_ADD | opcode == OP_AND | opcode == OP_UBFM |
-   opcode == OP_SBFM | opcode == OP_B | opcode == OP_BR | opcode == OP_B_COND | opcode == OP_BL | opcode == OP_BLR) begin
+   opcode == OP_SBFM | opcode == OP_B | opcode == OP_B_COND | opcode == OP_BL) begin
       out_reg_use_imm = 1;
     end else begin
       out_reg_use_imm = 0;

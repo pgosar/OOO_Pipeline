@@ -295,6 +295,7 @@ module core (
   assign in_rob_nzcv_valid = out_rs_nzcv_valid;
   assign in_rob_alu_val_a_value = out_rs_alu_val_a_value;
   assign in_rob_alu_val_b_value = out_rs_alu_val_b_value;
+  // `DEBUG(("(RS) received rob val a %0d and val b %0d", out_rs_alu_val_a_value, out_rs_alu_val_b_value));
   assign rs_in_rob_nzcv = out_rs_nzcv;
   assign rs_in_rob_set_nzcv = out_rs_set_nzcv;
   assign in_rob_alu_val_a_rob_index = out_rs_alu_val_a_rob_index;

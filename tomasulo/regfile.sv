@@ -90,6 +90,7 @@ module reg_module (
       end
     end else begin
       d_done <= in_d_done;
+      `DEBUG(("(regfile) d_done %0d", in_d_done));
       if (in_d_done) begin
         // Buffer inputs
         d_src1 <= in_d_src1;
@@ -146,6 +147,7 @@ module reg_module (
   always_ff @(posedge in_clk) begin
     #5  // Ugh, Verilator doees not signals to be driven on both the posedge
         // and negedge clk. the bastard.
+    `DEBUG(("(regfile) checking d_done buffered. %0d", d_done));
     if (d_done) begin
       // gprs[d_dst].valid <= 0;
       // gprs[d_dst].rob_index <= in_rob_next_rob_index;

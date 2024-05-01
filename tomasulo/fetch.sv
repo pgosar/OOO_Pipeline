@@ -88,7 +88,8 @@ module fetch #(
         out_d_done <= 0;
         PC <= in_rob_new_PC;
       end else if (opcode == OP_B_COND) begin
-        PC <= PC + imm;
+        out_d_branch_PC <= PC + imm;
+        PC <= PC + 4;
       end else if (opcode == OP_B || opcode == OP_BL) begin
         `DEBUG(("(fetch) detected branch. changing PC: %16x -> %16x", PC, PC + imm));
         PC <= PC + imm;

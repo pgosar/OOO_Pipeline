@@ -234,6 +234,7 @@ module reservation_station_module #(
       rob_nzcv_valid <= in_rob_nzcv_valid;
       rob_alu_val_a_value <= in_rob_alu_val_a_value;
       rob_alu_val_b_value <= in_rob_alu_val_b_value;
+      `DEBUG(("(RS) received rob val a %0d and val b %0d", in_rob_alu_val_a_value, in_rob_alu_val_b_value));
       rob_set_nzcv <= in_rob_set_nzcv;
       rob_nzcv <= in_rob_nzcv;
       rob_alu_val_a_rob_index <= in_rob_alu_val_a_rob_index;
