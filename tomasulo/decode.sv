@@ -113,25 +113,30 @@ module extract_reg (
     input logic [`INSNBITS_SIZE-1:0] in_insnbits,
     input opcode_t opcode,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src1,
-    output logic out_reg_src1_used,
+    output reg_status_t out_reg_src1_status,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
-    output logic out_reg_src2_used,
-    output logic [`GPR_IDX_SIZE-1:0] out_reg_dst
+    output reg_status_t out_reg_src2_status,
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_dst,
+    output reg_status_t out_reg_dst_status
 );
   always_comb begin
     //out_reg_dst
     casez (opcode)
       OP_B, OP_BR, OP_B_COND, OP_CBZ, OP_CBNZ, OP_RET, OP_NOP, OP_HLT, OP_ERR: begin
-        out_reg_dst = REG_ZR;
+        out_reg_dst = 31;
+        out_reg_dst_status = REG_IS_UNUSED;
+      end
+      OP_STUR: begin
+        out_reg_dst = 31;
+        out_reg_dst_status = REG_IS_STUR;
       end
       OP_BL, OP_BLR: begin
         out_reg_dst = 30;
-      end
-      OP_STUR: begin
-        out_reg_dst = REG_STUR;
+        out_reg_dst_status = REG_IS_USED;
       end
       default: begin
         out_reg_dst = in_insnbits[4:0];
+        out_reg_dst_status = REG_IS_USED;
       end
     endcase
 
@@ -140,26 +145,26 @@ module extract_reg (
             opcode != OP_B & opcode != OP_B_COND & opcode != OP_BL & opcode != OP_NOP & opcode != OP_HLT
             & opcode != OP_CBZ & opcode != OP_CBNZ) begin
       out_reg_src1 = in_insnbits[9:5];
-      out_reg_src1_used = 1;
+      out_reg_src1_status = REG_IS_USED;
     end else if (opcode == OP_CBZ | opcode == OP_CBNZ) begin
       out_reg_src1 = in_insnbits[4:0];
-      out_reg_src1_used = 1;
+      out_reg_src1_status = REG_IS_USED;
     end else begin
-      out_reg_src1 = REG_ZR;
-      out_reg_src1_used = 0;
+      out_reg_src1 = 31;
+      out_reg_src1_status = REG_IS_UNUSED;
     end
 
 
     //out_reg_src2
     if (opcode == OP_STUR) begin
       out_reg_src2 = in_insnbits[4:0];
-      out_reg_src2_used = 1;
+      out_reg_src2_status = REG_IS_USED;
     end else if (opcode == OP_ADDS | opcode == OP_SUBS | opcode == OP_ORN | opcode == OP_ORR | opcode == OP_EOR | opcode == OP_ANDS | opcode == OP_CSEL | opcode == OP_CSINV | opcode == OP_CSINC | opcode == OP_CSNEG) begin
       out_reg_src2 = in_insnbits[20:16];
-      out_reg_src2_used = 1;
+      out_reg_src2_status = REG_IS_USED;
     end else begin
-      out_reg_src2 = REG_ZR;
-      out_reg_src2_used = 0;
+      out_reg_src2 = 31;
+      out_reg_src2_status = REG_IS_UNUSED;
     end
   end
 endmodule
@@ -361,9 +366,10 @@ module dispatch (
       .in_insnbits(insnbits),
       .out_reg_src1(out_reg_sigs.src1),
       .out_reg_src2(out_reg_sigs.src2),
-      .out_reg_src1_used(out_reg_sigs.src1_used),
-      .out_reg_src1_used(out_reg_sigs.src2_used),
-      .out_reg_dst(out_reg_sigs.dst)
+      .out_reg_src1_status(out_reg_sigs.src1_status),
+      .out_reg_src2_status(out_reg_sigs.src2_status),
+      .out_reg_dst(out_reg_sigs.dst),
+      .out_reg_dst_status(out_reg_sigs.dst_status)
   );
 
   find_cond_code cond_holds (
@@ -372,9 +378,9 @@ module dispatch (
       .out_reg_cond_codes(out_reg_sigs.cond_codes)
   );
 
-  uses_nzcv instr_uses_nzcv (
+  uses_nzcv uses_nzcv (
       .in_opcode(opcode),
-      .out_op_uses_nzcv(out_reg_sigs.instr_uses_nzcv)
+      .out_op_uses_nzcv(out_reg_sigs.uses_nzcv)
   );
   use_out_reg_imm imm_selector (
       .opcode,
@@ -389,10 +395,6 @@ module dispatch (
   fu_decider fu (
       .opcode,
       .out_reg_fu_id(out_reg_sigs.fu_id)
-  );
-  sets_nzcv nzcv_setter (
-      .opcode,
-      .out_reg_set_nzcv(out_reg_sigs.set_nzcv)
   );
   sets_nzcv nzcv_setter (
       .opcode,
@@ -424,10 +426,11 @@ module dispatch (
           ("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_sigs.dst,
                out_reg_sigs.src1, out_reg_sigs.src2, out_reg_sigs.imm, out_reg_sigs.use_imm));
       `DEBUG(
-          ("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_sigs.set_nzcv, out_reg_sigs.instr_uses_nzcv))
+          ("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_sigs.set_nzcv, out_reg_sigs.uses_nzcv))
       `DEBUG(("(dec) cond codes %0b", out_reg_sigs.cond_codes))
     end
   end
 
 endmodule : dispatch
 `endif  // decode
+

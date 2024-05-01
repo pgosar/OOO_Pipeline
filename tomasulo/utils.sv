@@ -6,12 +6,14 @@ module cond_holds (
     output logic  cond_holds
 );
   logic N, Z, C, V;
-  assign N = nzcv.N;
-  assign Z = nzcv.Z;
-  assign C = nzcv.C;
-  assign V = nzcv.V;
 
   always_comb begin
+    // Rename For eeas
+    N = nzcv.N;
+    Z = nzcv.Z;
+    C = nzcv.C;
+    V = nzcv.V;
+
     casez (cond)
       C_EQ: cond_holds = Z;
       C_NE: cond_holds = ~Z;
@@ -24,9 +26,9 @@ module cond_holds (
       C_HI: cond_holds = C & Z;
       C_LS: cond_holds = ~(C & Z);
       C_GE: cond_holds = N == V;
-      C_LT: cond_holds = !(N == V);
+      C_LT: cond_holds = ~(N == V);
       C_GT: cond_holds = (N == V) & (Z == 0);
-      C_LE: cond_holds = !((N == V) & (Z == 0));
+      C_LE: cond_holds = ~((N == V) & (Z == 0));
       C_AL: cond_holds = 1;
       C_NV: cond_holds = 1;
     endcase

@@ -5,7 +5,7 @@
 `define RS_IDX_SIZE $clog2(`RS_SIZE)
 `define ROB_SIZE ((`RS_SIZE)*2+2)
 `define ROB_IDX_SIZE $clog2(`ROB_SIZE)
-`define GPR_COUNT 34
+`define GPR_COUNT 32
 `define INSNBITS_SIZE 32
 `define GPR_IDX_SIZE $clog2(`GPR_COUNT)
 `define GPR_SIZE 64 //IDK WHAT ITS SUPPOSED TO DO
@@ -14,13 +14,7 @@
 `define COND_SIZE 4
 `define NUM_OPCODES 43
 `define OPCODE_SIZE $clog2(`NUM_OPCODES)
-`define MISSPRED_SIZE 3
-
-typedef enum logic[GPR_IDX_SIZE-1:0] {
-  REG_ZR = 31,
-  REG_SP = 32,
-  REG_STUR = 33,
-} regs;
+`define LS_DELAY 3
 
 `define DEBUG(ARGS) \
 `ifdef DEBUG_PRINT \
@@ -175,6 +169,14 @@ typedef enum logic [3:0] {
   C_NV
 } cond_t;
 
+typedef enum logic [2:0] {
+  REG_IS_UNUSED,
+  REG_IS_USED,
+  REG_IS_XZR,
+  REG_IS_SP,
+  REG_IS_STUR
+} reg_status_t;
+
 typedef enum logic {
   FU_ALU,  // Arithmetic & Logic Unit
   FU_LS    // Load / Store Unit
@@ -220,7 +222,6 @@ typedef struct packed {
   logic set_nzcv;
   nzcv_t nzcv;
   logic mispredict;
-  logic controlflow_valid;
   logic bcond;
 } rob_entry_t;
 
@@ -246,15 +247,103 @@ interface decode_interface ();
   logic use_imm;
   logic [`IMMEDIATE_SIZE-1:0] imm;
   logic [`GPR_IDX_SIZE-1:0] src1;
-  logic src1_used;
+  reg_status_t src1_status;
   logic [`GPR_IDX_SIZE-1:0] src2;
-  logic src2_used;
+  reg_status_t src2_status;
   fu_t fu_id;
   fu_op_t fu_op;
   logic [`GPR_IDX_SIZE-1:0] dst;
+  reg_status_t dst_status;
   cond_t cond_codes;
-  logic instr_uses_nzcv;
+  logic uses_nzcv;
   logic mispredict; // NOTE(Nate): This is used to indicate that a branch is always mispredicted. Honestly, could be part of the   logic bcond,
   logic [`GPR_SIZE-1:0] pc;
 endinterface
+
+interface reg_interface ();
+  logic done;
+  logic src1_valid;
+  logic src2_valid;
+  logic nzcv_valid;
+  logic [`GPR_IDX_SIZE-1:0] dst;
+  logic [`ROB_IDX_SIZE-1:0] src1_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] src2_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] nzcv_rob_index;
+  logic [`GPR_SIZE-1:0] src1_value;
+  logic [`GPR_SIZE-1:0] src2_value;
+  logic uses_nzcv;
+  nzcv_t nzcv;
+  logic set_nzcv;
+  fu_t fu_id;
+  logic mispredict;
+  logic bcond;
+  // Outputs for FU (rob)
+  fu_op_t fu_op;
+  cond_t cond_codes;
+endinterface
+
+interface rob_commit_interface ();
+  logic done;
+  logic set_nzcv;
+  nzcv_t nzcv;
+  logic [`GPR_SIZE-1:0] value;
+  logic [`GPR_IDX_SIZE-1:0] reg_index;
+  logic [`ROB_IDX_SIZE-1:0] rob_index;
+endinterface
+
+interface rob_broadcast_interface ();
+  logic done;
+  logic [`ROB_IDX_SIZE-1:0] index;
+  logic [`GPR_SIZE-1:0] value;
+  logic set_nzcv;
+  nzcv_t nzcv;
+endinterface
+
+interface rob_interface ();
+  cond_t cond_codes;
+  logic done;
+  fu_t fu_id;
+  fu_op_t fu_op;
+  logic val_a_valid;
+  logic val_b_valid;
+  logic nzcv_valid;
+  logic [`GPR_SIZE-1:0] val_a_value;
+  logic [`GPR_SIZE-1:0] val_b_value;
+  logic uses_nzcv;
+  nzcv_t nzcv;
+  logic set_nzcv;
+  logic [`ROB_IDX_SIZE-1:0] val_a_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] val_b_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] nzcv_rob_index;
+  logic commit_done;
+endinterface
+
+interface rs_interface ();
+  logic start;
+  fu_op_t fu_op;
+  logic [`GPR_SIZE-1:0] val_a;
+  logic [`GPR_SIZE-1:0] val_b;
+  logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
+endinterface
+
+interface rs_interface_alu_ext ();
+  logic  set_nzcv;
+  nzcv_t nzcv;
+  cond_t cond_codes;
+endinterface
+
+interface fu_interface ();
+  logic done;
+  logic [`ROB_IDX_SIZE-1:0] dst_rob_index;
+  logic [`GPR_SIZE-1:0] value;
+endinterface
+
+interface fu_interface_alu_ext ();
+  logic  set_nzcv;
+  nzcv_t nzcv;
+  logic  is_mispred;
+  logic  condition;
+endinterface
+
 `endif  // data_structures
