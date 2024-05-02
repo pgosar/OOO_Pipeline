@@ -91,18 +91,20 @@ module extract_immval (
     output logic [63:0] out_reg_imm
 );
 
+// logic signed signed_imm[63:0];
+
   // TODO(Nate): Add AND, STP, LDP. Probably remove shifts to aid in synthesis.
   //             Could these assignments result in floating values because we
   //             haven't assigned every bit? idk
   always_comb begin
     case (opcode)
-      OP_LDUR, OP_STUR: out_reg_imm = {55'd0, in_insnbits[20:12]};
+      OP_LDUR, OP_STUR: out_reg_imm = signed'({55'd0, in_insnbits[20:12]});
       OP_ADD, OP_SUB, OP_UBFM, OP_SBFM: out_reg_imm = {52'd0, in_insnbits[21:10]};
       OP_MOVK, OP_MOVZ: out_reg_imm = {48'd0, in_insnbits[20:5]};
-      OP_ADRP: out_reg_imm = {31'd0, in_insnbits[23:5], in_insnbits[30:29], 12'h000};
-      OP_ADR: out_reg_imm = {43'd0, in_insnbits[23:5], in_insnbits[30:29]};
-      OP_B, OP_BL: out_reg_imm = ({38'd0, in_insnbits[25:0]}) * 4;
-      OP_B_COND, OP_CBNZ, OP_CBZ: out_reg_imm = ({45'd0, in_insnbits[23:5]}) * 4;
+      OP_ADRP: out_reg_imm = signed'({31'd0, in_insnbits[23:5], in_insnbits[30:29], 12'h000});
+      OP_ADR: out_reg_imm = signed'({43'd0, in_insnbits[23:5], in_insnbits[30:29]});
+      OP_B, OP_BL: out_reg_imm = signed'(({38'd0, in_insnbits[25:0]}) * 4);
+      OP_B_COND, OP_CBNZ, OP_CBZ: out_reg_imm = signed'(({45'd0, in_insnbits[23:5]}) * 4);
       default: out_reg_imm = 0;
     endcase
   end
