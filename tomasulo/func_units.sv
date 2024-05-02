@@ -184,7 +184,7 @@ module alu_module (
   always_comb begin
     // $display("ALU_OP: %s", in_op.name);
     casez (in_op)
-      FU_OP_ADRX, FU_OP_PLUS: result = val_a + val_b;
+      FU_OP_ADRX, FU_OP_PLUS, FU_OP_B_COND: result = val_a + val_b;
       FU_OP_MINUS: result = val_a - val_b;
       FU_OP_ORN: result = val_a | (~val_b);
       FU_OP_OR: result = val_a | val_b;
