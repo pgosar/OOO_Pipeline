@@ -6,6 +6,7 @@ module rob_module (
     input logic in_clk,
     // Inputs from FU (to broadcast)
     input logic in_fu_done,
+    input logic in_fu_alu_condition,
     input logic [`ROB_IDX_SIZE-1:0] in_fu_dst_rob_index,
     input logic [`GPR_SIZE-1:0] in_fu_value,
     input logic in_fu_set_nzcv,
@@ -127,6 +128,7 @@ module rob_module (
             `DEBUG(("(rob) !!! DETECTED BCOND !!!"));
             // if alu condition is true, mark mispredict as true and set PC. DO
             // NOT broadcast state.
+            last_commit_was_mispredict <= 1;
           end
           if (in_reg_fu_op == OP_STUR) begin
             `DEBUG(("(rob) STUR detected. Incrementing STUR counter."));
@@ -161,8 +163,8 @@ module rob_module (
           rob[next_ptr].set_nzcv <= in_reg_set_nzcv;
           rob[next_ptr].nzcv <= in_reg_nzcv;
           rob[next_ptr].valid <= 0;
-          rob[next_ptr].mispredict <= in_reg_mispredict;
-          rob[next_ptr].bcond <= in_reg_bcond;
+          rob[next_ptr].mispredict <= in_reg_mispredict | (fu_op == FU_OP_B_COND & in_fu_alu_condition == 1);
+          rob[next_ptr].bcond <= fu_op == FU_OP_B_COND;
           rob[next_ptr].controlflow_valid <= 1;
           next_ptr <= (next_ptr + 1) % `ROB_SIZE;
         end

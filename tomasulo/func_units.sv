@@ -39,6 +39,7 @@ module func_units (
     output logic [`GPR_SIZE-1:0] out_rob_value,
     output logic out_rob_set_nzcv,
     output nzcv_t out_rob_nzcv,
+    // output for the ROB
     output logic out_alu_condition  // TODO this needs to be wired up
     // output logic out_rob_is_mispred
 );

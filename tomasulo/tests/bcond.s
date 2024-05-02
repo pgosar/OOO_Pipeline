@@ -13,9 +13,9 @@ start:
     // Print x0
     eor     x5, x5, x5
     mvn     x5, x5
+    ret
     //correct value is 26
     //incorrect value is 1
-    stur    x0, [x5]
 
 .notequal:
     add x0, x0, #13

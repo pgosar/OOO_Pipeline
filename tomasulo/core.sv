@@ -98,6 +98,7 @@ module core (
   // ROB
 
   logic in_fu_done;
+  logic in_fu_alu_condition;
   logic [`ROB_IDX_SIZE-1:0] in_fu_dst_rob_index;
   logic [`GPR_SIZE-1:0] in_fu_value;
   logic in_fu_set_nzcv;
@@ -228,7 +229,7 @@ module core (
   int i;
   initial begin
     in_clk = 0;
-    for (i = 1; i <= 30; i += 1) begin
+    for (i = 1; i <= 100; i += 1) begin
       `DEBUG(("\n>>>>> CYCLE COUNT: %0d <<<<<", i));
       #1 in_clk = ~in_clk;  // 100 MHz clock
       #5 in_clk = ~in_clk;
@@ -242,8 +243,6 @@ module core (
     in_rst = 0;
     `DEBUG(("RESET DONE === BEGIN TEST"));
     while (in_fetch_insnbits != 0) begin
-      `DEBUG(("itr"));
-      `DEBUG(("*******insnbits: %b", in_fetch_insnbits));
       #10;
     end
   end
@@ -354,6 +353,7 @@ module core (
   assign in_fu_value = out_rob_value;
   assign in_fu_set_nzcv = fu_out_rob_set_nzcv;
   assign in_fu_nzcv = fu_out_rob_nzcv;
+  assign in_fu_alu_condition = out_alu_condition;
 
   // ROB to FETCH fetch inputs = rob outputs
   assign in_rob_mispredict = out_fetch_mispredict;
