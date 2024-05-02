@@ -48,9 +48,11 @@ module core (
   logic out_reg_uses_nzcv;
   logic out_reg_mispredict;
   logic [`GPR_SIZE-1:0] out_reg_pc;
+  logic out_reg_uses_signed_immediate;
 
   // REGFILE
 
+  logic in_d_uses_signed_immediate;
   logic in_d_done;
   logic in_d_set_nzcv;
   logic in_d_use_imm;
@@ -85,7 +87,7 @@ module core (
   logic [`ROB_IDX_SIZE-1:0] out_rob_src2_rob_index;
   logic [`ROB_IDX_SIZE-1:0] out_rob_nzcv_rob_index;
   logic [`GPR_SIZE-1:0] out_rob_src1_value;
-  logic [`GPR_SIZE-1:0] out_rob_src2_value;
+  logic signed [`GPR_SIZE-1:0] out_rob_src2_value;
   logic out_rob_uses_nzcv;
   nzcv_t reg_out_rob_nzcv;
   logic reg_out_rob_set_nzcv;
@@ -115,7 +117,7 @@ module core (
   logic [`ROB_IDX_SIZE-1:0] in_reg_src2_rob_index;
   logic [`ROB_IDX_SIZE-1:0] in_reg_nzcv_rob_index;
   logic [`GPR_SIZE-1:0] in_reg_src1_value;
-  logic [`GPR_SIZE-1:0] in_reg_src2_value;
+  logic signed[`GPR_SIZE-1:0] in_reg_src2_value;
   logic in_reg_set_nzcv;
   nzcv_t in_reg_nzcv;
   fu_t in_reg_fu_id;
@@ -268,6 +270,7 @@ module core (
   assign in_d_cond_codes = out_reg_cond_codes;
   assign in_d_uses_nzcv = out_reg_uses_nzcv;
   assign in_d_mispredict = out_reg_mispredict;
+  assign in_d_uses_signed_immediate = out_reg_uses_signed_immediate;
   // assign in_d_bcond = out_reg_bcond;
   assign in_d_pc = out_reg_pc;
 

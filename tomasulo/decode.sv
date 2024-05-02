@@ -85,6 +85,7 @@ module decode_instruction (
 
 endmodule : decode_instruction
 
+
 module extract_immval (
     input logic [`INSNBITS_SIZE-1:0] in_insnbits,
     input opcode_t opcode,
@@ -110,6 +111,19 @@ module extract_immval (
   end
 
 endmodule : extract_immval
+
+module uses_signed_immediate (
+    input opcode_t in_opcode,
+    output logic out_uses_signed_immediate
+);
+  always_comb begin
+    if (in_opcode == OP_ADD | in_opcode == OP_SUB | in_opcode == OP_UBFM | in_opcode == OP_SBFM | in_opcode == OP_MOVK | in_opcode == OP_MOVZ ) begin
+      out_uses_signed_immediate = 0;
+    end else begin
+      out_uses_signed_immediate = 1;
+    end
+  end
+endmodule
 
 module extract_reg (
     input logic [`INSNBITS_SIZE-1:0] in_insnbits,
@@ -335,6 +349,8 @@ module uses_nzcv (
   end
 endmodule
 
+
+
 module dispatch (
     // Inputs from core
     input logic in_rst,
@@ -363,11 +379,14 @@ module dispatch (
     output cond_t out_reg_cond_codes,
     output logic out_reg_uses_nzcv,
     output logic out_reg_mispredict,
-    output logic [`GPR_SIZE-1:0] out_reg_pc
+    output logic [`GPR_SIZE-1:0] out_reg_pc,
+    output logic out_reg_uses_signed_immediate
     // NOTE(Nate): This is used to indicate that a branch is always mispredicted. Honestly, could be part of the   logic bcond,
     // Outputs to be broadcasted.
     // output logic out_stalled
 );
+
+
 
 
   opcode_t opcode;
@@ -381,6 +400,10 @@ module dispatch (
       .opcode,
       .in_insnbits(insnbits),
       .out_reg_imm(out_reg_imm)
+  );
+  uses_signed_immediate sign_imm_decider(
+    .in_opcode(opcode),
+    .out_uses_signed_immediate(out_reg_uses_signed_immediate)
   );
   extract_reg reg_extractor (
       .opcode,
@@ -417,6 +440,8 @@ module dispatch (
       .opcode,
       .out_reg_fu_id(out_reg_fu_id)
   );
+
+  
 
 
   always_ff @(posedge in_clk) begin

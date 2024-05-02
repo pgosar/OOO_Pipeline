@@ -22,7 +22,7 @@ module rob_module (
     input logic [`ROB_IDX_SIZE-1:0] in_reg_src2_rob_index,
     input logic [`ROB_IDX_SIZE-1:0] in_reg_nzcv_rob_index,
     input logic [`GPR_SIZE-1:0] in_reg_src1_value,
-    input logic [`GPR_SIZE-1:0] in_reg_src2_value,
+    input logic signed[`GPR_SIZE-1:0] in_reg_src2_value,
     input logic in_reg_set_nzcv,
     input nzcv_t in_reg_nzcv,
     input fu_t in_reg_fu_id,
@@ -81,7 +81,7 @@ module rob_module (
   // Buffered data
   logic reg_done;
   logic [`GPR_SIZE-1:0] reg_src1_value;
-  logic [`GPR_SIZE-1:0] reg_src2_value;
+  logic signed[`GPR_SIZE-1:0] reg_src2_value;
   nzcv_t reg_nzcv;
   logic [`ROB_IDX_SIZE-1:0] reg_src1_rob_index;
   logic [`ROB_IDX_SIZE-1:0] reg_src2_rob_index;

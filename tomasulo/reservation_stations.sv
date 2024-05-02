@@ -14,7 +14,7 @@ module reservation_stations (
     input logic in_rob_alu_val_b_valid,
     input logic in_rob_nzcv_valid,
     input logic [`GPR_SIZE-1:0] in_rob_alu_val_a_value,
-    input logic [`GPR_SIZE-1:0] in_rob_alu_val_b_value,
+    input logic signed[`GPR_SIZE-1:0] in_rob_alu_val_b_value,
     input nzcv_t in_rob_nzcv,
     input logic in_rob_set_nzcv,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_a_rob_index,
@@ -37,7 +37,7 @@ module reservation_stations (
     output logic out_fu_alu_start,
     output fu_op_t out_fu_op,
     output logic [`GPR_SIZE-1:0] out_fu_alu_val_a,
-    output logic [`GPR_SIZE-1:0] out_fu_alu_val_b,
+    output logic signed[`GPR_SIZE-1:0] out_fu_alu_val_b,
     output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,
     output logic out_fu_alu_set_nzcv,
     output nzcv_t out_fu_alu_nzcv,
@@ -108,7 +108,7 @@ module reservation_station_module #(
     input logic in_rob_alu_val_a_valid,
     input logic in_rob_alu_val_b_valid,
     input logic [`GPR_SIZE-1:0] in_rob_alu_val_a_value,
-    input logic [`GPR_SIZE-1:0] in_rob_alu_val_b_value,
+    input logic signed[`GPR_SIZE-1:0] in_rob_alu_val_b_value,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_a_rob_index,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_alu_val_b_rob_index,
 
@@ -126,7 +126,7 @@ module reservation_station_module #(
     output logic out_fu_start,  // A
     output fu_op_t out_fu_op,  // AA
     output logic [`GPR_SIZE-1:0] out_fu_val_a,  // AB
-    output logic [`GPR_SIZE-1:0] out_fu_val_b,  // AC
+    output logic signed[`GPR_SIZE-1:0] out_fu_val_b,  // AC
     output logic [`ROB_IDX_SIZE-1:0] out_fu_dst_rob_index,  // AD
     output logic out_fu_alu_set_nzcv,  // AE
     output nzcv_t out_fu_alu_nzcv,  // AF
@@ -156,7 +156,7 @@ module reservation_station_module #(
   logic rob_alu_val_b_valid;
   logic rob_nzcv_valid;
   logic [`GPR_SIZE-1:0] rob_alu_val_a_value  /*verilator public*/;
-  logic [`GPR_SIZE-1:0] rob_alu_val_b_value;
+  logic signed[`GPR_SIZE-1:0] rob_alu_val_b_value;
   logic rob_set_nzcv;
   nzcv_t rob_nzcv;
   logic [`ROB_IDX_SIZE-1:0] rob_alu_val_a_rob_index;

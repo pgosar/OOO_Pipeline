@@ -9,6 +9,7 @@ module reg_module (
     input logic in_d_set_nzcv,
     input logic in_d_use_imm,
     input logic [`IMMEDIATE_SIZE-1:0] in_d_imm,
+    input logic in_d_uses_signed_immediate,
     input logic [`GPR_IDX_SIZE-1:0] in_d_src1,
     input reg_status_t in_d_src1_status,
     input logic [`GPR_IDX_SIZE-1:0] in_d_src2,
@@ -40,7 +41,7 @@ module reg_module (
     output logic [`ROB_IDX_SIZE-1:0] out_rob_src2_rob_index,  // ABA
     output logic [`ROB_IDX_SIZE-1:0] out_rob_nzcv_rob_index,  // ACA
     output logic [`GPR_SIZE-1:0] out_rob_src1_value,  // AAB
-    output logic [`GPR_SIZE-1:0] out_rob_src2_value,  // ABB
+    output logic signed[`GPR_SIZE-1:0] out_rob_src2_value,  // ABB
     output logic out_rob_uses_nzcv,  // AE
     output nzcv_t out_rob_nzcv,  // AEA
     output logic out_rob_set_nzcv,  // AF
@@ -78,6 +79,7 @@ module reg_module (
   logic [`ROB_IDX_SIZE-1:0] src2_rob_index;
   fu_op_t d_fu_op;
   logic d_mispredict;
+  logic d_uses_signed_immediate;
 
   // Commit & buffer inputs
   always_ff @(posedge in_clk) begin
@@ -95,12 +97,14 @@ module reg_module (
       `DEBUG(("(regfile) d_done %0d", in_d_done));
       if (in_d_done) begin
         // Buffer inputs
+
         d_src1 <= in_d_src1;
         d_src2 <= in_d_src2;
         d_dst <= in_d_dst;
         d_set_nzcv <= in_d_set_nzcv;
         d_imm <= in_d_imm;
         d_use_imm <= in_d_use_imm;
+        d_uses_signed_immediate = in_d_uses_signed_immediate;;
         d_fu_op <= in_d_fu_op;
         rob_next_rob_index <= in_rob_next_rob_index;
         // Copy unused signals
@@ -201,8 +205,13 @@ module reg_module (
     // Src2 - With LDUR, the immediate is the offset.
     //      - With STUR, src2 contains value to store. immediate contains the offset
     if (d_use_imm) begin
-      out_rob_src2_value = d_imm;
-      out_rob_src2_valid = 1;
+      if(d_uses_signed_immediate) begin
+        out_rob_src2_value = $signed(d_imm);
+        out_rob_src2_valid = 1;
+      end else begin
+        out_rob_src2_value = d_imm;
+        out_rob_src2_valid = 1; 
+      end
     end else begin
       out_rob_src2_valid = gprs[d_src2].valid;
       out_rob_src2_value = gprs[d_src2].value;

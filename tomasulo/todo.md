@@ -7,6 +7,9 @@ conditions this is trivial)
 - Fix the fetch being delayed
 - Fix RETs
 
+TODO(Kavya); Fix signed vs unsigned immediate values
+    - 
+
 checkout broken.s
 
 fix load store
