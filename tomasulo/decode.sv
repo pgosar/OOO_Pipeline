@@ -113,25 +113,30 @@ module extract_reg (
     input logic [`INSNBITS_SIZE-1:0] in_insnbits,
     input opcode_t opcode,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src1,
-    output logic out_reg_src1_used,
+    output reg_status_t out_reg_src1_status,
     output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
-    output logic out_reg_src2_used,
-    output logic [`GPR_IDX_SIZE-1:0] out_reg_dst
+    output reg_status_t out_reg_src2_status,
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_dst,
+    output reg_status_t out_reg_dst_status
 );
   always_comb begin
     //out_reg_dst
     casez (opcode)
       OP_B, OP_BR, OP_B_COND, OP_CBZ, OP_CBNZ, OP_RET, OP_NOP, OP_HLT, OP_ERR: begin
-        out_reg_dst = REG_ZR;
+        out_reg_dst = 31;
+        out_reg_dst_status = REG_IS_UNUSED;
+      end
+      OP_STUR: begin
+        out_reg_dst = 31;
+        out_reg_dst_status = REG_IS_STUR;
       end
       OP_BL, OP_BLR: begin
         out_reg_dst = 30;
-      end
-      OP_STUR: begin
-        out_reg_dst = REG_STUR;
+        out_reg_dst_status = REG_IS_USED;
       end
       default: begin
         out_reg_dst = in_insnbits[4:0];
+        out_reg_dst_status = REG_IS_USED;
       end
     endcase
 
@@ -140,26 +145,26 @@ module extract_reg (
             opcode != OP_B & opcode != OP_B_COND & opcode != OP_BL & opcode != OP_NOP & opcode != OP_HLT
             & opcode != OP_CBZ & opcode != OP_CBNZ) begin
       out_reg_src1 = in_insnbits[9:5];
-      out_reg_src1_used = 1;
+      out_reg_src1_status = REG_IS_USED;
     end else if (opcode == OP_CBZ | opcode == OP_CBNZ) begin
       out_reg_src1 = in_insnbits[4:0];
-      out_reg_src1_used = 1;
+      out_reg_src1_status = REG_IS_USED;
     end else begin
-      out_reg_src1 = REG_ZR;
-      out_reg_src1_used = 0;
+      out_reg_src1 = 31;
+      out_reg_src1_status = REG_IS_UNUSED;
     end
 
 
     //out_reg_src2
     if (opcode == OP_STUR) begin
       out_reg_src2 = in_insnbits[4:0];
-      out_reg_src2_used = 1;
+      out_reg_src2_status = REG_IS_USED;
     end else if (opcode == OP_ADDS | opcode == OP_SUBS | opcode == OP_ORN | opcode == OP_ORR | opcode == OP_EOR | opcode == OP_ANDS | opcode == OP_CSEL | opcode == OP_CSINV | opcode == OP_CSINC | opcode == OP_CSNEG) begin
       out_reg_src2 = in_insnbits[20:16];
-      out_reg_src2_used = 1;
+      out_reg_src2_status = REG_IS_USED;
     end else begin
-      out_reg_src2 = REG_ZR;
-      out_reg_src2_used = 0;
+      out_reg_src2 = 31;
+      out_reg_src2_status = REG_IS_UNUSED;
     end
   end
 endmodule
@@ -334,11 +339,30 @@ module dispatch (
     input logic in_clk,
     // input logic in_stall,
     // Inputs from fetch
-    input fetch_interface in_fetch_sigs,
+
+    input logic in_fetch_done,
+    input logic [`INSNBITS_SIZE-1:0] in_fetch_insnbits,
+    input logic [`GPR_SIZE-1:0] in_fetch_pc,
     // Outputs to regfile. This will (asynchronously) cause the regfile to send
     // signals to the ROB. We assume that this will occur within the same
-    // cycle.
-    output decode_interface out_reg_sigs
+    // cycle;
+    output logic out_reg_done,
+    output logic out_reg_set_nzcv,
+    output logic out_reg_use_imm,
+    output logic [`IMMEDIATE_SIZE-1:0] out_reg_imm,
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_src1,
+    output reg_status_t out_reg_src1_status,
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_src2,
+    output reg_status_t out_reg_src2_status,
+    output fu_t out_reg_fu_id,
+    output fu_op_t out_reg_fu_op,
+    output logic [`GPR_IDX_SIZE-1:0] out_reg_dst,
+    output reg_status_t out_reg_dst_status,
+    output cond_t out_reg_cond_codes,
+    output logic out_reg_uses_nzcv,
+    output logic out_reg_mispredict,
+    output logic [`GPR_SIZE-1:0] out_reg_pc
+    // NOTE(Nate): This is used to indicate that a branch is always mispredicted. Honestly, could be part of the   logic bcond,
     // Outputs to be broadcasted.
     // output logic out_stalled
 );
@@ -354,80 +378,74 @@ module dispatch (
   extract_immval imm_extractor (
       .opcode,
       .in_insnbits(insnbits),
-      .out_reg_imm(out_reg_sigs.imm)
+      .out_reg_imm(out_reg_imm)
   );
   extract_reg reg_extractor (
       .opcode,
       .in_insnbits(insnbits),
-      .out_reg_src1(out_reg_sigs.src1),
-      .out_reg_src2(out_reg_sigs.src2),
-      .out_reg_src1_used(out_reg_sigs.src1_used),
-      .out_reg_src1_used(out_reg_sigs.src2_used),
-      .out_reg_dst(out_reg_sigs.dst)
+      .out_reg_src1(out_reg_src1),
+      .out_reg_src2(out_reg_src2),
+      .out_reg_src1_status(out_reg_src1_status),
+      .out_reg_src2_status(out_reg_src2_status),
+      .out_reg_dst(out_reg_dst),
+      .out_reg_dst_status(out_reg_dst_status)
   );
 
   find_cond_code cond_holds (
       .in_opcode(opcode),
       .in_insnbits(insnbits),
-      .out_reg_cond_codes(out_reg_sigs.cond_codes)
+      .out_reg_cond_codes(out_reg_cond_codes)
   );
 
-  uses_nzcv instr_uses_nzcv (
+  uses_nzcv uses_nzcv (
       .in_opcode(opcode),
-      .out_op_uses_nzcv(out_reg_sigs.instr_uses_nzcv)
+      .out_op_uses_nzcv(out_reg_uses_nzcv)
   );
   use_out_reg_imm imm_selector (
       .opcode,
-      .out_reg_use_imm(out_reg_sigs.use_imm)
+      .out_reg_use_imm(out_reg_use_imm)
   );
   decide_alu alu_decider (
       .opcode,
-      .out_reg_fu_op(out_reg_sigs.fu_op),
-      .out_reg_mispredict(out_reg_sigs.mispredict)
-      // .out_reg_bcond(out_reg_sigs.bcond)
+      .out_reg_fu_op(out_reg_fu_op),
+      .out_reg_mispredict(out_reg_mispredict)
+      // .out_reg_bcond(out_reg_bcond)
   );
   fu_decider fu (
       .opcode,
-      .out_reg_fu_id(out_reg_sigs.fu_id)
-  );
-  sets_nzcv nzcv_setter (
-      .opcode,
-      .out_reg_set_nzcv(out_reg_sigs.set_nzcv)
-  );
-  sets_nzcv nzcv_setter (
-      .opcode,
-      .out_reg_set_nzcv(out_reg_sigs.set_nzcv)
+      .out_reg_fu_id(out_reg_fu_id)
   );
 
 
   always_ff @(posedge in_clk) begin
     if (in_rst) begin
       `DEBUG(("(dec) Resetting"));
-      out_reg_sigs.done <= 0;
+      out_reg_done <= 0;
     end else begin
-      out_reg_sigs.done <= ~in_rst & in_fetch_sigs.done;
-      if (in_fetch_sigs.done) begin
-        insnbits <= in_fetch_sigs.insnbits;
-        out_reg_sigs.pc <= in_fetch_sigs.pc;
+      out_reg_done <= ~in_rst & in_fetch_done;
+      if (in_fetch_done) begin
+        insnbits   <= in_fetch_insnbits;
+        out_reg_pc <= in_fetch_pc;
       end
     end
+    #1 `DEBUG(("(dec) Decoding: %b, done: %0b, rst: %0b", insnbits, out_reg_done, in_rst))
   end
 
   // Print statements only in here
   always_ff @(posedge in_clk) begin
-    if (in_fetch_sigs.done & ~in_rst) begin
-      #1 `DEBUG(("(dec) Decoding: %b", insnbits))
+    if (in_fetch_done & ~in_rst) begin
+      #1 `DEBUG(("(dec) Decoding: %b, done: %0b, rst: %0b", insnbits, out_reg_done, in_rst))
       `DEBUG(
-          ("(dec)\tfu_id: %s, opcode: %s, fu_op: %s", out_reg_sigs.fu_id.name, opcode.name,
-               out_reg_sigs.fu_op.name));
+          ("(dec)\tfu_id: %s, opcode: %s, fu_op: %s", out_reg_fu_id.name, opcode.name,
+               out_reg_fu_op.name));
       `DEBUG(
-          ("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_sigs.dst,
-               out_reg_sigs.src1, out_reg_sigs.src2, out_reg_sigs.imm, out_reg_sigs.use_imm));
-      `DEBUG(
-          ("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_sigs.set_nzcv, out_reg_sigs.instr_uses_nzcv))
-      `DEBUG(("(dec) cond codes %0b", out_reg_sigs.cond_codes))
+          ("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_dst,
+               out_reg_src1, out_reg_src2, out_reg_imm, out_reg_use_imm));
+      `DEBUG(("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_set_nzcv, out_reg_uses_nzcv))
+      `DEBUG(("(dec) cond codes %0b", out_reg_cond_codes))
     end
   end
 
 endmodule : dispatch
 `endif  // decode
+

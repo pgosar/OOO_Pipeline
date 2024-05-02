@@ -27,7 +27,7 @@ module rob_module (
     input fu_t in_reg_fu_id,
     input fu_op_t in_reg_fu_op,
     input cond_t in_reg_cond_codes,
-    input logic in_reg_instr_uses_nzcv,
+    input logic in_reg_uses_nzcv,
     input logic in_reg_mispredict,
     input logic in_reg_bcond,
 
@@ -41,7 +41,7 @@ module rob_module (
     output logic out_rs_nzcv_valid,  // AE
     output logic [`GPR_SIZE-1:0] out_rs_alu_val_a_value,  // ACA
     output logic [`GPR_SIZE-1:0] out_rs_alu_val_b_value,  // ADA
-    output logic out_rs_instr_uses_nzcv,  // AE
+    output logic out_rs_uses_nzcv,  // AE
     output nzcv_t out_rs_nzcv,  // AEA
     output logic out_rs_set_nzcv,  // AF
     output logic [`ROB_IDX_SIZE-1:0] out_rs_alu_val_a_rob_index,  // ACB
@@ -88,7 +88,7 @@ module rob_module (
   logic reg_nzcv_valid;
   logic reg_src1_valid;
   logic reg_src2_valid;
-  logic reg_instr_uses_nzcv;
+  logic reg_uses_nzcv;
   logic [`ROB_IDX_SIZE-1:0] fu_dst;
   logic fu_done;
   fu_op_t fu_op;
@@ -150,7 +150,7 @@ module rob_module (
         if (in_reg_done) begin
           `DEBUG(("(rob) Inserting new entry @ ROB[%0d] for dst GPR[%0d]", next_ptr, in_reg_dst));
           `DEBUG(
-              ("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_instr_uses_nzcv, next_ptr,
+              ("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_uses_nzcv, next_ptr,
                (next_ptr + 1) % `ROB_SIZE));
           if (in_reg_fu_op == OP_STUR) begin
             `DEBUG(("(rob) STUR detected. Incrementing STUR counter."));
@@ -193,7 +193,7 @@ module rob_module (
         reg_src1_rob_index <= in_reg_src1_rob_index;
         reg_src2_rob_index <= in_reg_src2_rob_index;
         reg_nzcv_rob_index <= in_reg_nzcv_rob_index;
-        reg_instr_uses_nzcv <= in_reg_instr_uses_nzcv;
+        reg_uses_nzcv <= in_reg_uses_nzcv;
         fu_dst <= in_fu_dst_rob_index;
         fu_done <= in_fu_done;
         // Copy over unused signals for RS
@@ -201,7 +201,7 @@ module rob_module (
         out_rs_fu_id <= in_reg_fu_id;
         out_rs_set_nzcv <= in_reg_set_nzcv;
         out_rs_cond_codes <= in_reg_cond_codes;
-        out_rs_instr_uses_nzcv <= in_reg_instr_uses_nzcv;
+        out_rs_uses_nzcv <= in_reg_uses_nzcv;
         out_rs_alu_val_a_rob_index <= in_reg_src1_rob_index;
         out_rs_alu_val_b_rob_index <= in_reg_src2_rob_index;
         out_rs_nzcv_rob_index <= in_reg_nzcv_rob_index;

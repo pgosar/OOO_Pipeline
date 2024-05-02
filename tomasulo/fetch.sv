@@ -7,11 +7,14 @@ module fetch #(
     parameter int PAGESIZE = 4096
 )  // note: this should always be 4096
 (
-    input wire in_clk,
-    input wire in_rst,
-    input wire in_rob_mispredict,
-    input wire [`GPR_SIZE-1:0] in_rob_new_PC,
-    output fetch_interface out_d_sigs
+    input logic in_clk,
+    input logic in_rst,
+    input logic in_rob_mispredict,
+    input logic [`GPR_SIZE-1:0] in_rob_new_PC,
+
+    output logic out_d_done,
+    output logic [`INSNBITS_SIZE-1:0] out_d_insnbits,
+    output logic [`GPR_SIZE-1:0] out_d_pc
 );
 
   // access IMEM
@@ -46,16 +49,16 @@ module fetch #(
   logic no_instruction;
   logic ret_from_main;
   always_comb begin
-    ret_from_main   = PC == 0;
-    no_instruction  = data == 0;
-    out_d_sigs.done = ~rst & ~no_instruction;
-    out_d_sigs.pc   = PC;
+    ret_from_main = PC == 0;
+    no_instruction = data == 0;
+    out_d_done = ~rst & ~no_instruction;
+    out_d_pc = PC;
     if (no_instruction) begin
-      out_d_sigs.insnbits = 0;
+      out_d_insnbits = 0;
     end else if (ret_from_main) begin
-      out_d_sigs.insnbits = INSNBITS_HLT;
+      out_d_insnbits = INSNBITS_HLT;
     end else begin
-      out_d_sigs.insnbits = data;
+      out_d_insnbits = data;
     end
   end
 
@@ -101,7 +104,7 @@ endmodule : fetch
 // (
 //     input wire in_clk,
 //     input wire in_rst,
-//     input fetch_interface out_d_sigs.sigs
+//     input fetch_interface out_d_sigs
 // );
 
 
@@ -120,12 +123,12 @@ endmodule : fetch
 
 //   imem #(PAGESIZE) mem (
 //       .in_addr(PC),
-//       .out_data(out_d_sigs.sigs.insnbits)
+//       .out_data(out_d_sigs.insnbits)
 //   );
 
 //   always_comb begin
-//     no_instruction = out_d_sigs.sigs.insnbits == 0;
-//     out_d_sigs.sigs.done = ~rst & ~no_instruction;
+//     no_instruction = out_d_sigs.insnbits == 0;
+//     out_d_sigs.done = ~rst & ~no_instruction;
 //   end
 
 //   always_ff @(posedge in_clk) begin : fetch_logic

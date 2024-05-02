@@ -28,7 +28,7 @@ module reservation_stations (
     input logic in_rob_broadcast_set_nzcv,
     input nzcv_t in_rob_broadcast_nzcv,
     input logic in_rob_is_mispred,
-    input logic in_rob_instr_uses_nzcv,
+    input logic in_rob_uses_nzcv,
     // Inputs from FU (LS)
     input logic in_fu_ls_ready,
     // Inputs from FU (ALU)
@@ -102,7 +102,7 @@ module reservation_station_module #(
     input nzcv_t in_rob_nzcv,
     input logic in_rob_set_nzcv,
     input logic [`ROB_IDX_SIZE-1:0] in_rob_nzcv_rob_index,
-    input logic in_rob_instr_uses_nzcv,
+    input logic in_rob_uses_nzcv,
 
     // Inputs from ROB (unique)
     input logic in_rob_alu_val_a_valid,
@@ -166,7 +166,7 @@ module reservation_station_module #(
   fu_op_t rob_fu_op;
   logic rob_done;
   logic fu_ready;
-  logic rob_instr_uses_nzcv;
+  logic rob_uses_nzcv;
   integer stur_counter;
   // For broadcasts
   logic [`ROB_IDX_SIZE-1:0] rob_broadcast_index;
@@ -250,7 +250,7 @@ module reservation_station_module #(
       rob_fu_op <= in_rob_fu_op;
       rob_done <= in_rob_done;
       fu_ready <= in_fu_ready;
-      rob_instr_uses_nzcv <= in_rob_instr_uses_nzcv;
+      rob_uses_nzcv <= in_rob_uses_nzcv;
       // For broadcast
       rob_broadcast_index <= in_rob_broadcast_index;
       rob_broadcast_value <= in_rob_broadcast_value;
@@ -325,7 +325,7 @@ module reservation_station_module #(
       `DEBUG(
           ("(RS) Adding new entry to RS[%0d] for ROB[%0d]", free_station_index, rob_dst_rob_index));
       `DEBUG(
-          ("(RS) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %s", rob_set_nzcv, rob_instr_uses_nzcv,
+          ("(RS) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %s", rob_set_nzcv, rob_uses_nzcv,
              rob_fu_op.name));
       `DEBUG(
           ("(RS) \top1: [valid: %0d, value: %0d, rob_index: %0d],", rob_alu_val_a_valid,
@@ -335,7 +335,7 @@ module reservation_station_module #(
              rob_alu_val_b_value, rob_alu_val_b_rob_index));
       `DEBUG(
           ("(RS) \tnzcv: [uses: %0d, valid: %0d, value: %0d, rob_index: %0d],",
-             rob_instr_uses_nzcv, rob_nzcv_valid, rob_nzcv, rob_nzcv_rob_index));
+             rob_uses_nzcv, rob_nzcv_valid, rob_nzcv, rob_nzcv_rob_index));
     end : rs_add_entry
   end
 

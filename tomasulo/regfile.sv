@@ -4,9 +4,23 @@ module reg_module (
     // Timing
     input logic in_clk,
     input logic in_rst,
-    input logic in_validate,
     // Inputs from decode (consumed in decode)
-    input decode_interface in_d_sigs,
+    input logic in_d_done,
+    input logic in_d_set_nzcv,
+    input logic in_d_use_imm,
+    input logic [`IMMEDIATE_SIZE-1:0] in_d_imm,
+    input logic [`GPR_IDX_SIZE-1:0] in_d_src1,
+    input reg_status_t in_d_src1_status,
+    input logic [`GPR_IDX_SIZE-1:0] in_d_src2,
+    input reg_status_t in_d_src2_status,
+    input fu_t in_d_fu_id,
+    input fu_op_t in_d_fu_op,
+    input logic [`GPR_IDX_SIZE-1:0] in_d_dst,
+    input reg_status_t in_d_dst_status,
+    input cond_t in_d_cond_codes,
+    input logic in_d_uses_nzcv,
+    input logic in_d_mispredict,
+    input logic [`GPR_SIZE-1:0] in_d_pc,
     // Inputs from ROB (for a commit)
     input logic in_rob_should_commit,
     input logic in_rob_set_nzcv,
@@ -27,7 +41,7 @@ module reg_module (
     output logic [`ROB_IDX_SIZE-1:0] out_rob_nzcv_rob_index,  // ACA
     output logic [`GPR_SIZE-1:0] out_rob_src1_value,  // AAB
     output logic [`GPR_SIZE-1:0] out_rob_src2_value,  // ABB
-    output logic out_rob_instr_uses_nzcv,  // AE
+    output logic out_rob_uses_nzcv,  // AE
     output nzcv_t out_rob_nzcv,  // AEA
     output logic out_rob_set_nzcv,  // AF
     output fu_t out_rob_fu_id,  // AG
@@ -67,7 +81,7 @@ module reg_module (
 
   // Commit & buffer inputs
   always_ff @(posedge in_clk) begin
-    if (in_rst | in_validate) begin
+    if (in_rst) begin
       `DEBUG(("(regfile) Resetting"));
       // Reset root control signal
       d_done <= 0;
@@ -77,25 +91,25 @@ module reg_module (
         gprs[i].valid <= 1;
       end
     end else begin
-      d_done <= in_d_sigs.done;
-      `DEBUG(("(regfile) d_done %0d", in_d_sigs.done));
-      if (in_d_sigs.done) begin
+      d_done <= in_d_done;
+      `DEBUG(("(regfile) d_done %0d", in_d_done));
+      if (in_d_done) begin
         // Buffer inputs
-        d_src1 <= in_d_sigs.src1;
-        d_src2 <= in_d_sigs.src2;
-        d_dst <= in_d_sigs.dst;
-        d_set_nzcv <= in_d_sigs.set_nzcv;
-        d_imm <= in_d_sigs.imm;
-        d_use_imm <= in_d_sigs.use_imm;
-        d_fu_op <= in_d_sigs.fu_op;
+        d_src1 <= in_d_src1;
+        d_src2 <= in_d_src2;
+        d_dst <= in_d_dst;
+        d_set_nzcv <= in_d_set_nzcv;
+        d_imm <= in_d_imm;
+        d_use_imm <= in_d_use_imm;
+        d_fu_op <= in_d_fu_op;
         rob_next_rob_index <= in_rob_next_rob_index;
         // Copy unused signals
-        out_rob_fu_op <= in_d_sigs.fu_op;
-        out_rob_fu_id <= in_d_sigs.fu_id;
-        out_rob_instr_uses_nzcv <= in_d_sigs.instr_uses_nzcv;
-        out_rob_cond_codes <= in_d_sigs.cond_codes;
-        out_rob_mispredict <= in_d_sigs.mispredict;
-        // out_rob_bcond <= in_d_sigs.bcond;
+        out_rob_fu_op <= in_d_fu_op;
+        out_rob_fu_id <= in_d_fu_id;
+        out_rob_uses_nzcv <= in_d_uses_nzcv;
+        out_rob_cond_codes <= in_d_cond_codes;
+        out_rob_mispredict <= in_d_mispredict;
+        // out_rob_bcond <= in_d_bcond;
       end
       if (d_done) begin
         // update validity of previous cycle's dst.
@@ -126,7 +140,6 @@ module reg_module (
   end
 
   always_ff @(posedge in_clk) begin
-    #1
     // Buffer old rob indices first....
     src1_rob_index <= gprs[d_src1].rob_index;
     src2_rob_index <= gprs[d_src2].rob_index;
@@ -176,11 +189,11 @@ module reg_module (
         out_rob_src1_value = d_imm;
       end
     end else if (d_fu_op == FU_OP_B_COND) begin
-      out_rob_src1_value = in_d_sigs.pc;
+      out_rob_src1_value = in_d_pc;
       out_rob_src1_valid = 1;
     end else if (d_fu_op == FU_OP_ADRX) begin
       out_rob_src1_valid = 1;
-      out_rob_src1_value = in_d_sigs.pc;
+      out_rob_src1_value = in_d_pc;
     end else begin
       out_rob_src1_value = gprs[d_src1].value;
     end

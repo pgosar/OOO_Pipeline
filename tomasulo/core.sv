@@ -12,7 +12,6 @@ module core (
     //input logic in_clk
 );
   initial begin
-
     $dumpfile("core.vcd");  // Dump waveform to VCD file
     $dumpvars(0, core);  // Dump all signals
   end
@@ -21,32 +20,34 @@ module core (
   logic in_clk;
 
   // FETCH
-
   logic in_rob_mispredict;
   logic [`GPR_SIZE-1:0] in_rob_new_PC;
-  logic [`INSNBITS_SIZE-1:0] fetch_insnbits;
-  logic fetch_done;
-  logic [`GPR_SIZE-1:0] out_d_branch_PC;
+  logic out_d_done;
+  logic [`INSNBITS_SIZE-1:0] out_d_insnbits;
+  logic [`GPR_SIZE-1:0] out_d_pc;
 
   // DISPATCH
-  logic in_stall;
-  logic [`INSNBITS_SIZE-1:0] in_fetch_insnbits;
   logic in_fetch_done;
-  logic [`GPR_SIZE-1:0] in_fetch_branch_PC;
+  logic [`INSNBITS_SIZE-1:0] in_fetch_insnbits;
+  logic [`GPR_SIZE-1:0] in_fetch_pc;
   logic out_reg_done;
   logic d_out_reg_set_nzcv;
   logic out_reg_use_imm;
   logic [`IMMEDIATE_SIZE-1:0] out_reg_imm;
   logic [`GPR_IDX_SIZE-1:0] out_reg_src1;
+  logic out_reg_src1_used;
+  reg_status_t out_reg_src1_status;
   logic [`GPR_IDX_SIZE-1:0] out_reg_src2;
+  logic out_reg_src2_used;
+  reg_status_t out_reg_src2_status;
   fu_t out_reg_fu_id;
   fu_op_t out_reg_fu_op;
   logic [`GPR_IDX_SIZE-1:0] out_reg_dst;
+  reg_status_t out_reg_dst_status;
   cond_t out_reg_cond_codes;
-  logic out_reg_instr_uses_nzcv;
+  logic out_reg_uses_nzcv;
   logic out_reg_mispredict;
-  logic out_reg_bcond;
-  logic [`GPR_SIZE-1:0] out_reg_branch_PC;
+  logic [`GPR_SIZE-1:0] out_reg_pc;
 
   // REGFILE
 
@@ -55,12 +56,16 @@ module core (
   logic in_d_use_imm;
   logic [`IMMEDIATE_SIZE-1:0] in_d_imm;
   logic [`GPR_IDX_SIZE-1:0] in_d_src1;
+  reg_status_t in_d_src1_status;
   logic [`GPR_IDX_SIZE-1:0] in_d_src2;
-  logic [`GPR_IDX_SIZE-1:0] in_d_dst;
+  reg_status_t in_d_src2_status;
   fu_t in_d_fu_id;
   fu_op_t in_d_fu_op;
-  logic in_d_instr_uses_nzcv;
+  logic [`GPR_IDX_SIZE-1:0] in_d_dst;
+  reg_status_t in_d_dst_status;
+  logic in_d_uses_nzcv;
   logic in_d_mispredict;
+  logic [`GPR_SIZE-1:0] in_d_pc;
   logic in_d_bcond;
   cond_t in_d_cond_codes;
   logic [`GPR_SIZE-1:0] in_d_branch_PC;
@@ -81,7 +86,7 @@ module core (
   logic [`ROB_IDX_SIZE-1:0] out_rob_nzcv_rob_index;
   logic [`GPR_SIZE-1:0] out_rob_src1_value;
   logic [`GPR_SIZE-1:0] out_rob_src2_value;
-  logic out_rob_instr_uses_nzcv;
+  logic out_rob_uses_nzcv;
   nzcv_t reg_out_rob_nzcv;
   logic reg_out_rob_set_nzcv;
   fu_t out_rob_fu_id;
@@ -115,7 +120,7 @@ module core (
   fu_t in_reg_fu_id;
   fu_op_t in_reg_fu_op;
   cond_t in_reg_cond_codes;
-  logic in_reg_instr_uses_nzcv;
+  logic in_reg_uses_nzcv;
   cond_t out_rs_cond_codes;
   logic out_rs_done;
   fu_t out_rs_fu_id;
@@ -126,7 +131,7 @@ module core (
   logic out_rs_nzcv_valid;
   logic [`GPR_SIZE-1:0] out_rs_alu_val_a_value;
   logic [`GPR_SIZE-1:0] out_rs_alu_val_b_value;
-  logic out_rs_instr_uses_nzcv;
+  logic out_rs_uses_nzcv;
   nzcv_t out_rs_nzcv;
   logic out_rs_set_nzcv;
   logic [`ROB_IDX_SIZE-1:0] out_rs_alu_val_a_rob_index;
@@ -173,7 +178,7 @@ module core (
   logic in_rob_broadcast_set_nzcv;
   nzcv_t in_rob_broadcast_nzcv;
   logic in_rob_is_mispred;
-  logic in_rob_instr_uses_nzcv;
+  logic in_rob_uses_nzcv;
   logic in_fu_ls_ready;
   logic in_fu_alu_ready;
   logic out_fu_alu_start;
@@ -243,8 +248,10 @@ module core (
     end
   end
 
-  // FETCH to DISPATCH
-  assign in_fetch_branch_PC = out_d_branch_PC;
+  // FETCH to DISPATCH dispatch inputs = fetch outputs
+  assign in_fetch_done = out_d_done;
+  assign in_fetch_insnbits = out_d_insnbits;
+  assign in_fetch_pc = out_d_pc;
 
   // DISPATCH to REG reg inputs = dispatch outputs
   assign in_d_done = out_reg_done;
@@ -252,15 +259,18 @@ module core (
   assign in_d_use_imm = out_reg_use_imm;
   assign in_d_imm = out_reg_imm;
   assign in_d_src1 = out_reg_src1;
+  assign in_d_src1_status = out_reg_src1_status;
   assign in_d_src2 = out_reg_src2;
-  assign in_d_dst = out_reg_dst;
+  assign in_d_src2_status = out_reg_src2_status;
   assign in_d_fu_id = out_reg_fu_id;
   assign in_d_fu_op = out_reg_fu_op;
-  assign in_d_instr_uses_nzcv = out_reg_instr_uses_nzcv;
+  assign in_d_dst = out_reg_dst;
+  assign in_d_dst_status = out_reg_dst_status;
   assign in_d_cond_codes = out_reg_cond_codes;
+  assign in_d_uses_nzcv = out_reg_uses_nzcv;
   assign in_d_mispredict = out_reg_mispredict;
-  assign in_d_bcond = out_reg_bcond;
-  assign in_d_branch_PC = out_reg_branch_PC;
+  // assign in_d_bcond = out_reg_bcond;
+  assign in_d_pc = out_reg_pc;
 
   // ROB to REG reg inputs = rob outputs
   assign in_rob_should_commit = out_reg_commit_done;
@@ -287,7 +297,7 @@ module core (
   assign in_reg_fu_id = out_rob_fu_id;
   assign in_reg_fu_op = out_rob_fu_op;
   assign in_reg_cond_codes = out_rob_cond_codes;
-  assign in_reg_instr_uses_nzcv = out_rob_instr_uses_nzcv;
+  assign in_reg_uses_nzcv = out_rob_uses_nzcv;
   assign in_reg_mispredict = out_rob_mispredict;
   assign in_reg_bcond = out_rob_bcond;
 
@@ -303,7 +313,6 @@ module core (
   assign in_rob_nzcv_valid = out_rs_nzcv_valid;
   assign in_rob_alu_val_a_value = out_rs_alu_val_a_value;
   assign in_rob_alu_val_b_value = out_rs_alu_val_b_value;
-  // `DEBUG(("(RS) received rob val a %0d and val b %0d", out_rs_alu_val_a_value, out_rs_alu_val_b_value));
   assign rs_in_rob_nzcv = out_rs_nzcv;
   assign rs_in_rob_set_nzcv = out_rs_set_nzcv;
   assign in_rob_alu_val_a_rob_index = out_rs_alu_val_a_rob_index;
@@ -316,7 +325,7 @@ module core (
   assign in_rob_broadcast_set_nzcv = out_rs_broadcast_set_nzcv;
   assign in_rob_broadcast_nzcv = out_rs_broadcast_nzcv;
   assign in_rob_is_mispred = out_rs_is_mispred;
-  assign in_rob_instr_uses_nzcv = out_rs_instr_uses_nzcv;
+  assign in_rob_uses_nzcv = out_rs_uses_nzcv;
 
   // RS to FUNC UNITS fu inputs = rs outputs
   assign in_rs_alu_start = out_fu_alu_start;
@@ -346,8 +355,9 @@ module core (
   assign in_fu_set_nzcv = fu_out_rob_set_nzcv;
   assign in_fu_nzcv = fu_out_rob_nzcv;
 
-  assign in_rob_new_PC = out_fetch_new_PC;
+  // ROB to FETCH fetch inputs = rob outputs
   assign in_rob_mispredict = out_fetch_mispredict;
+  assign in_rob_new_PC = out_fetch_new_PC;
 
   logic reset_for_mispred;
   always_ff @(negedge in_clk) begin
@@ -356,28 +366,19 @@ module core (
 
   // modules
   fetch f (
-      .in_clk,
-      .in_rst,
-      .in_rob_mispredict(in_rob_mispredict),
-      .in_rob_new_PC(in_rob_new_PC),
-      .out_d_sigs(fetch_sigs)
+      .*
+      // .in_rob_mispredict(in_rob_mispredict),
+      // .in_rob_new_PC(in_rob_new_PC),
+      // .out_d_sigs(fetch_sigs)
   );
-
-  fetch_interface fetch_sigs ();
 
   dispatch dp (
-      .in_clk,
-      .in_rst,
-      .in_fetch_sigs(fetch_sigs),
-      .out_reg_sigs(d_sigs)
+      .*,
+      .out_reg_set_nzcv(d_out_reg_set_nzcv)
   );
-
-  decode_interface d_sigs ();
 
   reg_module regfile (
       .*,
-      .in_d_sigs(d_sigs),
-      .in_validate(reset_for_mispred),
       .in_rob_nzcv(reg_in_rob_nzcv),
       .in_rob_set_nzcv(reg_in_rob_set_nzcv),
       .out_rob_done(reg_out_rob_done),
@@ -407,9 +408,3 @@ module core (
   );
 
 endmodule
-
-// module testbehhcn(
-
-// );
-
-// endmodule

@@ -5,7 +5,7 @@
 `define RS_IDX_SIZE $clog2(`RS_SIZE)
 `define ROB_SIZE ((`RS_SIZE)*2+2)
 `define ROB_IDX_SIZE $clog2(`ROB_SIZE)
-`define GPR_COUNT 34
+`define GPR_COUNT 32
 `define INSNBITS_SIZE 32
 `define GPR_IDX_SIZE $clog2(`GPR_COUNT)
 `define GPR_SIZE 64 //IDK WHAT ITS SUPPOSED TO DO
@@ -16,11 +16,13 @@
 `define OPCODE_SIZE $clog2(`NUM_OPCODES)
 `define MISSPRED_SIZE 3
 
-typedef enum logic[GPR_IDX_SIZE-1:0] {
-  REG_ZR = 31,
-  REG_SP = 32,
-  REG_STUR = 33,
-} regs;
+typedef enum logic [2:0] {
+  REG_IS_XZR,
+  REG_IS_SP,
+  REG_IS_STUR,
+  REG_IS_USED,
+  REG_IS_UNUSED
+} reg_status_t;
 
 `define DEBUG(ARGS) \
 `ifdef DEBUG_PRINT \
@@ -234,27 +236,4 @@ typedef enum logic {
   STORE
 } ls_op_t;
 
-interface fetch_interface ();
-  logic done;
-  logic [`INSNBITS_SIZE-1:0] insnbits;
-  logic [`GPR_SIZE-1:0] pc;
-endinterface
-
-interface decode_interface ();
-  logic done;
-  logic set_nzcv;
-  logic use_imm;
-  logic [`IMMEDIATE_SIZE-1:0] imm;
-  logic [`GPR_IDX_SIZE-1:0] src1;
-  logic src1_used;
-  logic [`GPR_IDX_SIZE-1:0] src2;
-  logic src2_used;
-  fu_t fu_id;
-  fu_op_t fu_op;
-  logic [`GPR_IDX_SIZE-1:0] dst;
-  cond_t cond_codes;
-  logic instr_uses_nzcv;
-  logic mispredict; // NOTE(Nate): This is used to indicate that a branch is always mispredicted. Honestly, could be part of the   logic bcond,
-  logic [`GPR_SIZE-1:0] pc;
-endinterface
 `endif  // data_structures
