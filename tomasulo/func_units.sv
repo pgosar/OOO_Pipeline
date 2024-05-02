@@ -108,11 +108,17 @@ module func_units (
     end
   end
 
+  // TODO(Nate): This is getting executed a cycle later than it should.
+  // Furthermore, there should be two cycles which can run dmem. (1),
+  // from the rob on commit. (2) from ldurs if there are no sturs. (3)
+  // We need some sort of writeback buffer to read new values from while
+  // waiting for sturs to complete. This can be the ROB.
+
   // logic dmem_clk = in_clk & in_rs_ls_start;
   dmem dmem_module (
       .clk(in_clk),
       .in_addr(val_a),
-      .w_enable(fu_op == FU_OP_STUR & in_rs_commit_done),
+      .w_enable(fu_op == FU_OP_STUR  /* & in_rs_commit_done*/),
       .wval(val_b),
       .data(ls_value)
   );
@@ -216,6 +222,7 @@ module dmem #(
     input wire [63:0] wval,
     output logic [63:0] data
 );
+
   // read-only instruction memory module.
   localparam bits_amt = PAGESIZE * 4;  // 64 bit access
   localparam fname = "mem/dmem.txt";
@@ -225,35 +232,36 @@ module dmem #(
     $readmemb(fname, mem);
   end : mem_init
 
+  logic [63:0] buffer;
   logic [$clog2(PAGESIZE*4)-1:0] addr;
   always_ff @(posedge clk) begin : mem_access
-    $display("w enable: %0d", w_enable);
-    $display("wval: %0d", wval);
-    addr <= in_addr[$clog2(PAGESIZE*4)-1:0];
-    #1
+    buffer <= wval;
+    addr   <= in_addr[$clog2(PAGESIZE*4)-1:0];
     if (w_enable) begin
-      mem[addr+7] <= wval[63:56];
-      mem[addr+6] <= wval[55:48];
-      mem[addr+5] <= wval[47:40];
-      mem[addr+4] <= wval[39:32];
-      mem[addr+3] <= wval[31:24];
-      mem[addr+2] <= wval[23:16];
-      mem[addr+1] <= wval[15:8];
-      mem[addr] <= wval[7:0];
-      data <= wval;
-    end else begin
-      data <= {
-        mem[addr+7],
-        mem[addr+6],
-        mem[addr+5],
-        mem[addr+4],
-        mem[addr+3],
-        mem[addr+2],
-        mem[addr+1],
-        mem[addr]
-      };
+      #1 `DEBUG(("(LS) Here is the wval: %0d", buffer));
+      mem[addr+7] <= buffer[63:56];
+      mem[addr+6] <= buffer[55:48];
+      mem[addr+5] <= buffer[47:40];
+      mem[addr+4] <= buffer[39:32];
+      mem[addr+3] <= buffer[31:24];
+      mem[addr+2] <= buffer[23:16];
+      mem[addr+1] <= buffer[15:8];
+      mem[addr]   <= buffer[7:0];
     end
   end : mem_access
+
+  always_comb begin
+    data = {
+      mem[addr+7],
+      mem[addr+6],
+      mem[addr+5],
+      mem[addr+4],
+      mem[addr+3],
+      mem[addr+2],
+      mem[addr+1],
+      mem[addr]
+    };
+  end
 
 endmodule : dmem
 

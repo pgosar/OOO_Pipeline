@@ -276,7 +276,7 @@ module reservation_station_module #(
           // src1
           // checks whether to update the value in the RS. All loads must only be updated if there
           // are no pending sturs
-          if (~rs[i].op1.valid & rs[i].op1.rob_index == rob_broadcast_index & (stur_counter != 0 & in_rob_fu_op == OP_LDUR)) begin
+          if (~rs[i].op1.valid & rs[i].op1.rob_index == rob_broadcast_index & ~(stur_counter != 0 & in_rob_fu_op == OP_LDUR)) begin
             `DEBUG(("(RS) \tUpdating RS[%0d] op1 -> %0d (op: %s)", i, $signed(rob_broadcast_value
                    ), rs[i].op.name));
             if (rs[i].op == FU_OP_LDUR | rs[i].op == FU_OP_STUR) begin
@@ -290,7 +290,7 @@ module reservation_station_module #(
           end
 
           // src2
-          if (~rs[i].op2.valid & rs[i].op2.rob_index == rob_broadcast_index & (stur_counter != 0 & in_rob_fu_op == OP_LDUR)) begin
+          if (~rs[i].op2.valid & rs[i].op2.rob_index == rob_broadcast_index & ~(stur_counter != 0 & in_rob_fu_op == OP_LDUR)) begin
             `DEBUG(("(RS) \tUpdating RS[%0d] op2 -> %0d", i, $signed(rob_broadcast_value)));
             rs[i].op2.value <= rob_broadcast_value;
             rs[i].op2.valid <= 1;
