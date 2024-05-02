@@ -32,3 +32,9 @@ when a ROB receives a broadcast that a stur has completed.
 ehem,
 
 NOTE(Pranay): For stur counter,loads must also be checked
+
+NOTE(Pranay): I believe for the broken bits of broken.s such as
+instr x5, .., ..
+instr x5, x5, ..
+this is both a read after write and write after write, this must be
+stalled?
