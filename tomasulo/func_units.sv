@@ -16,7 +16,7 @@ module func_units (
     input logic in_rs_alu_start,
     input fu_op_t in_rs_alu_fu_op,
     input logic [`GPR_SIZE-1:0] in_rs_alu_val_a,
-    input logic signed[`GPR_SIZE-1:0] in_rs_alu_val_b,
+    input logic [`GPR_SIZE-1:0] in_rs_alu_val_b,
     input logic [`ROB_IDX_SIZE-1:0] in_rs_alu_dst_rob_index,
     input logic in_rs_alu_set_nzcv,
     input nzcv_t in_rs_alu_nzcv,
@@ -46,7 +46,7 @@ module func_units (
 
   fu_op_t fu_op;
   logic [`GPR_SIZE-1:0] val_a;
-  logic signed[`GPR_SIZE-1:0] val_b;
+  logic [`GPR_SIZE-1:0] val_b;
   logic [`GPR_SIZE-1:0] alu_value;
   logic [`GPR_SIZE-1:0] ls_value;
   cond_t cond_codes;
@@ -145,7 +145,7 @@ module alu_module (
     input cond_t in_cond,
     input fu_op_t in_op,
     input logic [`GPR_SIZE-1:0] in_alu_val_a,
-    input logic signed[`GPR_SIZE-1:0] in_alu_val_b,
+    input logic [`GPR_SIZE-1:0] in_alu_val_b,
     input nzcv_t in_nzcv,
     input logic in_set_nzcv,
     // TODO(Nate): We need to include input condition codes
@@ -162,7 +162,7 @@ module alu_module (
   nzcv_t nzcv;  // TODO why?
   logic delayed_clk;
   logic [`GPR_SIZE:0] val_a;
-  logic signed[`GPR_SIZE:0] val_b;
+  logic [`GPR_SIZE:0] val_b;
 
   assign out_value = result[`GPR_SIZE-1:0];
   assign val_a = {1'b0, in_alu_val_a};
@@ -184,7 +184,8 @@ module alu_module (
   always_comb begin
     // $display("ALU_OP: %s", in_op.name);
     casez (in_op)
-      FU_OP_ADRX, FU_OP_PLUS, FU_OP_B_COND: result = val_a + val_b;
+      FU_OP_ADRX, FU_OP_PLUS: result = val_a + val_b;
+      FU_OP_B_COND: result = val_a + (val_b);
       FU_OP_MINUS: result = val_a - val_b;
       FU_OP_ORN: result = val_a | (~val_b);
       FU_OP_OR: result = val_a | val_b;

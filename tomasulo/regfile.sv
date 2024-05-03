@@ -104,7 +104,7 @@ module reg_module (
         d_set_nzcv <= in_d_set_nzcv;
         d_imm <= in_d_imm;
         d_use_imm <= in_d_use_imm;
-        d_uses_signed_immediate = in_d_uses_signed_immediate;;
+        d_uses_signed_immediate <= in_d_uses_signed_immediate;
         d_fu_op <= in_d_fu_op;
         rob_next_rob_index <= in_rob_next_rob_index;
         // Copy unused signals
@@ -205,13 +205,8 @@ module reg_module (
     // Src2 - With LDUR, the immediate is the offset.
     //      - With STUR, src2 contains value to store. immediate contains the offset
     if (d_use_imm) begin
-      if(d_uses_signed_immediate) begin
-        out_rob_src2_value = $signed(d_imm);
-        out_rob_src2_valid = 1;
-      end else begin
         out_rob_src2_value = d_imm;
         out_rob_src2_valid = 1; 
-      end
     end else begin
       out_rob_src2_valid = gprs[d_src2].valid;
       out_rob_src2_value = gprs[d_src2].value;
