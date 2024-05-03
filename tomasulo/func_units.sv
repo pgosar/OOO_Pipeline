@@ -31,18 +31,17 @@ module func_units (
     output fu_interface_alu_ext out_rob_alu_sigs
 );
 
-  // Structural hazards are resolved in the reservation
-  // stations.
+  // NOTE(Nate): Structural hazards are resolved in the
+  // reservation stations.
+  // NOTE(Nate): Apologies for the hardcoded assignments
+  assign out_rs_alu_ready = 1;
+  assign out_rs_ls_ready  = 1;
 
   // LS output wires
   fu_interface ls_results ();
   // ALU output wires
   fu_interface alu_results ();
   fu_interface_alu_ext alu_results_ext ();
-
-  // NOTE(Nate): Apologies for the hardcoded assignments
-  assign out_rs_alu_ready = 1;
-  assign out_rs_ls_ready  = 1;
 
   // Decide which output should be run. This is normally
   // trivial, since only one FU can run at a time.
@@ -51,9 +50,11 @@ module func_units (
     if (alu_results.done) begin
       out_rob_sigs.dst_rob_index = alu_results.dst_rob_index;
       out_rob_sigs.value = alu_results.value;
+      out_rob_sigs.fu_op = alu_results.fu_op;
     end else begin
       out_rob_sigs.dst_rob_index = ls_results.dst_rob_index;
       out_rob_sigs.value = ls_results.value;
+      out_rob_sigs.fu_op = ls_results.fu_op;
     end
     // Extensions
     out_rob_alu_sigs.set_nzcv = alu_results_ext.set_nzcv;
@@ -61,35 +62,37 @@ module func_units (
     out_rob_alu_sigs.condition = alu_results_ext.condition;
   end
 
-  rs_interface rs_alu_sigs ();
-  rs_interface_alu_ext rs_alu_sigs_ext ();
-  rs_interface rs_ls_sigs ();
-
+  logic ls_start;
   // Prints
   always_ff @(posedge in_clk) begin
-    rs_alu_sigs <= in_rs_alu_sigs;
-    rs_alu_sigs_ext <= in_rs_alu_sigs_ext;
-    rs_ls_sigs <= rs_ls_sigs;
-    // `ASSERT((~(alu_results.done & ls_results.done)));
+    // Start LS
+    ls_start <= in_rs_ls_sigs.start;
+    ls_results.done <= in_rs_ls_sigs.start;
+    ls_results.dst_rob_index <= in_rs_ls_sigs.dst_rob_index;
+    ls_results.fu_op <= in_rs_ls_sigs.fu_op;
+    `ASSERT((~(alu_results.done & ls_results.done)));
+    // `DEBUG(("(FU) alu_results_done: %0d, ls_results_done: %0d", alu_results.done, ls_results.done));
     if (in_rs_alu_sigs.start) begin
-      // #1
-      // `DEBUG(
-      //     ( "(ALU) %s calculated: %0d for dst ROB[%0d] val_a: %0d, val_b: %0d, nzcv = %4b, condition = %0d", rs_alu_sigs.fu_op.name, $signed(
-      //         alu_results
-      //     ), rs_alu_sigs.rs_alu_dst_rob_index, $signed(
-      //         rs_alu_sigs.val_a
-      //     ), $signed(
-      //         rs_alu_sigs.val_b), out_rob_alu_sigs.nzcv, out_rob_alu_sigs.condition));
+      `DEBUG(( "(ALU) Prepped for %s to ROB[%0d] w/ val_a: %0d, val_b: %0d",
+          in_rs_alu_sigs.fu_op.name,
+          in_rs_alu_sigs.dst_rob_index,
+          $signed(in_rs_alu_sigs.val_a),
+          $signed(in_rs_alu_sigs.val_b),
+      ));
+      #1
+      `DEBUG(("(ALU) Calculated for ROB[%0d] value: %0d, nzcv: %4b, condition: %0d",
+          out_rob_sigs.dst_rob_index, $signed(alu_results.value), out_rob_alu_sigs.nzcv, out_rob_alu_sigs.condition))
     end
     if (in_rs_ls_sigs.start) begin
-      // #1
-      // `DEBUG(
-      //     ( "(LS) %s executed: %0d for dst ROB[%0d], val_a: %0d, val_b: %0d", rs_ls_sigs.fu_op.name, $signed(
-      //         ls_results
-      //     ), rs_ls_sigs.dst_rob_index, $signed(
-      //         rs_ls_sigs.val_a
-      //     ), $signed(
-      //         rs_ls_sigs.val_b)));
+      `DEBUG(( "(LS) Prepped for %s to ROB[%0d] w/ val_a: %0d, val_b: %0d",
+          in_rs_ls_sigs.fu_op.name,
+          in_rs_ls_sigs.dst_rob_index,
+          $signed(in_rs_ls_sigs.val_a),
+          $signed(in_rs_ls_sigs.val_b),
+      ));
+      #2
+      `DEBUG(("(LS) Loaded / Stored for ROB[%0d] value: %0d",
+          out_rob_sigs.dst_rob_index, $signed(ls_results.value)))
     end
   end
 
@@ -97,7 +100,7 @@ module func_units (
   dmem dmem_module (
       .in_clk,
       .in_addr(in_rs_ls_sigs.val_a),
-      .in_w_enable(in_rs_ls_sigs.fu_op == FU_OP_STUR),
+      .in_w_enable(in_rs_ls_sigs.start & in_rs_ls_sigs.fu_op == FU_OP_STUR),
       .in_wval(in_rs_ls_sigs.val_b),
       .out_data(ls_results.value)
   );
@@ -141,6 +144,8 @@ module alu_module (
       alu_set_nzcv <= in_alu_sigs_ext.set_nzcv;
       alu_nzcv <= in_alu_sigs_ext.nzcv;
       alu_cond_codes <= in_alu_sigs_ext.cond_codes;
+      // Copy over unused
+      out_alu_sigs.dst_rob_index <= in_alu_sigs.dst_rob_index;
     end
   end
 
@@ -213,18 +218,22 @@ module dmem #(
     $readmemb(fname, mem);
   end : mem_init
 
+  logic [`GPR_SIZE-1:0] wval;
   logic [$clog2(PAGESIZE*4)-1:0] addr;
   always_ff @(posedge in_clk) begin : mem_access
     addr <= in_addr[$clog2(PAGESIZE*4)-1:0];
+    wval <= in_wval;
     if (in_w_enable) begin
-      #1 mem[addr+7] <= in_wval[63:56];
-      mem[addr+6] <= in_wval[55:48];
-      mem[addr+5] <= in_wval[47:40];
-      mem[addr+4] <= in_wval[39:32];
-      mem[addr+3] <= in_wval[31:24];
-      mem[addr+2] <= in_wval[23:16];
-      mem[addr+1] <= in_wval[15:8];
-      mem[addr]   <= in_wval[7:0];
+      #1
+      `DEBUG(("(LS) dmem storing %0d to %16x", wval, addr))
+      mem[addr+7] <= wval[63:56];
+      mem[addr+6] <= wval[55:48];
+      mem[addr+5] <= wval[47:40];
+      mem[addr+4] <= wval[39:32];
+      mem[addr+3] <= wval[31:24];
+      mem[addr+2] <= wval[23:16];
+      mem[addr+1] <= wval[15:8];
+      mem[addr]   <= wval[7:0];
     end
   end : mem_access
 

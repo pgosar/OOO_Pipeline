@@ -48,7 +48,7 @@ module fetch #(
   always_comb begin
     ret_from_main   = PC == 0;
     no_instruction  = data == 0;
-    out_d_sigs.done = ~in_rst & ~no_instruction;
+    out_d_sigs.done = ~rst & ~no_instruction;
     out_d_sigs.pc   = PC;
     if (no_instruction) begin
       out_d_sigs.insnbits = 0;
@@ -62,7 +62,6 @@ module fetch #(
   always_ff @(posedge in_clk) begin : fetch_logic
     rst <= in_rst;
     is_mispred <= in_rob_mispredict;
-    `DEBUG(("(fetch) is f_done: %0d", out_d_sigs.done))
     if (in_rst) begin
       `DEBUG(("(fetch) Resetting. PC: %16x -> %16x (entry point)", PC, entry_addr[0]));
       PC <= entry_addr[0];
@@ -70,23 +69,19 @@ module fetch #(
       if (rst) begin
         `DEBUG(("(fetch) Last cycle was reset. PC remains %16x", PC));
       end else if (in_rob_mispredict) begin
-        `DEBUG(("(fetch) No instruction. PC halted at: %16x", PC));
+        `DEBUG(("(fetch) Mispredict received. PC %16x -> %16x", PC, in_rob_new_PC));
         PC <= in_rob_new_PC;
       end else if (ret_from_main) begin
-        `DEBUG(("(fetch) Returned from main. PC Halted at: %16x", PC));
-        PC <= PC;
+        `DEBUG(("(fetch) PC at 0. Possibly due to return from main. Halting: %16x", PC));
       end else if (no_instruction) begin
         `DEBUG(("(fetch) All insnbits are 0. PC Halted at: %16x", PC));
-        PC <= PC;
-      end  // NOTE(Nate): What comes after is a little jank
-      else if (opcode == OP_ADR | opcode == OP_ADRP) begin
-        PC <= PC + 4;
-      end else if (opcode == OP_B_COND) begin
-        PC <= PC + 4;
-      end else if (opcode == OP_B | opcode == OP_BL) begin
+      end  
+      // NOTE(Nate): What comes after is a little jank
+      else if (opcode == OP_B | opcode == OP_BL) begin
         `DEBUG(("(fetch) detected branch. changing PC: %16x -> %16x", PC, PC + imm));
         PC <= PC + imm;
-      end  // NOTE(Nate): But it does the job ig
+      end  
+      // NOTE(Nate): But it does the job ig
       else begin
         `DEBUG(("(fetch) PC: %16x -> %16x", PC, PC + 4));
         PC <= PC + 4;

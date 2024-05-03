@@ -22,7 +22,7 @@
 `endif
 
 `define ASSERT(ARGS) \
-  if(ARGS == 0) $stop; \
+  if(ARGS == 0) \
   $finish;
 
 typedef struct packed {logic src2_sel;} d_ctl_sigs_t;
@@ -174,7 +174,8 @@ typedef enum logic [2:0] {
   REG_IS_USED,
   REG_IS_XZR,
   REG_IS_SP,
-  REG_IS_STUR
+  REG_IS_STUR,
+  REG_IS_IMMEDATE
 } reg_status_t;
 
 typedef enum logic {
@@ -244,7 +245,6 @@ endinterface
 interface decode_interface ();
   logic done;
   logic set_nzcv;
-  logic use_imm;
   logic [`IMMEDIATE_SIZE-1:0] imm;
   logic [`GPR_IDX_SIZE-1:0] src1;
   reg_status_t src1_status;
@@ -280,6 +280,7 @@ interface reg_interface ();
   // Outputs for FU (rob)
   fu_op_t fu_op;
   cond_t cond_codes;
+  logic [`GPR_SIZE-1:0] pc;
 endinterface
 
 interface rob_commit_interface ();
@@ -300,7 +301,6 @@ interface rob_broadcast_interface ();
 endinterface
 
 interface rob_interface ();
-  integer stur_counter;
   cond_t cond_codes;
   logic done;
   fu_t fu_id;

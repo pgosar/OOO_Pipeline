@@ -33,7 +33,6 @@ module reg_module (
   // Buffered inputs (from decode)
   logic d_done;
   logic d_set_nzcv;
-  logic d_use_imm;
   logic [`IMMEDIATE_SIZE-1:0] d_imm;
   logic [`GPR_IDX_SIZE-1:0] d_src1;
   reg_status_t d_src1_status;
@@ -66,29 +65,30 @@ module reg_module (
       d_done <= in_d_sigs.done;
       // Buffer inputs
       if (in_d_sigs.done) begin
+        `DEBUG(("(regfile) buffering inputs from decode"))
         // Buffered inputs (from d)
-        d_done <= in_d_sigs.done;
         d_set_nzcv <= in_d_sigs.set_nzcv;
-        d_use_imm <= in_d_sigs.use_imm;
         d_imm <= in_d_sigs.imm;
         d_src1 <= in_d_sigs.src1;
         d_src1_status <= in_d_sigs.src1_status;
         d_src2 <= in_d_sigs.src2;
         d_src2_status <= in_d_sigs.src2_status;
-        d_fu_id <= in_d_sigs.fu_id;
         d_fu_op <= in_d_sigs.fu_op;
         d_dst <= in_d_sigs.dst;
         d_dst_status <= in_d_sigs.dst_status;
         d_cond_codes <= in_d_sigs.cond_codes;
-        d_uses_nzcv <= in_d_sigs.uses_nzcv;
         d_mispredict <= in_d_sigs.mispredict;
-        d_pc <= in_d_sigs.pc;
+        d_uses_nzcv <= in_d_sigs.uses_nzcv;
+        // Copy over
+        out_rob_sigs.pc <= in_d_sigs.pc;
+        out_rob_sigs.fu_id <= in_d_sigs.fu_id;
       end
       // Update validity of previous cycle's dst.
-      if (d_sigs.done) begin
-        gprs[d_sigs.dst].valid <= 0;
-        gprs[d_sigs.dst].rob_index <= in_rob_next_rob_index;
-        if (d_sigs.set_nzcv) begin
+      if (d_done) begin
+        `DEBUG(("(regfile) updating prev cycle's dst"))
+        gprs[d_dst].valid <= 0;
+        gprs[d_dst].rob_index <= in_rob_next_rob_index;
+        if (d_set_nzcv) begin
           nzcv_valid <= 0;
           nzcv_rob_index <= in_rob_next_rob_index;
         end
@@ -102,7 +102,6 @@ module reg_module (
           nzcv <= in_rob_commit_sigs.nzcv;
           nzcv_valid <= 1;
         end
-
         `DEBUG(
             ("(regfile) Request to commit to GPR[%0d] -> %0d", in_rob_commit_sigs.reg_index, $signed(
             in_rob_commit_sigs.value)));
@@ -116,45 +115,44 @@ module reg_module (
   always_ff @(posedge in_clk) begin
     #1
     // Buffer old rob indices first....
-    src1_rob_index <= gprs[d_sigs.src1].rob_index;
-    src2_rob_index <= gprs[d_sigs.src2].rob_index;
+    src1_rob_index <= gprs[d_src1].rob_index;
+    src2_rob_index <= gprs[d_src2].rob_index;
   end
 
-  // Update internal state using external inputs
+  // Some print statemnts 
   always_ff @(posedge in_clk) begin
     #5  // Ugh, Verilator doees not signals to be driven on both the posedge
         // and negedge clk. the bastard.
-    if (d_sigs.done) begin
-      // gprs[d_sigs.dst].valid <= 0;
-      // gprs[d_sigs.dst].rob_index <= in_rob_next_rob_index;
-      // if (d_sigs.set_nzcv) begin
+    if (d_done) begin
+      // gprs[d_dst].valid <= 0;
+      // gprs[d_dst].rob_index <= in_rob_next_rob_index;
+      // if (d_set_nzcv) begin
       //   nzcv_valid <= 0;
       //   nzcv_rob_index <= in_rob_next_rob_index;
       // end
-      if (d_sigs.src1_status == REG_IS_USED) begin
-        `DEBUG(
-            ("(regfile) src1 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_sigs.src1,
-             out_rob_sigs.src1_value, out_rob_sigs.src1_valid, out_rob_sigs.src1_rob_index));
-      end
+      `DEBUG((
+        "(regfile) src1 read from GPR[%0d] = %0d, valid: %0d, rob_index: %0d, status: %s", 
+        d_src1, out_rob_sigs.src1_value, out_rob_sigs.src1_valid, out_rob_sigs.src1_rob_index, d_src1_status.name));
 
-      `DEBUG(
-          ("(REGFILE) src2: use_imm, imm, reg_num, status, %0d, %0d, %0d, %s", d_sigs.use_imm, d_sigs.imm, d_sigs.src1, d_sigs.src1_status.name));
-      if (d_sigs.use_imm) begin
-        `DEBUG(("(regfile) src2 using immediate: %0d", d_sigs.imm));
+      if (d_src2_status == REG_IS_IMMEDATE) begin
+        `DEBUG(("(regfile) src2 using immediate: %0d", d_imm));
       end else begin
-        `DEBUG(
-            ("(regfile) src2 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d", d_sigs.src2,
-               gprs[d_sigs.src2].value, gprs[d_sigs.src2].valid,
-               d_sigs.src2 == d_sigs.dst ? src2_rob_index : gprs[d_sigs.src2].rob_index));
+        `DEBUG(("(regfile) src2 wanted from GPR[%0d] = %0d, valid: %0d, rob_index: %0d, status: %s", 
+            d_src2,
+            gprs[d_src2].value, gprs[d_src2].valid,
+            d_src2 == d_dst ? src2_rob_index : gprs[d_src2].rob_index,
+            d_src2_status.name
+        ));
       end
       `DEBUG(
-          ("(regfile) Dispatch dest GPR[%0d] renamed to ROB[%0d]", d_sigs.dst, in_rob_next_rob_index));
+          ("(regfile) Dispatch dest GPR[%0d] renamed to ROB[%0d]", d_dst, in_rob_next_rob_index));
     end
   end
 
   // Set outputs
   always_comb begin
     out_rob_sigs.done = d_done;
+    out_rob_sigs.fu_op = d_fu_op;
 
     // Src 1 - With LDUR/STUR, src1 contains base address. If src1 is not
     // available
@@ -187,9 +185,9 @@ module reg_module (
     if (d_src2_status == REG_IS_XZR) begin
       out_rob_sigs.src2_valid = 1;
       out_rob_sigs.src2_value = 0;
-    end else if (d_use_imm) begin  // TODO(Nate): This imm is messed up with STUR??
-      out_rob_sigs.src2_value = d_imm;
+    end else if (d_src2_status == REG_IS_IMMEDATE) begin  // TODO(Nate): This imm is messed up with STUR??
       out_rob_sigs.src2_valid = 1;
+      out_rob_sigs.src2_value = d_imm;
     end else begin
       out_rob_sigs.src2_valid = gprs[d_src2].valid | (d_src2_status == REG_IS_UNUSED);
       out_rob_sigs.src2_value = gprs[d_src2].value;
@@ -202,6 +200,7 @@ module reg_module (
     out_rob_sigs.nzcv_rob_index = nzcv_rob_index;
     out_rob_sigs.nzcv = nzcv;
     out_rob_sigs.set_nzcv = d_set_nzcv;
+    out_rob_sigs.uses_nzcv = d_uses_nzcv;
     // Dst
     out_rob_sigs.dst = d_dst;
   end

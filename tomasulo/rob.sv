@@ -73,34 +73,33 @@ module rob_module (
           rob[i].valid <= 0;
         end
       end else begin : not_reset
-        `DEBUG(
-            ("(ROB TEST) src valid: %0d src2 rob index: %0d src2 value: %0d", in_reg_sigs.src2_valid, in_reg_sigs.src2_rob_index, in_reg_sigs.src2_value));
+        reg_done <= in_reg_sigs.done;
+        // `DEBUG( ("(ROB TEST) src valid: %0d src2 rob index: %0d src2 value: %0d", in_reg_sigs.src2_valid, in_reg_sigs.src2_rob_index, in_reg_sigs.src2_value));
         // Update state from FU
         if (in_fu_sigs.done) begin
+          rob[in_fu_sigs.dst_rob_index].value <= in_fu_sigs.value;
+          rob[in_fu_sigs.dst_rob_index].valid <= 1;
+          if (in_alu_sigs.set_nzcv) begin
+            rob[in_fu_sigs.dst_rob_index].nzcv <= in_alu_sigs.nzcv;
+          end
+          if (in_fu_sigs.fu_op == FU_OP_STUR) begin
+            `DEBUG(("(rob) STUR received from FU. STUR counter: %0d -> %0d.",
+                out_rs_pending_stur_count, out_rs_pending_stur_count - 1));
+            out_rs_pending_stur_count <= out_rs_pending_stur_count - 1;
+          end
           if (rob[in_fu_sigs.dst_rob_index].bcond) begin
             `DEBUG(("(rob) !!! DETECTED BCOND !!!"));
             // if alu condition is true, mark mispredict as true and set PC. DO
             // NOT broadcast state.
           end
-          if (in_reg_sigs.fu_op == OP_STUR) begin
-            `DEBUG(("(rob) STUR detected. Incrementing STUR counter."));
-            out_rs_pending_stur_count <= out_rs_pending_stur_count + 1;
-          end
           `DEBUG(
-              ("(rob) Received result from FU. ROB[%0d] -> %0d + valid", in_fu_sigs.dst_rob_index,
+              ("(rob) Received result from FU: %s. ROB[%0d] -> %0d + valid", 
+                  in_fu_sigs.fu_op.name, in_fu_sigs.dst_rob_index,
                $signed(
               in_fu_sigs.value)));
           // Validate the line which the FU has updated
           /*if (rob[in_fu_sigs.dst_rob_index].controlflow_valid) begin
-            rob[in_fu_sigs.dst_rob_index].value <= in_fu_sigs.value;
-            rob[in_fu_sigs.dst_rob_index].valid <= 1;
-            if (in_alu_sigs.set_nzcv) begin
-              rob[in_fu_sigs.dst_rob_index].nzcv <= in_alu_sigs.nzcv;
-            end
-          end*/ if (0) begin
-          end else begin
-            `DEBUG(("(rob) !! not updating rob for previous result. control flow invalid !!"));
-          end
+          end*/         
         end
         // Update ROB
         if (in_reg_sigs.done) begin
@@ -109,10 +108,6 @@ module rob_module (
           `DEBUG(
               ("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_sigs.uses_nzcv, next_ptr,
                (next_ptr + 1) % `ROB_SIZE));
-          if (in_reg_sigs.fu_op == OP_STUR) begin
-            `DEBUG(("(rob) STUR detected. Incrementing STUR counter."));
-            out_rs_pending_stur_count <= out_rs_pending_stur_count + 1;
-          end
           // Add a new entry to the ROB and update the regfile
           rob[next_ptr].gpr_index <= in_reg_sigs.dst;
           rob[next_ptr].set_nzcv <= in_reg_sigs.set_nzcv;
@@ -120,26 +115,27 @@ module rob_module (
           rob[next_ptr].valid <= 0;
           rob[next_ptr].mispredict <= in_reg_sigs.mispredict;
           rob[next_ptr].bcond <= in_reg_sigs.bcond;
+          out_rs_sigs.dst_rob_index <= next_ptr;
           next_ptr <= (next_ptr + 1) % `ROB_SIZE;
+          if (in_reg_sigs.fu_op == FU_OP_STUR) begin
+            `DEBUG(("(rob) STUR added to ROB. STUR counter: %0d -> %0d.",
+                out_rs_pending_stur_count, out_rs_pending_stur_count + 1));
+            out_rs_pending_stur_count <= out_rs_pending_stur_count + 1;
+          end
         end
         if (rob[commit_ptr].valid) begin : remove_commit
+          `DEBUG(("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d", (commit_ptr + 1) % `ROB_SIZE));
+          `DEBUG(("(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b",
+              commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value), rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv));
           commit_ptr <= (commit_ptr + 1) % `ROB_SIZE;
           last_commit_was_mispredict <= rob[commit_ptr].mispredict;
           mispredict_new_PC <= rob[commit_ptr].value;
-          if (rob[commit_ptr].mispredict)
+          if (rob[commit_ptr].mispredict) begin
             `DEBUG(("(rob) Detected branch mispredict. About to commit branch instruction."));
-          `DEBUG(
-              ("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d",
-               (commit_ptr + 1) % `ROB_SIZE));
-          `DEBUG(
-              (
-            "(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b",
-            commit_ptr, rob[commit_ptr].gpr_index, $signed(
-              rob[commit_ptr].value), rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv));
+          end
         end : remove_commit
         // Buffer the incoming state
         fu_op <= in_reg_sigs.fu_op;
-        reg_done <= in_reg_sigs.done;
         reg_src1_value <= in_reg_sigs.src1_value;
         reg_src1_valid <= in_reg_sigs.src1_valid;
         reg_nzcv <= in_reg_sigs.nzcv;
@@ -161,8 +157,6 @@ module rob_module (
         out_rs_sigs.val_a_rob_index <= in_reg_sigs.src1_rob_index;
         out_rs_sigs.val_b_rob_index <= in_reg_sigs.src2_rob_index;
         out_rs_sigs.nzcv_rob_index <= in_reg_sigs.nzcv_rob_index;
-        // Set dst
-        out_rs_sigs.dst_rob_index <= next_ptr;
       end : not_reset
     end : on_posedge
     else begin : on_negedge

@@ -159,9 +159,24 @@ module extract_reg (
     if (opcode == OP_STUR) begin
       out_reg_src2 = in_insnbits[4:0];
       out_reg_src2_status = REG_IS_USED;
-    end else if (opcode == OP_ADDS | opcode == OP_SUBS | opcode == OP_ORN | opcode == OP_ORR | opcode == OP_EOR | opcode == OP_ANDS | opcode == OP_CSEL | opcode == OP_CSINV | opcode == OP_CSINC | opcode == OP_CSNEG) begin
+    end else if (
+        opcode == OP_ADDS | opcode == OP_SUBS | opcode == OP_ORN |
+        opcode == OP_ORR | opcode == OP_EOR | opcode == OP_ANDS |
+        opcode == OP_CSEL | opcode == OP_CSINV | opcode == OP_CSINC | 
+        opcode == OP_CSNEG
+    ) begin
       out_reg_src2 = in_insnbits[20:16];
       out_reg_src2_status = REG_IS_USED;
+    end else if(
+        opcode == OP_LDUR | opcode == OP_STUR | opcode == OP_LDP |
+        opcode == OP_STP | opcode == OP_MOVK | opcode == OP_MOVZ |
+        opcode == OP_ADR | opcode == OP_ADRP | opcode == OP_SUB | 
+        opcode == OP_ADD | opcode == OP_AND | opcode == OP_UBFM |
+        opcode == OP_SBFM | opcode == OP_B | opcode == OP_B_COND |
+        opcode == OP_BL
+    ) begin
+      out_reg_src2 = 31;
+      out_reg_src2_status = REG_IS_IMMEDATE;
     end else begin
       out_reg_src2 = 31;
       out_reg_src2_status = REG_IS_UNUSED;
@@ -290,13 +305,6 @@ module use_out_reg_imm (
 );
 
   always_comb begin
-    if(opcode == OP_LDUR | opcode == OP_STUR | opcode == OP_LDP | opcode == OP_STP | opcode == OP_MOVK | opcode == OP_MOVZ |
-   opcode == OP_ADR | opcode == OP_ADRP | opcode == OP_SUB | opcode == OP_ADD | opcode == OP_AND | opcode == OP_UBFM |
-   opcode == OP_SBFM | opcode == OP_B | opcode == OP_B_COND | opcode == OP_BL) begin
-      out_reg_use_imm = 1;
-    end else begin
-      out_reg_use_imm = 0;
-    end
   end
 
 endmodule
@@ -382,10 +390,6 @@ module dispatch (
       .in_opcode(opcode),
       .out_op_uses_nzcv(out_reg_sigs.uses_nzcv)
   );
-  use_out_reg_imm imm_selector (
-      .opcode,
-      .out_reg_use_imm(out_reg_sigs.use_imm)
-  );
   decide_alu alu_decider (
       .opcode,
       .out_reg_fu_op(out_reg_sigs.fu_op),
@@ -402,32 +406,36 @@ module dispatch (
   );
 
 
+  logic fetch_done;
+  always_comb begin
+    out_reg_sigs.done = fetch_done;
+  end
+
   always_ff @(posedge in_clk) begin
     if (in_rst) begin
       `DEBUG(("(dec) Resetting"));
-      out_reg_sigs.done <= 0;
+      fetch_done <= 0;
     end else begin
-      out_reg_sigs.done <= ~in_rst & in_fetch_sigs.done;
+      fetch_done <= in_fetch_sigs.done;
       if (in_fetch_sigs.done) begin
         insnbits <= in_fetch_sigs.insnbits;
         out_reg_sigs.pc <= in_fetch_sigs.pc;
       end
     end
-    #1 `DEBUG(("(dec) Decoding: %b, done: %0b, rst: %0b", insnbits, out_reg_sigs.done, in_rst))
   end
 
   // Print statements only in here
   always_ff @(posedge in_clk) begin
     if (in_fetch_sigs.done & ~in_rst) begin
-      #1 `DEBUG(("(dec) Decoding: %b, done: %0b, rst: %0b", insnbits, out_reg_sigs.done, in_rst))
-      `DEBUG(
-          ("(dec)\tfu_id: %s, opcode: %s, fu_op: %s", out_reg_sigs.fu_id.name, opcode.name,
-               out_reg_sigs.fu_op.name));
-      `DEBUG(
-          ("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d, use_imm: %b", out_reg_sigs.dst,
-               out_reg_sigs.src1, out_reg_sigs.src2, out_reg_sigs.imm, out_reg_sigs.use_imm));
-      `DEBUG(
-          ("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_sigs.set_nzcv, out_reg_sigs.uses_nzcv))
+      #1 
+      `DEBUG(("(dec) Decoding: %b, done: %0b, rst: %0b", insnbits, out_reg_sigs.done, in_rst))
+      `DEBUG(("(dec)\tfu_id: %s, opcode: %s, fu_op: %s",
+          out_reg_sigs.fu_id.name, opcode.name, out_reg_sigs.fu_op.name));
+      `DEBUG(("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d",
+          out_reg_sigs.dst, out_reg_sigs.src1, out_reg_sigs.src2, out_reg_sigs.imm))
+      `DEBUG(("(dec)\tdst: %s, src1: %s, src2: %s",
+          out_reg_sigs.dst_status.name, out_reg_sigs.src1_status.name, out_reg_sigs.src2_status.name))
+      `DEBUG(("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_sigs.set_nzcv, out_reg_sigs.uses_nzcv))
       `DEBUG(("(dec) cond codes %0b", out_reg_sigs.cond_codes))
     end
   end

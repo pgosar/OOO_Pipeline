@@ -25,18 +25,18 @@ module core (
   initial begin
     in_clk = 0;
     for (i = 1; i <= 30; i += 1) begin
-      `DEBUG(("\n>>>>> CYCLE COUNT: %0d <<<<<", i));
+      `DEBUG((">>>>> CYCLE COUNT: %0d <<<<<", i));
       #1 in_clk = ~in_clk;  // 100 MHz clock
       #5 in_clk = ~in_clk;
       #4;
+      `DEBUG((""))
     end
-    $stop();
     $finish();
   end
 
   initial begin
     in_rst = 1;
-    #5;
+    #10;
     in_rst = 0;
     `DEBUG(("RESET DONE === BEGIN TEST"));
     // while (fetch_sigs.pc != 0) begin
@@ -70,16 +70,16 @@ module core (
       .in_clk,
       .in_rst,
       .in_fetch_sigs(fetch_sigs),
-      .out_reg_sigs (d_sigs)
+      .out_reg_sigs (decode_sigs)
   );
 
-  decode_interface d_sigs ();
+  decode_interface decode_sigs ();
 
 
   reg_module regfile (
       .in_clk,
       .in_rst,
-      .in_d_sigs(d_sigs),
+      .in_d_sigs(decode_sigs),
       .in_rob_commit_sigs(commit_sigs),
       .in_rob_next_rob_index(next_rob_index),
       .out_rob_sigs(reg_sigs)
@@ -113,6 +113,7 @@ module core (
       .in_rst(in_rst | is_mispred),
       .in_fu_alu_ready(alu_ready),
       .in_fu_ls_ready(ls_ready),
+      .in_pending_stur_count(pending_stur_count),
       .in_rob_sigs(rob_sigs),
       .in_rob_is_mispred(is_mispred),
       .in_rob_broadcast(rob_broadcast_sigs),

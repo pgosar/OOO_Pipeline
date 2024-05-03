@@ -5,6 +5,7 @@ module reservation_stations (
     input logic in_clk,
     // Inputs From ROB (sourced from either regfile or ROB)
     input rob_interface in_rob_sigs,
+    input integer in_pending_stur_count,
     // inputs from ROB for broadcast
     input rob_broadcast_interface in_rob_broadcast,
     input logic in_rob_is_mispred,
@@ -41,7 +42,7 @@ module reservation_stations (
   end
 
   logic tmp;
-  reservation_station_module ls (
+  reservation_station_module #(.RS_ID(FU_LS)) ls (
       .in_rst(in_rst),
       .in_clk(in_clk),
       .out_alu_sigs_ext(out_alu_sigs_ext),
@@ -50,13 +51,14 @@ module reservation_stations (
       .in_stall(tmp),
       .in_fu_ready(ls_ready),
       .in_rob_sigs(in_rob_sigs),
+      .in_pending_stur_count,
       .out_fu_sigs(out_ls_sigs),
       .out_ls_sigs(tmp),
       .out_has_free(rs_ls_has_free),
       .out_has_ready(rs_ls_has_ready)
   );
 
-  reservation_station_module alu (
+  reservation_station_module #(.RS_ID(FU_ALU)) alu (
       .in_rst(in_rst),
       .in_clk(in_clk),
       .in_rob_is_mispred(in_rob_is_mispred),
@@ -64,6 +66,7 @@ module reservation_stations (
       .in_stall(alu_stall),
       .in_fu_ready(alu_ready),
       .in_rob_sigs(in_rob_sigs),
+      .in_pending_stur_count,
       .out_fu_sigs(out_alu_sigs),
       .out_ls_sigs(tmp),
       .out_alu_sigs_ext(out_alu_sigs_ext),
@@ -75,7 +78,8 @@ endmodule
 
 module reservation_station_module #(
     parameter RS_SIZE = 8,
-    parameter RS_IDX_SIZE = 3
+    parameter RS_IDX_SIZE = 3,
+    parameter fu_t RS_ID = FU_ALU
 ) (
     // Timing & Reset
     input logic in_rst,
@@ -84,6 +88,7 @@ module reservation_station_module #(
     input logic in_stall,
     // Inputs From ROB (sourced from either regfile or ROB)
     input rob_interface in_rob_sigs,
+    input integer in_pending_stur_count,
     // Inputs from ROB (for broadcast)
     input rob_broadcast_interface in_rob_broadcast,
     input logic in_rob_is_mispred,
@@ -113,22 +118,21 @@ module reservation_station_module #(
   rs_entry_t [`RS_SIZE-1:0] rs;
   logic delayed_clk;
   // Buffered state
-  logic rob_alu_val_a_valid;
-  logic rob_alu_val_b_valid;
+  logic rob_val_a_valid;
+  logic rob_val_b_valid;
   logic rob_nzcv_valid;
-  logic [`GPR_SIZE-1:0] rob_alu_val_a_value;
-  logic [`GPR_SIZE-1:0] rob_alu_val_b_value;
+  logic [`GPR_SIZE-1:0] rob_val_a_value;
+  logic [`GPR_SIZE-1:0] rob_val_b_value;
   logic rob_set_nzcv;
   nzcv_t rob_nzcv;
-  logic [`ROB_IDX_SIZE-1:0] rob_alu_val_a_rob_index;
-  logic [`ROB_IDX_SIZE-1:0] rob_alu_val_b_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] rob_val_a_rob_index;
+  logic [`ROB_IDX_SIZE-1:0] rob_val_b_rob_index;
   logic [`ROB_IDX_SIZE-1:0] rob_dst_rob_index;
   logic [`ROB_IDX_SIZE-1:0] rob_nzcv_rob_index;
   fu_op_t rob_fu_op;
   logic rob_done;
   logic fu_ready;
   logic rob_uses_nzcv;
-  integer stur_counter;
   // For broadcasts
   logic [`ROB_IDX_SIZE-1:0] rob_broadcast_index;
   logic [`GPR_SIZE-1:0] rob_broadcast_value;
@@ -148,7 +152,7 @@ module reservation_station_module #(
 
   always_ff @(posedge in_clk) begin : rs_on_clk
     if (in_rst) begin
-      `DEBUG(("(RS) Resetting both reservation stations"));
+      `DEBUG(("(RS-%s) Resetting", RS_ID.name));
       // Reset root control signal
       rob_done <= 0;
       // Reset internal state
@@ -156,26 +160,25 @@ module reservation_station_module #(
         rs[i].entry_valid <= 0;
       end
     end else begin : rs_not_reset
+      rob_done <= in_rob_sigs.done & in_rob_sigs.fu_id == RS_ID;
       if (fu_ready & has_ready) begin : fu_consume_entry
         rs[ready_station_index].entry_valid <= ~fu_ready;
-        `DEBUG(
-            ("(RS) Remove entry RS[%0d] = op: %s. FU consumed entry at start of this cycle.", ready_station_index, rob_fu_op.name));
+        // TODO(Nate): The loads and stores are not going their respective unit.
+        `DEBUG(("(RS-%s) Remove entry RS[%0d] = op: %s. FU consumed entry at start of this cycle. Pending sturs: %0d", RS_ID.name, ready_station_index, rs[ready_station_index].op.name, in_pending_stur_count));
       end : fu_consume_entry
       // Buffer state
-      rob_alu_val_a_valid <= in_rob_sigs.val_a_valid;
-      rob_alu_val_b_valid <= in_rob_sigs.val_b_valid;
+      rob_val_a_valid <= in_rob_sigs.val_a_valid;
+      rob_val_b_valid <= in_rob_sigs.val_b_valid;
       rob_nzcv_valid <= in_rob_sigs.nzcv_valid;
-      rob_alu_val_a_value <= in_rob_sigs.val_a_value;
-      rob_alu_val_b_value <= in_rob_sigs.val_b_value;
-      stur_counter <= in_rob_sigs.stur_counter;
+      rob_val_a_value <= in_rob_sigs.val_a_value;
+      rob_val_b_value <= in_rob_sigs.val_b_value;
       rob_set_nzcv <= in_rob_sigs.set_nzcv;
       rob_nzcv <= in_rob_sigs.nzcv;
-      rob_alu_val_a_rob_index <= in_rob_sigs.val_a_rob_index;
-      rob_alu_val_b_rob_index <= in_rob_sigs.val_b_rob_index;
+      rob_val_a_rob_index <= in_rob_sigs.val_a_rob_index;
+      rob_val_b_rob_index <= in_rob_sigs.val_b_rob_index;
       rob_dst_rob_index <= in_rob_sigs.dst_rob_index;
       rob_nzcv_rob_index <= in_rob_sigs.nzcv_rob_index;
       rob_fu_op <= in_rob_sigs.fu_op;
-      rob_done <= in_rob_sigs.done;
       fu_ready <= in_fu_ready;
       rob_uses_nzcv <= in_rob_sigs.uses_nzcv;
       // For broadcast
@@ -194,7 +197,7 @@ module reservation_station_module #(
   always_ff @(posedge in_clk) begin
     #2
     if (rob_broadcast_done) begin : rs_broadcast
-      `DEBUG(("(RS) Received a broadcast for ROB[%0d] -> %0d", rob_broadcast_index, $signed(
+      `DEBUG(("(RS-%s) Received a broadcast for ROB[%0d] -> %0d", RS_ID.name, rob_broadcast_index, $signed(
              rob_broadcast_value)));
       // Update reservation stations with values from the ROB
       for (int i = 0; i < RS_SIZE; i += 1) begin
@@ -202,12 +205,10 @@ module reservation_station_module #(
           // src1
           // checks whether to update the value in the RS. All loads must only be updated if there
           // are no pending sturs
-          if (~rs[i].op1.valid & rs[i].op1.rob_index == rob_broadcast_index & (stur_counter != 0 & in_rob_sigs.fu_op == OP_LDUR)) begin
-            `DEBUG(("(RS) \tUpdating RS[%0d] op1 -> %0d (op: %s)", i, $signed(rob_broadcast_value
-                   ), rs[i].op.name));
+          if (~rs[i].op1.valid & rs[i].op1.rob_index == rob_broadcast_index & ~(in_pending_stur_count != 0 & rob_fu_op == OP_LDUR)) begin
+            `DEBUG(("(RS-%s) \tUpdating RS[%0d] op1 -> %0d (op: %s)", RS_ID.name, i, $signed(rob_broadcast_value), rs[i].op.name));
             if (rs[i].op == FU_OP_LDUR | rs[i].op == FU_OP_STUR) begin
-              `DEBUG(
-                  ("op1.value: %0d, rob_broadcast_value: %0d", rs[i].op1.value, rob_broadcast_value));
+              `DEBUG(("op1.value: %0d, rob_broadcast_value: %0d", rs[i].op1.value, rob_broadcast_value));
               rs[i].op1.value <= rs[i].op1.value + rob_broadcast_value;
             end else begin
               rs[i].op1.value <= rob_broadcast_value;
@@ -216,8 +217,8 @@ module reservation_station_module #(
           end
 
           // src2
-          if (~rs[i].op2.valid & rs[i].op2.rob_index == rob_broadcast_index & (stur_counter != 0 & in_rob_sigs.fu_op == OP_LDUR)) begin
-            `DEBUG(("(RS) \tUpdating RS[%0d] op2 -> %0d", i, $signed(rob_broadcast_value)));
+          if (~rs[i].op2.valid & rs[i].op2.rob_index == rob_broadcast_index & ~(in_pending_stur_count != 0 & rob_fu_op == OP_LDUR)) begin
+            `DEBUG(("(RS-%s) \tUpdating RS[%0d] op2 -> %0d", RS_ID.name, i, $signed(rob_broadcast_value)));
             rs[i].op2.value <= rob_broadcast_value;
             rs[i].op2.valid <= 1;
           end
@@ -235,18 +236,16 @@ module reservation_station_module #(
   rob_interface rob_sigs ();
 
   always_ff @(posedge in_clk) begin
-    $display( "op2 valid: %0d, op2 value: %0d", rs[free_station_index].op2.valid, rs[free_station_index].op2.value);
-    rob_sigs <= in_rob_sigs;
     #1
-    if (rob_done & has_free) begin : in_rs_add_entry
-      rs[free_station_index].op1.valid <= rob_sigs.val_a_valid;
-      rs[free_station_index].op2.valid <= rob_sigs.val_b_valid;
-      rs[free_station_index].op1.value <= rob_sigs.val_a_value;
-      rs[free_station_index].op2.value <= rob_sigs.val_b_value;
-      rs[free_station_index].op1.rob_index <= rob_sigs.val_a_rob_index;
-      rs[free_station_index].op2.rob_index <= rob_sigs.val_b_rob_index;
-      rs[free_station_index].dst_rob_index <= rob_sigs.dst_rob_index;
-      rs[free_station_index].op <= rob_sigs.fu_op;
+    if (rob_done & has_free) begin : rs_add_entry
+      rs[free_station_index].op1.valid <= rob_val_a_valid;
+      rs[free_station_index].op2.valid <= rob_val_b_valid;
+      rs[free_station_index].op1.value <= rob_val_a_value;
+      rs[free_station_index].op2.value <= rob_val_b_value;
+      rs[free_station_index].op1.rob_index <= rob_val_a_rob_index;
+      rs[free_station_index].op2.rob_index <= rob_val_b_rob_index;
+      rs[free_station_index].dst_rob_index <= rob_dst_rob_index;
+      rs[free_station_index].op <= rob_fu_op;
       rs[free_station_index].entry_valid <= 1;
       rs[free_station_index].nzcv_valid <= rob_nzcv_valid;
       rs[free_station_index].set_nzcv <= rob_set_nzcv;
@@ -254,22 +253,13 @@ module reservation_station_module #(
       rs[free_station_index].nzcv_rob_index <= rob_nzcv_rob_index;
 
       if (rob_done & has_free) begin
-        `DEBUG(
-            ("(in_rs) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %0d", rob_sigs.nzcv, rob_sigs.uses_nzcv, rob_sigs.fu_op))
-        `DEBUG(
-            ("(in_rs) \tnzcv: [uses: %0d, valid: %0d, value: %0d, rob_index: %0d],", rob_sigs.uses_nzcv, rob_sigs.nzcv_valid, rob_sigs.nzcv, rob_sigs.nzcv_rob_index))
-        `DEBUG(
-            ("(in_rs) Adding new entry to in_rs[%0d] for ROB[%0d]", free_station_index, rob_sigs.dst_rob_index))
-        `DEBUG(
-            ("(in_rs) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %0d", rob_sigs.set_nzcv, rob_sigs.uses_nzcv, rob_sigs.fu_op))
-        `DEBUG(
-            ("(in_rs) \top1: [valid: %0d, value: %0d, rob_index: %0d],", rob_sigs.val_a_valid, rob_sigs.val_a_value, rob_sigs.val_a_rob_index))
-        `DEBUG(
-            ("(in_rs) \top2: [valid: %0d, value: %0d, rob_index: %0d],", rob_sigs.val_b_valid, rob_sigs.val_b_value, rob_sigs.val_b_rob_index))
-        `DEBUG(
-            ("(in_rs) \tnzcv: [uses: %0d, valid: %0d, value: %0d, rob_index: %0d],", rob_sigs.uses_nzcv, rob_sigs.nzcv_valid, rob_sigs.nzcv, rob_sigs.nzcv_rob_index))
+        `DEBUG(("(RS-%s) Adding new entry to RS[%0d] for ROB[%0d]", RS_ID.name, free_station_index, rob_dst_rob_index))
+        `DEBUG(("(RS-%s) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %s", RS_ID.name, rob_set_nzcv, rob_uses_nzcv, rob_fu_op.name))
+        `DEBUG(("(RS-%s) \top1: [valid: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_val_a_valid, rob_val_a_value, rob_val_a_rob_index))
+        `DEBUG(("(RS-%s) \top2: [valid: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_val_b_valid, rob_val_b_value, rob_val_b_rob_index))
+        `DEBUG(("(RS-%s) \tnzcv: [valid: %0d, uses: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_nzcv_valid, rob_uses_nzcv, rob_nzcv, rob_nzcv_rob_index))
       end
-    end : in_rs_add_entry
+    end : rs_add_entry
   end
 
   always_comb begin
@@ -299,7 +289,7 @@ module reservation_station_module #(
   logic [RS_SIZE:0] ready_entries;
   assign ready_entries[INVALID_INDEX] = 1;  // invalid entry always ready
   for (genvar i = 0; i < RS_SIZE; i += 1) begin
-    assign ready_entries[i] = rs[i].entry_valid & rs[i].op1.valid & rs[i].op2.valid & (rs[i].uses_nczv ? rs[i].nzcv_valid : 1);
+    assign ready_entries[i] = rs[i].entry_valid & rs[i].op1.valid & rs[i].op2.valid & (rs[i].uses_nczv ? rs[i].nzcv_valid : 1) & ~(rs[i].op == FU_OP_LDUR & in_pending_stur_count != 0);
   end
 
   // Do priority encoding
