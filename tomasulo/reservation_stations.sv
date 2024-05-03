@@ -139,6 +139,7 @@ module reservation_station_module #(
   logic rob_broadcast_set_nzcv;
   logic rob_broadcast_done;
   nzcv_t rob_broadcast_nzcv;
+  cond_t rob_cond_codes;
 
   always_ff @(posedge in_clk, negedge in_clk) begin
     delayed_clk <= #1 in_clk;
@@ -181,6 +182,7 @@ module reservation_station_module #(
       rob_fu_op <= in_rob_sigs.fu_op;
       fu_ready <= in_fu_ready;
       rob_uses_nzcv <= in_rob_sigs.uses_nzcv;
+      rob_cond_codes <= in_rob_sigs.cond_codes;
       // For broadcast
       rob_broadcast_index <= in_rob_broadcast.index;
       rob_broadcast_value <= in_rob_broadcast.value;
@@ -189,8 +191,6 @@ module reservation_station_module #(
       rob_broadcast_done <= in_rob_broadcast.done;
 
       // Unused state
-      `DEBUG(("(RSDWHAT) cond codes: %s", in_rob_sigs.cond_codes.name))
-      out_alu_sigs_ext.cond_codes <= in_rob_sigs.cond_codes;
 
     end : rs_not_reset
   end : rs_on_clk
@@ -243,7 +243,6 @@ module reservation_station_module #(
 
   always_ff @(posedge in_clk) begin
     #1
-      `DEBUG(("(RS-%s) Has free: %0d, ROB Done: %0d", RS_ID.name, has_free, rob_done));
     if (rob_done & has_free) begin : rs_add_entry
       rs[free_station_index].op1.valid <= rob_val_a_valid;
       rs[free_station_index].op2.valid <= rob_val_b_valid;
@@ -259,12 +258,14 @@ module reservation_station_module #(
       rs[free_station_index].uses_nzcv <= rob_uses_nzcv;
       rs[free_station_index].nzcv <= rob_nzcv;
       rs[free_station_index].nzcv_rob_index <= rob_nzcv_rob_index;
+      rs[free_station_index].cond_codes <= rob_cond_codes;
 
       `DEBUG(("(RS-%s) Adding new entry to RS[%0d] for ROB[%0d]", RS_ID.name, free_station_index, rob_dst_rob_index))
       `DEBUG(("(RS-%s) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %s", RS_ID.name, rob_set_nzcv, rob_uses_nzcv, rob_fu_op.name))
       `DEBUG(("(RS-%s) \top1: [valid: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_val_a_valid, rob_val_a_value, rob_val_a_rob_index))
       `DEBUG(("(RS-%s) \top2: [valid: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_val_b_valid, rob_val_b_value, rob_val_b_rob_index))
       `DEBUG(("(RS-%s) \tnzcv: [valid: %0d, uses: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_nzcv_valid, rob_uses_nzcv, rob_nzcv, rob_nzcv_rob_index))
+      `DEBUG(("(RS-%s) \tcond: %s", RS_ID.name, rob_cond_codes.name));
     end : rs_add_entry
   end
 
@@ -277,8 +278,8 @@ module reservation_station_module #(
     out_fu_sigs.dst_rob_index = rs[ready_station_index].dst_rob_index;
     out_alu_sigs_ext.nzcv = rs[ready_station_index].nzcv;
     out_alu_sigs_ext.set_nzcv = rs[ready_station_index].set_nzcv;
+    out_alu_sigs_ext.cond_codes = rs[ready_station_index].cond_codes;
   end
-
 
   localparam logic [RS_IDX_SIZE:0] INVALID_INDEX = RS_SIZE;
 

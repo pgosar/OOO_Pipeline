@@ -82,8 +82,7 @@ module reg_module (
         out_rob_sigs.cond_codes <= in_d_sigs.cond_codes;
         out_rob_sigs.pc <= in_d_sigs.pc;
         out_rob_sigs.fu_id <= in_d_sigs.fu_id;
-        out_rob_sigs.bcond <= in_d_sigs.bcond;
-        `DEBUG(("(regfile) Cond in: %s", in_d_sigs.cond_codes.name))
+        out_rob_sigs.is_branching <= in_d_sigs.is_branching;
       end
       // Update validity of previous cycle's dst.
       if (d_done) begin

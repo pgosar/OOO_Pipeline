@@ -192,7 +192,7 @@ module decide_alu (
     input opcode_t opcode,
     output fu_op_t out_reg_fu_op,
     output logic out_reg_mispredict,  // TODO(Nate): This could be done with just the opcode.
-    output logic out_reg_bcond
+    output logic out_reg_is_branching
 );
   // TODO op_cmp, op_tst def commented out in opcode_t
   always_comb begin
@@ -217,18 +217,20 @@ module decide_alu (
       default: out_reg_fu_op = FU_OP_PASS_A;  //plus for now i will add an error op later
     endcase
 
+    // For branch predictor
+    // out_reg_is_branching = OP_B | OP_BR | OP_BLR | OP_B_COND | OP_RET;
     casez (opcode)
       OP_BR, OP_BLR, OP_RET: begin
         out_reg_mispredict = 1;
-        out_reg_bcond = 0;
+        out_reg_is_branching = 0;
       end
       OP_B_COND: begin
         out_reg_mispredict = 0;
-        out_reg_bcond = 1;
+        out_reg_is_branching = 1;
       end
       default: begin
         out_reg_mispredict = 0;
-        out_reg_bcond = 0;
+        out_reg_is_branching = 0;
       end
     endcase
   end
@@ -398,7 +400,7 @@ module dispatch (
       .opcode,
       .out_reg_fu_op(out_reg_sigs.fu_op),
       .out_reg_mispredict(out_reg_sigs.mispredict),
-      .out_reg_bcond(out_reg_sigs.bcond)
+      .out_reg_is_branching(out_reg_sigs.is_branching)
   );
   fu_decider fu (
       .opcode,
@@ -433,14 +435,14 @@ module dispatch (
     if (in_fetch_sigs.done & ~in_rst) begin
       #1 
       `DEBUG(("(dec) Decoding: %b, done: %0b, rst: %0b", insnbits, out_reg_sigs.done, in_rst))
-      `DEBUG(("(dec)\tfu_id: %s, opcode: %s, fu_op: %s",
+      `DEBUG(("(dec) \tfu_id: %s, opcode: %s, fu_op: %s",
           out_reg_sigs.fu_id.name, opcode.name, out_reg_sigs.fu_op.name));
-      `DEBUG(("(dec)\tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d",
+      `DEBUG(("(dec) \tdst: X%0d, src1: X%0d, src2: X%0d, imm: %0d",
           out_reg_sigs.dst, out_reg_sigs.src1, out_reg_sigs.src2, out_reg_sigs.imm))
-      `DEBUG(("(dec)\tdst: %s, src1: %s, src2: %s",
+      `DEBUG(("(dec) \tdst: %s, src1: %s, src2: %s",
           out_reg_sigs.dst_status.name, out_reg_sigs.src1_status.name, out_reg_sigs.src2_status.name))
-      `DEBUG(("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_sigs.set_nzcv, out_reg_sigs.uses_nzcv))
-      `DEBUG(("(dec) cond codes %s", out_reg_sigs.cond_codes.name))
+      `DEBUG(("(dec) \tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_sigs.set_nzcv, out_reg_sigs.uses_nzcv))
+      `DEBUG(("(dec) \tcond codes %s", out_reg_sigs.cond_codes.name))
     end
   end
 

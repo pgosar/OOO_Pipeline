@@ -24,7 +24,7 @@ module core (
   int   i;
   initial begin
     in_clk = 0;
-    for (i = 1; i <= 30; i += 1) begin
+    for (i = 1; i <= 50; i += 1) begin
       `DEBUG((">>>>> CYCLE COUNT: %0d <<<<<", i));
       #1 in_clk = ~in_clk;  // 100 MHz clock
       #5 in_clk = ~in_clk;

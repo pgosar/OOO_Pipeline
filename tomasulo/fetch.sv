@@ -91,60 +91,6 @@ module fetch #(
 
 endmodule : fetch
 
-// module fetch #(
-//     parameter int PAGESIZE = 4096
-// )  // note: this should always be 4096
-// (
-//     input wire in_clk,
-//     input wire in_rst,
-//     input fetch_interface out_d_sigs.sigs
-// );
-
-
-//   // access IMEM
-//   logic [31:0] data;
-//   // PC is an internal register to fetch.
-//   logic [63:0] entry_addr[0:0];  // entry point. [0:0] to make verilog see it as a memory
-//   logic [63:0] PC;
-//   logic rst;
-//   logic no_instruction;
-
-//   // Load entry point from text file
-//   initial begin
-//     $readmemb("mem/entry.txt", entry_addr);
-//   end
-
-//   imem #(PAGESIZE) mem (
-//       .in_addr(PC),
-//       .out_data(out_d_sigs.sigs.insnbits)
-//   );
-
-//   always_comb begin
-//     no_instruction = out_d_sigs.sigs.insnbits == 0;
-//     out_d_sigs.sigs.done = ~rst & ~no_instruction;
-//   end
-
-//   always_ff @(posedge in_clk) begin : fetch_logic
-//     rst <= in_rst;
-//     if (in_rst) begin
-//       `DEBUG(("(fetch) resetting PC: %16x -> %16x", PC, entry_addr[0]));
-//       PC <= entry_addr[0];
-//     end else begin
-//       if (rst) begin
-//         `DEBUG(("(fetch) Last cycle was reset. PC remains %16x", PC));
-//       end else if (no_instruction) begin
-//         `DEBUG(("(fetch) No instruction. PC halted at: %16x", PC));
-//       end else begin
-//         `DEBUG(("(fetch) PC: %16x -> %16x", PC, PC + 4));
-//         PC <= PC + 4;
-//       end
-//     end
-//   end : fetch_logic
-
-// endmodule : fetch
-
-
-
 // Note: the imem is combinational to make accessing memory super easy.
 module imem #(
     parameter int PAGESIZE = 4096

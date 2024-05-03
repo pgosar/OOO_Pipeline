@@ -213,6 +213,7 @@ typedef struct packed {
   logic nzcv_valid;
   nzcv_t nzcv;
   fu_op_t op;
+  cond_t cond_codes;
 } rs_entry_t;
 
 typedef struct packed {
@@ -229,7 +230,7 @@ typedef struct packed {
   logic set_nzcv;
   nzcv_t nzcv;
   logic mispredict;
-  logic bcond;
+  logic is_branching;
 } rob_entry_t;
 
 typedef struct packed {
@@ -258,7 +259,7 @@ interface decode_interface ();
   reg_status_t src2_status;
   fu_t fu_id;
   fu_op_t fu_op;
-  logic bcond;
+  logic is_branching;
   logic [`GPR_IDX_SIZE-1:0] dst;
   reg_status_t dst_status;
   cond_t cond_codes;
@@ -283,7 +284,7 @@ interface reg_interface ();
   logic set_nzcv;
   fu_t fu_id;
   logic mispredict;
-  logic bcond;
+  logic is_branching;
   // Outputs for FU (rob)
   fu_op_t fu_op;
   cond_t cond_codes;
