@@ -72,6 +72,9 @@ module reg_module (
   logic [`GPR_IDX_SIZE-1:0] d_src2;
   logic [`GPR_IDX_SIZE-1:0] d_dst;
   logic [`ROB_IDX_SIZE-1:0] rob_next_rob_index;
+  reg_status_t d_src1_status;
+  reg_status_t d_src2_status;
+  reg_status_t d_dst_status;
   logic d_set_nzcv;
   logic [`GPR_SIZE-1:0] d_imm;
   logic d_use_imm;
@@ -106,6 +109,9 @@ module reg_module (
         d_use_imm <= in_d_use_imm;
         d_uses_signed_immediate <= in_d_uses_signed_immediate;
         d_fu_op <= in_d_fu_op;
+        d_src1_status <= in_d_src1_status;
+        d_src2_status <= in_d_src2_status;
+        d_dst_status <= in_d_dst_status;
         rob_next_rob_index <= in_rob_next_rob_index;
         // Copy unused signals
         out_rob_fu_op <= in_d_fu_op;

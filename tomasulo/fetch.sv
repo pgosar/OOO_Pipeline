@@ -23,7 +23,7 @@ module fetch #(
   logic [63:0] entry_addr[0:0];  // to make verilog see it as a memory
   logic [63:0] PC;
   opcode_t opcode;
-  logic [`GPR_SIZE-1:0] imm;
+  logic signed [`GPR_SIZE-1:0] imm;
   logic rst;
 
   initial begin
@@ -88,8 +88,8 @@ module fetch #(
       end else if (opcode == OP_B_COND) begin
         PC <= PC + 4;
       end else if (opcode == OP_B | opcode == OP_BL) begin
-        `DEBUG(("(fetch) detected branch. changing PC: %16x -> %16x", PC, PC + imm));
-        PC <= PC + imm;
+        `DEBUG(("(fetch) detected branch. changing PC: %16x -> %16x.", PC, PC + imm));
+        PC <= PC + $signed(imm);
       end  // NOTE(Nate): But it does the job ig
       else begin
         `DEBUG(("(fetch) PC: %16x -> %16x", PC, PC + 4));

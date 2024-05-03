@@ -104,7 +104,10 @@ module extract_immval (
       OP_MOVK, OP_MOVZ: out_reg_imm = {48'd0, in_insnbits[20:5]};
       OP_ADRP: out_reg_imm = ({31'd0, in_insnbits[23:5], in_insnbits[30:29], 12'h000});
       OP_ADR: out_reg_imm = ({43'd0, in_insnbits[23:5], in_insnbits[30:29]});
-      OP_B, OP_BL: out_reg_imm = (({38'd0, in_insnbits[25:0]}) * 4);
+      OP_B, OP_BL: begin
+        if (in_insnbits[25] == 1) out_reg_imm = (({{38{1'b1}}, in_insnbits[25:0]}) * 4);
+        else out_reg_imm = (({38'd0, in_insnbits[25:0]}) * 4);
+      end
       OP_B_COND, OP_CBNZ, OP_CBZ: out_reg_imm = (({45'd0, in_insnbits[23:5]}) * 4);
       default: out_reg_imm = 0;
     endcase
@@ -209,6 +212,7 @@ module decide_alu (
       OP_CSINC: out_reg_fu_op = FU_OP_CSINC;
       OP_CSINV: out_reg_fu_op = FU_OP_CSINV;
       OP_BR, OP_BLR: out_reg_fu_op = FU_OP_PASS_A;
+      OP_B: out_reg_fu_op = FU_OP_PLUS_SIGNED;
       OP_B_COND: out_reg_fu_op = FU_OP_B_COND;
       OP_ADR, OP_ADRP: out_reg_fu_op = FU_OP_ADRX;
       default: out_reg_fu_op = FU_OP_PASS_A;  //plus for now i will add an error op later

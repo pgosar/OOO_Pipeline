@@ -49,6 +49,7 @@ module core (
   logic out_reg_mispredict;
   logic [`GPR_SIZE-1:0] out_reg_pc;
   logic out_reg_uses_signed_immediate;
+  opcode_t out_reg_opcode;
 
   // REGFILE
 
@@ -71,6 +72,7 @@ module core (
   logic in_d_bcond;
   cond_t in_d_cond_codes;
   logic [`GPR_SIZE-1:0] in_d_branch_PC;
+  opcode_t in_d_opcode;
   logic in_rob_should_commit;
   logic reg_in_rob_set_nzcv;
   nzcv_t reg_in_rob_nzcv;
@@ -231,7 +233,7 @@ module core (
   int i;
   initial begin
     in_clk = 0;
-    for (i = 1; i <= 30; i += 1) begin
+    for (i = 1; i <= 40; i += 1) begin
       `DEBUG(("\n>>>>> CYCLE COUNT: %0d <<<<<", i));
       #1 in_clk = ~in_clk;  // 100 MHz clock
       #5 in_clk = ~in_clk;
@@ -244,9 +246,6 @@ module core (
     #10;
     in_rst = 0;
     `DEBUG(("RESET DONE === BEGIN TEST"));
-    while (in_fetch_insnbits != 0) begin
-      #10;
-    end
   end
 
   // FETCH to DISPATCH dispatch inputs = fetch outputs
@@ -273,6 +272,7 @@ module core (
   assign in_d_uses_signed_immediate = out_reg_uses_signed_immediate;
   // assign in_d_bcond = out_reg_bcond;
   assign in_d_pc = out_reg_pc;
+  assign in_d_opcode = out_reg_opcode;
 
   // ROB to REG reg inputs = rob outputs
   assign in_rob_should_commit = out_reg_commit_done;

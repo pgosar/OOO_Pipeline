@@ -1,11 +1,7 @@
 
 TODO(Namish): To complete branching:
-- Mispreds flushing the pipelines should be up and running
-- Branch conditions should be supported (if we can already propogate
-conditions this is trivial)
 - Add a HLT instruction to stop pipeline execution
-- Fix the fetch being delayed
-- Fix RETs
+- Fix RETs. Need to stop execution on a ret being committed - not working for bcond.
 
 TODO(Kavya); Fix signed vs unsigned immediate values
     - 

@@ -30,8 +30,7 @@ typedef enum logic [2:0] {
 `endif
 
 `define ASSERT(ARGS) \
-  if(ARGS == 0) $stop; \
-  $finish;
+  if(ARGS == 0) $finish;
 
 typedef struct packed {logic src2_sel;} d_ctl_sigs_t;
 
@@ -70,6 +69,7 @@ typedef enum logic [5:0] {
   FU_OP_CBNZ,    // EC: used for cbnz
   FU_OP_LDUR,
   FU_OP_STUR,
+  FU_OP_PLUS_SIGNED,
   FU_OP_B_COND,
   FU_OP_NOP,
   FU_OP_ADRX

@@ -217,7 +217,6 @@ module reservation_station_module #(
   // This is where the actual code starts lol
 
   always_ff @(posedge in_clk) begin : rs_on_clk
-    $display("bullshit fu op: %s", out_fu_op.name);
     if (in_rst) begin
       `DEBUG(("(RS) Resetting both reservation stations"));
       // Reset root control signal

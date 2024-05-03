@@ -47,6 +47,8 @@ module func_units (
   fu_op_t fu_op;
   logic [`GPR_SIZE-1:0] val_a;
   logic [`GPR_SIZE-1:0] val_b;
+  logic signed [`GPR_SIZE-1:0] s_val_a;
+  logic signed [`GPR_SIZE-1:0] s_val_b;
   logic [`GPR_SIZE-1:0] alu_value;
   logic [`GPR_SIZE-1:0] ls_value;
   cond_t cond_codes;
@@ -78,6 +80,8 @@ module func_units (
       // buffered state (so that it is clocked)
       val_a <= in_rs_alu_val_a;
       val_b <= in_rs_alu_val_b;
+      s_val_a <= in_rs_alu_val_a;
+      s_val_b <= in_rs_alu_val_b;
       rs_alu_dst_rob_index <= in_rs_alu_dst_rob_index;
       rs_alu_set_nzcv <= in_rs_alu_set_nzcv;
       rs_alu_nzcv <= in_rs_alu_nzcv;
@@ -129,6 +133,8 @@ module func_units (
       .in_op(fu_op),
       .in_alu_val_a(val_a),
       .in_alu_val_b(val_b),
+      .in_alu_s_val_a(s_val_a),
+      .in_alu_s_val_b(s_val_b),
       .in_set_nzcv(rs_alu_set_nzcv),
       .in_nzcv(rs_alu_nzcv),
       .out_alu_condition(out_alu_condition),
@@ -146,6 +152,8 @@ module alu_module (
     input fu_op_t in_op,
     input logic [`GPR_SIZE-1:0] in_alu_val_a,
     input logic [`GPR_SIZE-1:0] in_alu_val_b,
+    input logic signed [`GPR_SIZE-1:0] in_alu_s_val_a,
+    input logic signed [`GPR_SIZE-1:0] in_alu_s_val_b,
     input nzcv_t in_nzcv,
     input logic in_set_nzcv,
     // TODO(Nate): We need to include input condition codes
@@ -185,7 +193,7 @@ module alu_module (
     // $display("ALU_OP: %s", in_op.name);
     casez (in_op)
       FU_OP_ADRX, FU_OP_PLUS: result = val_a + val_b;
-      FU_OP_B_COND: result = val_a + (val_b);
+      FU_OP_PLUS_SIGNED, FU_OP_B_COND: result = val_a + $signed(val_b);
       FU_OP_MINUS: result = val_a - val_b;
       FU_OP_ORN: result = val_a | (~val_b);
       FU_OP_OR: result = val_a | val_b;
