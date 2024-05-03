@@ -40,7 +40,6 @@ module rob_module (
   logic reg_nzcv_valid;
   logic reg_src1_valid;
   logic reg_src2_valid;
-  logic reg_uses_nzcv;
   logic [`ROB_IDX_SIZE-1:0] fu_dst;
   logic fu_done;
   fu_op_t fu_op;
@@ -53,11 +52,6 @@ module rob_module (
   integer fd;
   initial begin
     fd = $fopen("log.txt", "w");
-  end
-
-  always_ff @(posedge in_clk, negedge in_clk) begin
-    delayed_clk   <= #1 in_clk;
-    delayed_clk_2 <= #2 in_clk;
   end
 
   // Update from FU and copy signals
@@ -92,22 +86,15 @@ module rob_module (
             // if alu condition is true, mark mispredict as true and set PC. DO
             // NOT broadcast state.
           end
-          `DEBUG(
-              ("(rob) Received result from FU: %s. ROB[%0d] -> %0d + valid", 
-                  in_fu_sigs.fu_op.name, in_fu_sigs.dst_rob_index,
-               $signed(
-              in_fu_sigs.value)));
+          `DEBUG( ("(rob) Received result from FU: %s. ROB[%0d] -> %0d + set_nzcv: %0d nzcv: %4b", in_fu_sigs.fu_op.name, in_fu_sigs.dst_rob_index, $signed( in_fu_sigs.value), in_alu_sigs.set_nzcv, in_alu_sigs.nzcv));
           // Validate the line which the FU has updated
           /*if (rob[in_fu_sigs.dst_rob_index].controlflow_valid) begin
           end*/         
         end
         // Update ROB
         if (in_reg_sigs.done) begin
-          `DEBUG(
-              ("(rob) Inserting new entry @ ROB[%0d] for dst GPR[%0d]", next_ptr, in_reg_sigs.dst));
-          `DEBUG(
-              ("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_sigs.uses_nzcv, next_ptr,
-               (next_ptr + 1) % `ROB_SIZE));
+          `DEBUG(("(rob) Inserting new entry @ ROB[%0d] for dst GPR[%0d]", next_ptr, in_reg_sigs.dst));
+          `DEBUG(("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_sigs.uses_nzcv, next_ptr, (next_ptr + 1) % `ROB_SIZE));
           // Add a new entry to the ROB and update the regfile
           rob[next_ptr].gpr_index <= in_reg_sigs.dst;
           rob[next_ptr].set_nzcv <= in_reg_sigs.set_nzcv;
@@ -118,18 +105,18 @@ module rob_module (
           out_rs_sigs.dst_rob_index <= next_ptr;
           next_ptr <= (next_ptr + 1) % `ROB_SIZE;
           if (in_reg_sigs.fu_op == FU_OP_STUR) begin
-            `DEBUG(("(rob) STUR added to ROB. STUR counter: %0d -> %0d.",
-                out_rs_pending_stur_count, out_rs_pending_stur_count + 1));
             out_rs_pending_stur_count <= out_rs_pending_stur_count + 1;
+            `DEBUG(("(rob) STUR added to ROB. STUR counter: %0d -> %0d.", out_rs_pending_stur_count, out_rs_pending_stur_count + 1));
           end
         end
         if (rob[commit_ptr].valid) begin : remove_commit
           `DEBUG(("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d", (commit_ptr + 1) % `ROB_SIZE));
-          `DEBUG(("(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b",
-              commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value), rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv));
+          `DEBUG(("(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b", commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value), rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv));
           commit_ptr <= (commit_ptr + 1) % `ROB_SIZE;
           last_commit_was_mispredict <= rob[commit_ptr].mispredict;
           mispredict_new_PC <= rob[commit_ptr].value;
+
+          `OUTPUT_PRINT(("rob[%0d]: gpr_index: %0d, value: %0d", commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value)));
           if (rob[commit_ptr].mispredict) begin
             `DEBUG(("(rob) Detected branch mispredict. About to commit branch instruction."));
           end
@@ -145,7 +132,6 @@ module rob_module (
         reg_src1_rob_index <= in_reg_sigs.src1_rob_index;
         reg_src2_rob_index <= in_reg_sigs.src2_rob_index;
         reg_nzcv_rob_index <= in_reg_sigs.nzcv_rob_index;
-        reg_uses_nzcv <= in_reg_sigs.uses_nzcv;
         fu_dst <= in_fu_sigs.dst_rob_index;
         fu_done <= in_fu_sigs.done;
         // Copy over unused signals for RS
@@ -203,12 +189,12 @@ module rob_module (
 
     // Tells the L/S to writeback during this commit
     out_rs_sigs.commit_done = rob[commit_ptr].valid;
+
+    
+
   end
 
-  //testing dont hate on me
-  always_ff @(negedge in_clk) begin
-    $fwrite(fd, "out_reg_commit_sigs.value: %d\n", out_reg_commit_sigs.value);
-  end
+
 
 endmodule
 

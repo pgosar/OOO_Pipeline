@@ -144,8 +144,8 @@ module reg_module (
             d_src2_status.name
         ));
       end
-      `DEBUG(
-          ("(regfile) Dispatch dest GPR[%0d] renamed to ROB[%0d]", d_dst, in_rob_next_rob_index));
+      `DEBUG(("(regfile) Dispatch dest GPR[%0d] renamed to ROB[%0d]", d_dst, in_rob_next_rob_index));
+      `DEBUG(("(regfile) NZCV: used: %0d,  valid: %0d, nzcv: %4b, rob_index: %0d", d_uses_nzcv, nzcv_valid, nzcv, nzcv_rob_index));
     end
   end
 

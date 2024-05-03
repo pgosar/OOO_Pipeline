@@ -21,6 +21,11 @@
     $display ARGS; \
 `endif
 
+`define OUTPUT_PRINT(ARGS) \
+`ifdef OUTPUT_PRINT \
+    $display ARGS; \
+`endif
+
 `define ASSERT(ARGS) \
   if(ARGS == 0) \
   $finish;
@@ -203,7 +208,7 @@ typedef struct packed {
   logic entry_valid;
   logic [`ROB_IDX_SIZE-1:0] nzcv_rob_index;
   logic set_nzcv;
-  logic uses_nczv;
+  logic uses_nzcv;
   logic nzcv_valid;
   nzcv_t nzcv;
   fu_op_t op;

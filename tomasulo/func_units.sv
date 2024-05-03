@@ -138,6 +138,7 @@ module alu_module (
     // Update input signals if started
     start <= in_alu_sigs.start;
     if (in_alu_sigs.start) begin
+      // `DEBUG(("(FU) INPUTS: instr: %s, set_nzcv: %0d, nzcv: ", in_alu_sigs.fu_op.name, in_alu_sigs_ext.set_nzcv, in_alu_sigs_ext.nzcv))
       alu_fu_op <= in_alu_sigs.fu_op;
       alu_val_a <= in_alu_sigs.val_a;
       alu_val_b <= in_alu_sigs.val_b;
@@ -188,6 +189,7 @@ module alu_module (
     out_alu_sigs.value = result[`GPR_SIZE-1:0];
 
     result_negative = result[`GPR_SIZE-1];
+    out_alu_sigs_ext.set_nzcv = alu_set_nzcv;
     out_alu_sigs_ext.nzcv.N = result_negative;
     out_alu_sigs_ext.nzcv.Z = result[`GPR_SIZE-1:0] == 0;
     out_alu_sigs_ext.nzcv.C = result[`GPR_SIZE] & val_a > val_b;

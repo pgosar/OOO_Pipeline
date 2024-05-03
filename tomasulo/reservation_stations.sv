@@ -224,7 +224,12 @@ module reservation_station_module #(
           end
 
           // nzcv
-          if (rob_broadcast_set_nzcv & rs[i].set_nzcv & rs[i].nzcv_rob_index == rob_broadcast_index) begin
+          // if (rs[i].nzcv_rob_index == rob_broadcast_index) begin
+            `DEBUG(("(RS-%s) \tbroadcast_set_nzcv: %0d, broadcast_nzcv: %4b, rs[%0d].uses_nzcv: %0d",
+                RS_ID.name, rob_broadcast_set_nzcv, rob_broadcast_nzcv, i, rs[i].uses_nzcv))
+          // end
+          if (rob_broadcast_set_nzcv & rs[i].uses_nzcv & rs[i].nzcv_rob_index == rob_broadcast_index) begin
+            `DEBUG(("(RS-%s) \tUpdating RS[%0d] nzcv -> %4b", RS_ID.name, i, rob_broadcast_nzcv));
             rs[i].nzcv <= rob_broadcast_nzcv;
             rs[i].nzcv_valid <= 1;
           end
@@ -237,6 +242,7 @@ module reservation_station_module #(
 
   always_ff @(posedge in_clk) begin
     #1
+      `DEBUG(("(RS-%s) Has free: %0d, ROB Done: %0d", RS_ID.name, has_free, rob_done));
     if (rob_done & has_free) begin : rs_add_entry
       rs[free_station_index].op1.valid <= rob_val_a_valid;
       rs[free_station_index].op2.valid <= rob_val_b_valid;
@@ -249,16 +255,15 @@ module reservation_station_module #(
       rs[free_station_index].entry_valid <= 1;
       rs[free_station_index].nzcv_valid <= rob_nzcv_valid;
       rs[free_station_index].set_nzcv <= rob_set_nzcv;
+      rs[free_station_index].uses_nzcv <= rob_uses_nzcv;
       rs[free_station_index].nzcv <= rob_nzcv;
       rs[free_station_index].nzcv_rob_index <= rob_nzcv_rob_index;
 
-      if (rob_done & has_free) begin
-        `DEBUG(("(RS-%s) Adding new entry to RS[%0d] for ROB[%0d]", RS_ID.name, free_station_index, rob_dst_rob_index))
-        `DEBUG(("(RS-%s) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %s", RS_ID.name, rob_set_nzcv, rob_uses_nzcv, rob_fu_op.name))
-        `DEBUG(("(RS-%s) \top1: [valid: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_val_a_valid, rob_val_a_value, rob_val_a_rob_index))
-        `DEBUG(("(RS-%s) \top2: [valid: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_val_b_valid, rob_val_b_value, rob_val_b_rob_index))
-        `DEBUG(("(RS-%s) \tnzcv: [valid: %0d, uses: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_nzcv_valid, rob_uses_nzcv, rob_nzcv, rob_nzcv_rob_index))
-      end
+      `DEBUG(("(RS-%s) Adding new entry to RS[%0d] for ROB[%0d]", RS_ID.name, free_station_index, rob_dst_rob_index))
+      `DEBUG(("(RS-%s) \tset_nzcv: %0d, use_nzcv: %0d, fu_op: %s", RS_ID.name, rob_set_nzcv, rob_uses_nzcv, rob_fu_op.name))
+      `DEBUG(("(RS-%s) \top1: [valid: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_val_a_valid, rob_val_a_value, rob_val_a_rob_index))
+      `DEBUG(("(RS-%s) \top2: [valid: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_val_b_valid, rob_val_b_value, rob_val_b_rob_index))
+      `DEBUG(("(RS-%s) \tnzcv: [valid: %0d, uses: %0d, value: %0d, rob_index: %0d],", RS_ID.name, rob_nzcv_valid, rob_uses_nzcv, rob_nzcv, rob_nzcv_rob_index))
     end : rs_add_entry
   end
 
@@ -289,20 +294,20 @@ module reservation_station_module #(
   logic [RS_SIZE:0] ready_entries;
   assign ready_entries[INVALID_INDEX] = 1;  // invalid entry always ready
   for (genvar i = 0; i < RS_SIZE; i += 1) begin
-    assign ready_entries[i] = rs[i].entry_valid & rs[i].op1.valid & rs[i].op2.valid & (rs[i].uses_nczv ? rs[i].nzcv_valid : 1) & ~(rs[i].op == FU_OP_LDUR & in_pending_stur_count != 0);
+    assign ready_entries[i] = rs[i].entry_valid & rs[i].op1.valid & rs[i].op2.valid & (rs[i].uses_nzcv ? rs[i].nzcv_valid : 1) & ~(rs[i].op == FU_OP_LDUR & in_pending_stur_count != 0);
   end
 
   // Do priority encoding
   always_comb begin
     // Priority encoder LUT for most significant 0 bit
     _free_station_index = INVALID_INDEX;
-    for (logic [RS_IDX_SIZE:0] i = RS_IDX_SIZE - 1; i < INVALID_INDEX; i -= 1) begin
+    for (logic [RS_IDX_SIZE:0] i = RS_SIZE - 1; i < INVALID_INDEX; i -= 1) begin
       if (occupied_entries[i] == 1'b0) _free_station_index = i;
     end
 
     _ready_station_index = INVALID_INDEX;
     // Priority encoder LUT for most significant 1 bit
-    for (logic [RS_IDX_SIZE:0] i = RS_IDX_SIZE - 1; i < INVALID_INDEX; i -= 1) begin
+    for (logic [RS_IDX_SIZE:0] i = RS_SIZE - 1; i < INVALID_INDEX; i -= 1) begin
       if (ready_entries[i] == 1'b1) _ready_station_index = i;
     end
   end
