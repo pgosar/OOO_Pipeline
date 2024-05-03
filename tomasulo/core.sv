@@ -78,7 +78,7 @@ module core (
 
   reg_module regfile (
       .in_clk,
-      .in_rst,
+      .in_rst(in_rst | is_mispred),
       .in_d_sigs(decode_sigs),
       .in_rob_commit_sigs(commit_sigs),
       .in_rob_next_rob_index(next_rob_index),
@@ -91,7 +91,7 @@ module core (
   integer pending_stur_count;
 
   rob_module rob (
-      .in_rst,
+      .in_rst(in_rst | is_mispred),
       .in_clk,
       .in_alu_sigs(alu_sigs_ext),
       .in_fu_sigs(alu_sigs),

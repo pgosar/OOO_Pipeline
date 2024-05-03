@@ -82,6 +82,7 @@ module rob_module (
             out_rs_pending_stur_count <= out_rs_pending_stur_count - 1;
           end
           if (rob[in_fu_sigs.dst_rob_index].bcond) begin
+            rob[in_fu_sigs.dst_rob_index].mispredict <= in_alu_sigs.condition;
             `DEBUG(("(rob) !!! DETECTED BCOND !!!"));
             // if alu condition is true, mark mispredict as true and set PC. DO
             // NOT broadcast state.
@@ -94,7 +95,7 @@ module rob_module (
         // Update ROB
         if (in_reg_sigs.done) begin
           `DEBUG(("(rob) Inserting new entry @ ROB[%0d] for dst GPR[%0d]", next_ptr, in_reg_sigs.dst));
-          `DEBUG(("(rob) \tuse_nzcv: %b, next_ptr: %0d -> %0d", in_reg_sigs.uses_nzcv, next_ptr, (next_ptr + 1) % `ROB_SIZE));
+          `DEBUG(("(rob) \tbcond: %b, use_nzcv: %b, next_ptr: %0d -> %0d", in_reg_sigs.bcond, in_reg_sigs.uses_nzcv, next_ptr, (next_ptr + 1) % `ROB_SIZE));
           // Add a new entry to the ROB and update the regfile
           rob[next_ptr].gpr_index <= in_reg_sigs.dst;
           rob[next_ptr].set_nzcv <= in_reg_sigs.set_nzcv;
@@ -139,6 +140,7 @@ module rob_module (
         out_rs_sigs.fu_id <= in_reg_sigs.fu_id;
         out_rs_sigs.set_nzcv <= in_reg_sigs.set_nzcv;
         out_rs_sigs.cond_codes <= in_reg_sigs.cond_codes;
+        `DEBUG(("(rob) IN cond: %s", in_reg_sigs.cond_codes.name))
         out_rs_sigs.uses_nzcv <= in_reg_sigs.uses_nzcv;
         out_rs_sigs.val_a_rob_index <= in_reg_sigs.src1_rob_index;
         out_rs_sigs.val_b_rob_index <= in_reg_sigs.src2_rob_index;
@@ -148,7 +150,6 @@ module rob_module (
     else begin : on_negedge
       if (last_commit_was_mispredict) begin
         `DEBUG(("(rob) emitting mispredict directive."));
-        // TODO(Nate): Misdirects must broadcast across the system
         rob <= 0;
         commit_ptr <= 0;
         next_ptr <= 0;

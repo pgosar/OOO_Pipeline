@@ -102,8 +102,8 @@ module extract_immval (
       OP_MOVK, OP_MOVZ: out_reg_imm = {48'd0, in_insnbits[20:5]};
       OP_ADRP: out_reg_imm = {{31{in_insnbits[23]}}, in_insnbits[23:5], in_insnbits[30:29], 12'h000};
       OP_ADR: out_reg_imm = {{43{in_insnbits[30]}}, in_insnbits[23:5], in_insnbits[30:29]};
-      OP_B, OP_BL: out_reg_imm = ({{32{in_insnbits[25]}}, in_insnbits[25:0]}) * 4;
-      OP_B_COND, OP_CBNZ, OP_CBZ: out_reg_imm = ({{45{in_insnbits[23]}}, in_insnbits[23:5]}) * 4;
+      OP_B, OP_BL: out_reg_imm = {{36{in_insnbits[25]}}, in_insnbits[25:0], 2'b0};
+      OP_B_COND, OP_CBNZ, OP_CBZ: out_reg_imm = {{43{in_insnbits[23]}}, in_insnbits[23:5], 2'b0};
       default: out_reg_imm = 0;
     endcase
   end
@@ -147,6 +147,9 @@ module extract_reg (
             & opcode != OP_CBZ & opcode != OP_CBNZ) begin
       out_reg_src1 = in_insnbits[9:5];
       out_reg_src1_status = REG_IS_USED;
+    end else if (opcode == OP_BR | opcode == OP_BLR | opcode == OP_B_COND) begin
+      out_reg_src1 = 31;
+      out_reg_src1_status = REG_IS_PC;
     end else if (opcode == OP_CBZ | opcode == OP_CBNZ) begin
       out_reg_src1 = in_insnbits[4:0];
       out_reg_src1_status = REG_IS_USED;
@@ -188,8 +191,8 @@ endmodule
 module decide_alu (
     input opcode_t opcode,
     output fu_op_t out_reg_fu_op,
-    output logic out_reg_mispredict  // TODO(Nate): This could be done with just the opcode.
-    // output logic out_reg_bcond
+    output logic out_reg_mispredict,  // TODO(Nate): This could be done with just the opcode.
+    output logic out_reg_bcond
 );
   // TODO op_cmp, op_tst def commented out in opcode_t
   always_comb begin
@@ -217,15 +220,15 @@ module decide_alu (
     casez (opcode)
       OP_BR, OP_BLR, OP_RET: begin
         out_reg_mispredict = 1;
-        // out_reg_bcond = 0;
+        out_reg_bcond = 0;
       end
       OP_B_COND: begin
         out_reg_mispredict = 0;
-        // out_reg_bcond = 1;
+        out_reg_bcond = 1;
       end
       default: begin
         out_reg_mispredict = 0;
-        // out_reg_bcond = 0;
+        out_reg_bcond = 0;
       end
     endcase
   end
@@ -394,8 +397,8 @@ module dispatch (
   decide_alu alu_decider (
       .opcode,
       .out_reg_fu_op(out_reg_sigs.fu_op),
-      .out_reg_mispredict(out_reg_sigs.mispredict)
-      // .out_reg_bcond(out_reg_sigs.bcond)
+      .out_reg_mispredict(out_reg_sigs.mispredict),
+      .out_reg_bcond(out_reg_sigs.bcond)
   );
   fu_decider fu (
       .opcode,
@@ -437,7 +440,7 @@ module dispatch (
       `DEBUG(("(dec)\tdst: %s, src1: %s, src2: %s",
           out_reg_sigs.dst_status.name, out_reg_sigs.src1_status.name, out_reg_sigs.src2_status.name))
       `DEBUG(("(dec)\tsets_nzcv: %0b, uses_nzcv: %0b", out_reg_sigs.set_nzcv, out_reg_sigs.uses_nzcv))
-      `DEBUG(("(dec) cond codes %0b", out_reg_sigs.cond_codes))
+      `DEBUG(("(dec) cond codes %s", out_reg_sigs.cond_codes.name))
     end
   end
 

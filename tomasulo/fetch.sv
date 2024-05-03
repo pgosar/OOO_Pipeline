@@ -20,7 +20,7 @@ module fetch #(
   logic [63:0] entry_addr[0:0];  // to make verilog see it as a memory
   logic [63:0] PC;
   opcode_t opcode;
-  logic [`GPR_SIZE-1:0] imm;
+  logic signed [`GPR_SIZE-1:0] imm;
   logic rst;
 
   initial begin

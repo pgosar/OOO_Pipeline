@@ -42,7 +42,6 @@ module reg_module (
   fu_op_t d_fu_op;
   logic [`GPR_IDX_SIZE-1:0] d_dst;
   reg_status_t d_dst_status;
-  cond_t d_cond_codes;
   logic d_uses_nzcv;
   logic d_mispredict;
   logic [`GPR_SIZE-1:0] d_pc;
@@ -76,12 +75,15 @@ module reg_module (
         d_fu_op <= in_d_sigs.fu_op;
         d_dst <= in_d_sigs.dst;
         d_dst_status <= in_d_sigs.dst_status;
-        d_cond_codes <= in_d_sigs.cond_codes;
         d_mispredict <= in_d_sigs.mispredict;
         d_uses_nzcv <= in_d_sigs.uses_nzcv;
+        d_pc <= in_d_sigs.pc;
         // Copy over
+        out_rob_sigs.cond_codes <= in_d_sigs.cond_codes;
         out_rob_sigs.pc <= in_d_sigs.pc;
         out_rob_sigs.fu_id <= in_d_sigs.fu_id;
+        out_rob_sigs.bcond <= in_d_sigs.bcond;
+        `DEBUG(("(regfile) Cond in: %s", in_d_sigs.cond_codes.name))
       end
       // Update validity of previous cycle's dst.
       if (d_done) begin
@@ -167,7 +169,7 @@ module reg_module (
       end else begin
         out_rob_sigs.src1_value = d_imm;
       end
-    end else if (d_fu_op == FU_OP_B_COND) begin
+    end else if (d_src1_status == REG_IS_PC) begin
       out_rob_sigs.src1_value = d_pc;
       out_rob_sigs.src1_valid = 1;
     end else if (d_fu_op == FU_OP_ADRX) begin

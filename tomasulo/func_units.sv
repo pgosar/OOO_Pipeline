@@ -73,11 +73,13 @@ module func_units (
     `ASSERT((~(alu_results.done & ls_results.done)));
     // `DEBUG(("(FU) alu_results_done: %0d, ls_results_done: %0d", alu_results.done, ls_results.done));
     if (in_rs_alu_sigs.start) begin
-      `DEBUG(( "(ALU) Prepped for %s to ROB[%0d] w/ val_a: %0d, val_b: %0d",
+      `DEBUG(( "(ALU) Prepped for %s to ROB[%0d] w/ val_a: %0d, val_b: %0d, nzcv: %4b, cond: %s",
           in_rs_alu_sigs.fu_op.name,
           in_rs_alu_sigs.dst_rob_index,
           $signed(in_rs_alu_sigs.val_a),
           $signed(in_rs_alu_sigs.val_b),
+          in_rs_alu_sigs_ext.nzcv,
+          in_rs_alu_sigs_ext.cond_codes.name
       ));
       #1
       `DEBUG(("(ALU) Calculated for ROB[%0d] value: %0d, nzcv: %4b, condition: %0d",
@@ -172,7 +174,7 @@ module alu_module (
     val_b_negative = val_b[`GPR_SIZE-1];
 
     casez (alu_fu_op)
-      FU_OP_ADRX, FU_OP_PLUS: result = val_a + val_b;
+      FU_OP_B_COND, FU_OP_ADRX, FU_OP_PLUS: result = val_a + val_b;
       FU_OP_MINUS: result = val_a - val_b;
       FU_OP_ORN: result = val_a | ~val_b;
       FU_OP_OR: result = val_a | val_b;

@@ -22,7 +22,7 @@
 `endif
 
 `define OUTPUT_PRINT(ARGS) \
-`ifdef OUTPUT_PRINT \
+`ifdef OUTPUT \
     $display ARGS; \
 `endif
 
@@ -180,7 +180,8 @@ typedef enum logic [2:0] {
   REG_IS_XZR,
   REG_IS_SP,
   REG_IS_STUR,
-  REG_IS_IMMEDATE
+  REG_IS_IMMEDATE,
+  REG_IS_PC
 } reg_status_t;
 
 typedef enum logic {
@@ -257,6 +258,7 @@ interface decode_interface ();
   reg_status_t src2_status;
   fu_t fu_id;
   fu_op_t fu_op;
+  logic bcond;
   logic [`GPR_IDX_SIZE-1:0] dst;
   reg_status_t dst_status;
   cond_t cond_codes;

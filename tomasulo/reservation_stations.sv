@@ -189,6 +189,7 @@ module reservation_station_module #(
       rob_broadcast_done <= in_rob_broadcast.done;
 
       // Unused state
+      `DEBUG(("(RSDWHAT) cond codes: %s", in_rob_sigs.cond_codes.name))
       out_alu_sigs_ext.cond_codes <= in_rob_sigs.cond_codes;
 
     end : rs_not_reset
