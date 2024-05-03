@@ -1,1 +1,14 @@
+<<<<<<< HEAD
 build/
+=======
+proc
+run_arm.c
+*.vcd
+*.out
+*.vvp
+.nvim/
+obj_dir/
+.vscode/
+*.txt
+build/
+>>>>>>> refactor
