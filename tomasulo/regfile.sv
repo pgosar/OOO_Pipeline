@@ -150,6 +150,7 @@ module reg_module (
   end
 
   always_ff @(posedge in_clk) begin
+    #1
     // Buffer old rob indices first....
     src1_rob_index <= gprs[d_src1].rob_index;
     src2_rob_index <= gprs[d_src2].rob_index;
