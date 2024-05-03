@@ -31,6 +31,7 @@ module reservation_stations (
   logic rs_alu_has_free, rs_alu_has_ready;
   logic alu_primed, ls_primed;  // Primed to execute on next cycle;
   logic alu_stall;  // Stall ALU if LS is primed
+  logic other_tmp;
 
   // Resolve structural hazard.
   always_comb begin
@@ -278,7 +279,7 @@ module reservation_station_module #(
     out_fu_sigs.dst_rob_index = rs[ready_station_index].dst_rob_index;
     out_alu_sigs_ext.nzcv = rs[ready_station_index].nzcv;
     out_alu_sigs_ext.set_nzcv = rs[ready_station_index].set_nzcv;
-    out_alu_sigs_ext.cond_codes = rs[ready_station_index].cond_codes;
+    if (RS_ID == FU_ALU) out_alu_sigs_ext.cond_codes = rs[ready_station_index].cond_codes;
   end
 
   localparam logic [RS_IDX_SIZE:0] INVALID_INDEX = RS_SIZE;
