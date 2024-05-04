@@ -26,7 +26,7 @@ module core (
     in_clk = 0;
     i = 0;
     halt = 0;
-    while (!halt) begin // Note (Namish): set this to be i < MAX_CYCLE_AMT if you want to limit cycles.
+    while (!halt && i < 30) begin // Note (Namish): set this to be i < MAX_CYCLE_AMT if you want to limit cycles.
       `DEBUG((">>>>> CYCLE COUNT: %0d <<<<<", i));
       #1 in_clk = ~in_clk;  // 100 MHz clock
       #5 in_clk = ~in_clk;
@@ -73,7 +73,7 @@ module core (
 
   dispatch dp (
       .in_clk,
-      .in_rst,
+      .in_rst(in_rst | is_mispred),
       .in_fetch_sigs(fetch_sigs),
       .out_reg_sigs (decode_sigs)
   );
