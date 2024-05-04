@@ -171,7 +171,7 @@ int main(int argc, char* argv[]) {
     puts("ERROR: could not open file\n");
     return 1;
   }
-  printf("ENTRY: %llu\n", entry);
+  printf("ENTRY: %lu\n", entry);
   char fname2[] = "entry.txt";
   FILE* fout = fopen(fname2, "w");
   if (fout == NULL) {
@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
   }
   printf("writing...\n");
   for (int i = 0; i < sizeof(entry) * 8; ++i) {
-    fprintf(fout, "%llu", (entry >> (63 - i) & 1));
+    fprintf(fout, "%lu", (entry >> (63 - i) & 1));
   }
   fprintf(fout, "\n");
   fclose(fout);
