@@ -20,13 +20,6 @@ module reservation_stations (
     output rs_interface out_ls_sigs
 );
 
-  // Buffer
-  logic ls_ready, alu_ready;
-  always_ff @(posedge in_clk) begin
-    alu_ready <= in_fu_alu_ready;
-    ls_ready  <= in_fu_ls_ready;
-  end
-
   logic rs_ls_has_free, rs_ls_has_ready;
   logic rs_alu_has_free, rs_alu_has_ready;
   logic alu_primed, ls_primed;  // Primed to execute on next cycle;
@@ -37,8 +30,8 @@ module reservation_stations (
   always_comb begin
     // We need some comb logic to check whether both
     // signals are ready to run, and stop them from both running
-    alu_primed = rs_alu_has_ready & alu_ready;
-    ls_primed  = rs_ls_has_ready & ls_ready;
+    alu_primed = rs_alu_has_ready & in_fu_alu_ready;
+    ls_primed  = rs_ls_has_ready & in_fu_ls_ready;
     alu_stall  = alu_primed & ls_primed;
   end
 
@@ -50,7 +43,7 @@ module reservation_stations (
       .in_rob_broadcast(in_rob_broadcast),
       .in_rob_is_mispred(in_rob_is_mispred),
       .in_stall(tmp),
-      .in_fu_ready(ls_ready),
+      .in_fu_ready(in_fu_ls_ready),
       .in_rob_sigs(in_rob_sigs),
       .in_pending_stur_count,
       .out_fu_sigs(out_ls_sigs),
@@ -65,7 +58,7 @@ module reservation_stations (
       .in_rob_is_mispred(in_rob_is_mispred),
       .in_rob_broadcast(in_rob_broadcast),
       .in_stall(alu_stall),
-      .in_fu_ready(alu_ready),
+      .in_fu_ready(in_fu_alu_ready),
       .in_rob_sigs(in_rob_sigs),
       .in_pending_stur_count,
       .out_fu_sigs(out_alu_sigs),
@@ -163,9 +156,8 @@ module reservation_station_module #(
       end
     end else begin : rs_not_reset
       rob_done <= in_rob_sigs.done & in_rob_sigs.fu_id == RS_ID;
-      if (fu_ready & has_ready) begin : fu_consume_entry
-        rs[ready_station_index].entry_valid <= ~fu_ready;
-        // TODO(Nate): The loads and stores are not going their respective unit.
+      if (fu_ready & has_ready & ~in_stall) begin : fu_consume_entry
+        rs[ready_station_index].entry_valid <= 0;
         `DEBUG(("(RS-%s) Remove entry RS[%0d] = op: %s. FU consumed entry at start of this cycle. Pending sturs: %0d", RS_ID.name, ready_station_index, rs[ready_station_index].op.name, in_pending_stur_count));
       end : fu_consume_entry
       // Buffer state
@@ -320,5 +312,8 @@ module reservation_station_module #(
   assign has_free = _free_station_index != INVALID_INDEX;
   assign ready_station_index = _ready_station_index[RS_IDX_SIZE-1:0];
   assign has_ready = _ready_station_index != INVALID_INDEX;
+
+  assign out_has_ready = has_ready;
+  assign out_has_free = has_free;
 
 endmodule

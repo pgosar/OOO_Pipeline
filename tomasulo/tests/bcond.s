@@ -7,14 +7,17 @@ start:
     movz x0, #1
     movz x1, #2
     subs x3, x0, x1
-    b.eq .helper
+    b.ne .helper
 
 .goback:
-    // Print x0
-    // correct: 1
-    eor 	x5, x5, x5
-	mvn 	x5, x5
-	stur	x0, [x5]
+  // Print x0
+  // correct: 1
+  // eor 	x5, x5, x5
+	// mvn 	x5, x5
+  adds x0, x1, x0
+  mov x5, 0x2000
+	stur	x0, [x5, #8]
+  ldur x10, [x5, #8]
 	ret
 
 .helper:
