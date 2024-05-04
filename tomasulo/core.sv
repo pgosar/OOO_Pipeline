@@ -21,15 +21,18 @@ module core (
   logic in_clk;
 
   // for now just run a single cycle
-  int   i;
+  int i;
   initial begin
     in_clk = 0;
-    for (i = 1; i <= 50; i += 1) begin
+    i = 0;
+    halt = 0;
+    while (!halt) begin
       `DEBUG((">>>>> CYCLE COUNT: %0d <<<<<", i));
       #1 in_clk = ~in_clk;  // 100 MHz clock
       #5 in_clk = ~in_clk;
       #4;
       `DEBUG((""))
+      ++i;
     end
     $finish();
   end
@@ -54,6 +57,7 @@ module core (
 
   logic is_mispred;
   logic [`GPR_SIZE-1:0] mispred_new_pc;
+  logic halt;
 
   // modules
   fetch f (
@@ -61,7 +65,8 @@ module core (
       .in_rst,
       .in_rob_mispredict(is_mispred),
       .in_rob_new_PC(mispred_new_pc),
-      .out_d_sigs(fetch_sigs)
+      .out_d_sigs(fetch_sigs),
+      .halt(halt)
   );
 
   fetch_interface fetch_sigs ();

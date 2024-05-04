@@ -43,7 +43,6 @@ module reg_module (
   logic [`GPR_IDX_SIZE-1:0] d_dst;
   reg_status_t d_dst_status;
   logic d_uses_nzcv;
-  logic d_mispredict;
   logic [`GPR_SIZE-1:0] d_pc;
 
   decode_interface d_sigs ();
@@ -75,7 +74,6 @@ module reg_module (
         d_fu_op <= in_d_sigs.fu_op;
         d_dst <= in_d_sigs.dst;
         d_dst_status <= in_d_sigs.dst_status;
-        d_mispredict <= in_d_sigs.mispredict;
         d_uses_nzcv <= in_d_sigs.uses_nzcv;
         d_pc <= in_d_sigs.pc;
         // Copy over
@@ -83,6 +81,7 @@ module reg_module (
         out_rob_sigs.pc <= in_d_sigs.pc;
         out_rob_sigs.fu_id <= in_d_sigs.fu_id;
         out_rob_sigs.is_branching <= in_d_sigs.is_branching;
+        out_rob_sigs.mispredict <= in_d_sigs.mispredict;
       end
       // Update validity of previous cycle's dst.
       if (d_done) begin

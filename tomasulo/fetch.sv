@@ -11,7 +11,8 @@ module fetch #(
     input wire in_rst,
     input wire in_rob_mispredict,
     input wire [`GPR_SIZE-1:0] in_rob_new_PC,
-    output fetch_interface out_d_sigs
+    output fetch_interface out_d_sigs,
+    output logic halt
 );
 
   // access IMEM
@@ -68,23 +69,29 @@ module fetch #(
     end else begin
       if (rst) begin
         `DEBUG(("(fetch) Last cycle was reset. PC remains %16x", PC));
+        halt <= 0;
       end else if (in_rob_mispredict) begin
         `DEBUG(("(fetch) Mispredict received. PC %16x -> %16x", PC, in_rob_new_PC));
         PC <= in_rob_new_PC;
+        halt <= 0;
       end else if (ret_from_main) begin
         `DEBUG(("(fetch) PC at 0. Possibly due to return from main. Halting: %16x", PC));
+        halt <= 1;
       end else if (no_instruction) begin
         `DEBUG(("(fetch) All insnbits are 0. PC Halted at: %16x", PC));
+        halt <= 0;
       end  
       // NOTE(Nate): What comes after is a little jank
       else if (opcode == OP_B | opcode == OP_BL) begin
         `DEBUG(("(fetch) detected branch. changing PC: %16x -> %16x", PC, PC + imm));
         PC <= PC + imm;
+        halt <= 0;
       end  
       // NOTE(Nate): But it does the job ig
       else begin
         `DEBUG(("(fetch) PC: %16x -> %16x", PC, PC + 4));
         PC <= PC + 4;
+        halt <= 0;
       end
     end
   end : fetch_logic
