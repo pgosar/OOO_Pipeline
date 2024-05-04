@@ -72,6 +72,7 @@ module func_units (
     ls_results.fu_op <= in_rs_ls_sigs.fu_op;
     `ASSERT((~(alu_results.done & ls_results.done)));
     // `DEBUG(("(FU) alu_results_done: %0d, ls_results_done: %0d", alu_results.done, ls_results.done));
+    `ifdef DEBUG_PRINT
     if (in_rs_alu_sigs.start) begin
       `DEBUG(( "(ALU) Prepped for %s to ROB[%0d] w/ val_a: %0d, val_b: %0d, nzcv: %4b, cond: %s",
           in_rs_alu_sigs.fu_op.name,
@@ -96,6 +97,7 @@ module func_units (
       `DEBUG(("(LS) Loaded / Stored for ROB[%0d] value: %0d",
           out_rob_sigs.dst_rob_index, $signed(ls_results.value)))
     end
+    `endif
   end
 
   // logic dmem_clk = in_clk & in_rs_ls_sigs.start;

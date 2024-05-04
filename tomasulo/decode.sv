@@ -414,7 +414,7 @@ module dispatch (
 
   logic fetch_done;
   always_comb begin
-    out_reg_sigs.done = fetch_done;
+    out_reg_sigs.done = fetch_done & opcode != OP_ERR;
   end
 
   always_ff @(posedge in_clk) begin

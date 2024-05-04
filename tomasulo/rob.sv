@@ -111,13 +111,13 @@ module rob_module (
           end
         end
         if (rob[commit_ptr].valid) begin : remove_commit
-          `DEBUG(("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d", (commit_ptr + 1) % `ROB_SIZE));
-          `DEBUG(("(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b", commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value), rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv));
           commit_ptr <= (commit_ptr + 1) % `ROB_SIZE;
           last_commit_was_mispredict <= rob[commit_ptr].mispredict;
           mispredict_new_PC <= rob[commit_ptr].value;
 
-          `OUTPUT_PRINT(("rob[%0d]: gpr_index: %0d, value: %0d", commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value)));
+          `DEBUG(("(rob) Commit was sent on posedge of this cycle. Incrementing cptr to %0d", (commit_ptr + 1) % `ROB_SIZE));
+          `DEBUG(("(rob) \tcommit_ptr:%0d, rob[cptr].gpr_index: %0d, rob[cptr].value: %0d, rob[cptr].set_nzcv: %b, rob[cptr].nzcv %b", commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value), rob[commit_ptr].set_nzcv, rob[commit_ptr].nzcv));
+          `OUTPUT_PRINT(("rob[%2d]: X%2d -> %0d", commit_ptr, rob[commit_ptr].gpr_index, $signed(rob[commit_ptr].value)));
           if (rob[commit_ptr].mispredict) begin
             `DEBUG(("(rob) Detected branch mispredict. About to commit branch instruction."));
           end
