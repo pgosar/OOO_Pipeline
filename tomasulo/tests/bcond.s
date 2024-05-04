@@ -15,7 +15,7 @@ start:
     mvn     x5, x5
     //correct value is 26
     //incorrect value is 1
-    //stur    x0, [x5]
+    stur    x0, [x5]
     ret
 
 .notequal:
