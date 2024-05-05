@@ -1,3 +1,5 @@
+Note to Sun and Dr. Chatterjee: when taking a look at the commit history, remember that Pranay, Nathan, Kavya, and Namish all did significant amounts of work, but most of the work was done under Pranay's liveshare. Joshua also did significant amounts of work on LLVM to get a complete implementation.
+
 # The Out Of Order Processor
 This document describes some of the needs of the project
 
